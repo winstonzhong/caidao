@@ -1,0 +1,82 @@
+'''
+Created on 2022年3月20日
+
+@author: Administrator
+'''
+import random
+import sys
+import time
+
+
+import requests
+from requests.adapters import HTTPAdapter
+
+from agent import pick_one_agent
+
+cookies = []
+
+
+class UrlOpenError(Exception):
+    pass
+
+
+
+def retry(attempt):
+    def decorator(func):
+        def retryit(att, e):
+            print("timeout, retrying ...", att)
+            att += 1
+            if att >= attempt:
+                raise e.with_traceback(sys.exc_info()[2])
+            time.sleep(random.randint(1, 3) + att)
+            return att
+
+        def wrapper(*args, **kw):
+            att = 0
+            while att < attempt:
+                try:
+                    return func(*args, **kw)
+#                 except HTTPError as e:
+                except Exception as e:
+                    # except UrlOpenError as e:
+                    att = retryit(att, e)
+
+        return wrapper
+    return decorator
+
+def get_with_random_agent_simple(*args, **kw):
+    s = requests.Session()
+    s.mount('http://', HTTPAdapter(max_retries=10))
+    s.mount('https://', HTTPAdapter(max_retries=10))
+
+    headers = {'user-agent': pick_one_agent()}
+
+    if kw.get('cookie') is not None:
+        headers['cookie'] = kw.pop('cookie')
+
+    kw.setdefault('headers', {}).update(headers)
+    kw['timeout'] = 20 if 'timeout' not in kw else kw['timeout']
+
+    return s.get(*args, **kw)
+
+
+def get_cookies(*args, **kw):
+    r = get_with_random_agent_simple(*args, **kw)
+    if r.status_code == 200 and r.cookies:
+        return ';'.join([k + '=' + v for k, v in r.cookies.items()])
+
+@retry(3)
+def get_with_random_agent(*args, **kw):
+    if kw.get('empty_not_allowed'):
+        empty_not_allowed = True
+        kw.pop('empty_not_allowed')
+    else:
+        empty_not_allowed = False
+
+    r = get_with_random_agent_simple(*args, **kw)
+
+    if r.status_code == 200:
+        if not empty_not_allowed or r.content:
+            return r
+
+    raise UrlOpenError("HTTP ERROR:%s, %s" % (r.status_code, args[0]))
