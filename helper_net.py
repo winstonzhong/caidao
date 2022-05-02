@@ -21,14 +21,17 @@ class UrlOpenError(Exception):
 
 
 
-def retry(attempt):
+def retry(attempt, fix_short_timeout=False):
     def decorator(func):
         def retryit(att, e):
-            print("timeout, retrying ...", att)
+            print("timeout, retrying %s..." % func.__name__, att)
             att += 1
             if att >= attempt:
                 raise e.with_traceback(sys.exc_info()[2])
-            time.sleep(random.randint(1, 3) + att)
+            if not fix_short_timeout:
+                time.sleep(random.randint(1, 3) + att)
+            else:
+                time.sleep(0.1)
             return att
 
         def wrapper(*args, **kw):
