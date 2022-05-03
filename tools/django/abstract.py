@@ -11,3 +11,11 @@ class AbstractModel(models.Model):
 
     class Meta:
         abstract = True
+
+    FIELDS = None
+    
+    @classmethod
+    def get_fields(cls):
+        if not cls.FIELDS:
+            cls.FIELDS = list(map(lambda x: x.get_attname(), cls._meta.fields))
+        return cls.FIELDS
