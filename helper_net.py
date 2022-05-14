@@ -49,8 +49,8 @@ def retry(attempt, fix_short_timeout=False):
 
 def get_with_random_agent_simple(*args, **kw):
     s = requests.Session()
-    s.mount('http://', HTTPAdapter(max_retries=10))
-    s.mount('https://', HTTPAdapter(max_retries=10))
+    # s.mount('http://', HTTPAdapter(max_retries=10))
+    # s.mount('https://', HTTPAdapter(max_retries=10))
 
     headers = {'user-agent': pick_one_agent()}
 
@@ -58,7 +58,7 @@ def get_with_random_agent_simple(*args, **kw):
         headers['cookie'] = kw.pop('cookie')
 
     kw.setdefault('headers', {}).update(headers)
-    kw['timeout'] = 20 if 'timeout' not in kw else kw['timeout']
+    kw['timeout'] = (20,20) if 'timeout' not in kw else kw['timeout']
 
     return s.get(*args, **kw)
 
