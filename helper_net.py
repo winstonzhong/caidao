@@ -3,6 +3,7 @@ Created on 2022年3月20日
 
 @author: Administrator
 '''
+import ssl
 import random
 import sys
 import time
@@ -15,10 +16,11 @@ from agent import pick_one_agent
 
 cookies = []
 
+ssl._create_default_https_context = ssl._create_unverified_context
+
 
 class UrlOpenError(Exception):
     pass
-
 
 
 def retry(attempt, fix_short_timeout=False):
@@ -47,6 +49,7 @@ def retry(attempt, fix_short_timeout=False):
         return wrapper
     return decorator
 
+
 def get_with_random_agent_simple(*args, **kw):
     s = requests.Session()
     s.mount('http://', HTTPAdapter(max_retries=10))
@@ -58,7 +61,7 @@ def get_with_random_agent_simple(*args, **kw):
         headers['cookie'] = kw.pop('cookie')
 
     kw.setdefault('headers', {}).update(headers)
-    kw['timeout'] = (20,20) if 'timeout' not in kw else kw['timeout']
+    kw['timeout'] = (20, 20) if 'timeout' not in kw else kw['timeout']
 
     return s.get(*args, **kw)
 
@@ -67,6 +70,7 @@ def get_cookies(*args, **kw):
     r = get_with_random_agent_simple(*args, **kw)
     if r.status_code == 200 and r.cookies:
         return ';'.join([k + '=' + v for k, v in r.cookies.items()])
+
 
 @retry(3)
 def get_with_random_agent(*args, **kw):
