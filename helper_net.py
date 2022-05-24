@@ -3,7 +3,7 @@ Created on 2022年3月20日
 
 @author: Administrator
 '''
-import ssl
+# import ssl
 import random
 import sys
 import time
@@ -16,7 +16,7 @@ from agent import pick_one_agent
 
 cookies = []
 
-ssl._create_default_https_context = ssl._create_unverified_context
+# ssl._create_default_https_context = ssl._create_unverified_context
 
 
 class UrlOpenError(Exception):
@@ -62,6 +62,8 @@ def get_with_random_agent_simple(*args, **kw):
 
     kw.setdefault('headers', {}).update(headers)
     kw['timeout'] = (20, 20) if 'timeout' not in kw else kw['timeout']
+
+    kw['verify'] = False
 
     return s.get(*args, **kw)
 
