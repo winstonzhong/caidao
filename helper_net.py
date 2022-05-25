@@ -8,12 +8,15 @@ import random
 import sys
 import time
 
-
 import requests
 from requests.adapters import HTTPAdapter
+from urllib3 import disable_warnings
+from urllib3.exceptions import InsecureRequestWarning
 
 from agent import pick_one_agent
 
+
+disable_warnings(InsecureRequestWarning)
 cookies = []
 
 # ssl._create_default_https_context = ssl._create_unverified_context
