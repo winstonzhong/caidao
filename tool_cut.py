@@ -21,7 +21,14 @@ STOP_WORDS = get_stop_words()
 def get_words(txt):
     if txt:
         l = jieba.cut(txt)
-        return filter(lambda x: x.strip() and x not in STOP_WORDS, l)
+        rtn = []
+        for x in l:
+            x = x.strip()
+            if x and x not in STOP_WORDS:
+                rtn.append(x)
+        return rtn
+        # return [x.strip() for x in l if x.strip() not in STOP_WORDS]
+        # return filter(lambda x: x.strip() and x not in STOP_WORDS, l)
         
 def get_line_for_train(txt):
     if txt:
