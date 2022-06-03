@@ -3,11 +3,16 @@ Created on 2022年6月3日
 
 @author: Administrator
 '''
+import os
+
 import jieba
 
 
+FPATH_STOP_WORDS = os.path.join(os.path.dirname(__file__), 'cn_stopwords.txt')
+
+
 def get_stop_words():
-    with open('cn_stopwords.txt', 'r', encoding='utf8') as fp:
+    with open(FPATH_STOP_WORDS, 'r', encoding='utf8') as fp:
         return [x.strip() for x in fp.readlines()]
 
 
