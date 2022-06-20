@@ -17,3 +17,8 @@ def has_chinese(line):
         if is_chinese(ch):
             return True
     return False
+
+
+def split_df(df, batch_size=1000):
+    for x in range(0, len(df), batch_size):
+        yield df.iloc[x:x + batch_size]
