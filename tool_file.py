@@ -6,8 +6,12 @@ Created on 2022年6月23日
 import glob
 import os
 
+import ffmpeg
 import pandas
+
 from tool_env import OS_WIN
+from helper_cmd import CmdProgress
+
 
 suffix_mv = ('mp4', 'mkv', 'rmvb')
 
@@ -41,3 +45,21 @@ def get_all_movie_files_auto_root():
         root = '/large'
 
     return get_all_movie_files(root)
+
+
+def extract_sub(fpath):
+    stream = ffmpeg.input(fpath)
+    fpath = fpath.rsplit('.', maxsplit=1)[0] + '.srt'
+    stream = ffmpeg.output(stream, fpath)
+    ffmpeg.run(stream, quiet=True)
+
+
+def extract_sub_all():
+    df = get_all_movie_files_auto_root()
+    cp = CmdProgress(len(df))
+    for x in df.to_dict('records'):
+        try:
+            extract_sub(x.get('fpath'))
+        except IOError:
+            pass
+        cp.update()
