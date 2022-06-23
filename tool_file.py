@@ -36,15 +36,22 @@ def get_all_movie_files(root='/large', suffixs=('mp4', 'mkv', 'rmvb')):
     return get_all_files(fpath, suffixs)
 
 
-def get_all_movie_files_auto_root():
+def get_root():
     if OS_WIN:
         root = 'z:/'
     elif os.path.lexists('/home/zyc'):
         root = '/media/zyc/Data56T'
     else:
         root = '/large'
+    return root
 
-    return get_all_movie_files(root)
+
+def get_all_movie_files_auto_root():
+    return get_all_movie_files(get_root())
+
+
+def get_all_srt():
+    return get_all_movie_files(get_root(), ('srt',))
 
 
 def extract_sub(fpath):
