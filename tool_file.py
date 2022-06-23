@@ -60,6 +60,6 @@ def extract_sub_all():
     for x in df.to_dict('records'):
         try:
             extract_sub(x.get('fpath'))
-        except IOError:
+        except:
             pass
         cp.update()
