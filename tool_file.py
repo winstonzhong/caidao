@@ -33,7 +33,10 @@ def get_all_files(fpath, suffixs):
 
 def get_all_movie_files(root='/large', suffixs=('mp4', 'mkv', 'rmvb')):
     fpath = os.path.join(root, 'movie')
-    return get_all_files(fpath, suffixs)
+    df = get_all_files(fpath, suffixs)
+    s = df.fpath.str.rsplit('.', n=1).apply(lambda x: x[0] + '.srt')
+    df['has_srt'] = s.apply(lambda x: os.path.lexists(x))
+    return df
 
 
 def get_root():
