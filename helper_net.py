@@ -52,6 +52,14 @@ def retry(attempt, fix_short_timeout=False):
         return wrapper
     return decorator
 
+@retry(3)
+def rget(*a, **k):
+    return requests.get(*a, **k)
+
+@retry(3)
+def rpost(*a, **k):
+    return requests.post(*a, **k)
+
 
 def get_with_random_agent_simple(*args, **kw):
     s = requests.Session()
