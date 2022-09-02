@@ -52,14 +52,16 @@ def retry(attempt, fix_short_timeout=False):
         return wrapper
     return decorator
 
-@retry(5, True)
+@retry(3, True)
 def rget(*a, **k):
     return requests.get(*a, **k)
 
-@retry(5, True)
+@retry(3, True)
 def rpost(*a, **k):
-    return requests.post(*a, **k)
-
+    r = requests.post(*a, **k)
+    if r.status_code == 200:
+        return r
+    raise ValueError(r.content)
 
 def get_with_random_agent_simple(*args, **kw):
     s = requests.Session()
