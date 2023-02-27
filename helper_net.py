@@ -63,6 +63,26 @@ def rpost(*a, **k):
         return r
     raise ValueError(r.content)
 
+def with_random_agent_simple(*args, **kw):
+    s = requests.Session()
+    s.mount('http://', HTTPAdapter(max_retries=10))
+    s.mount('https://', HTTPAdapter(max_retries=10))
+
+    headers = {'user-agent': pick_one_agent()}
+
+    if kw.get('cookie') is not None:
+        headers['cookie'] = kw.pop('cookie')
+
+    kw.setdefault('headers', {}).update(headers)
+    kw['timeout'] = (20, 20) if 'timeout' not in kw else kw['timeout']
+
+    kw['verify'] = False
+    return s, args, kw
+
+def post_with_random_agent_simple(*args, **kw):
+    s, args, kw = with_random_agent_simple(*args, **kw)
+    return s.post(*args, **kw)
+
 def get_with_random_agent_simple(*args, **kw):
     s = requests.Session()
     s.mount('http://', HTTPAdapter(max_retries=10))
