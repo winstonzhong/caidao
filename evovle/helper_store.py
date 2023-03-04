@@ -32,10 +32,10 @@ pl_info = {
 }
 
 
-def split_train_test(df):
-    tmp = df[df.trade_date != pl_info.get('last_td')]
-    df_train = tmp[tmp.trade_date <= pl_info.get('td')]
-    df_test = tmp[tmp.trade_date > pl_info.get('td')]
+def split_train_test(df, attname='index'):
+    df = df[getattr(df, attname) != pl_info.get('last_td')]
+    df_train = df[getattr(df, attname) <= pl_info.get('td')]
+    df_test = df[getattr(df, attname) > pl_info.get('td')]
     return df_train, df_test
 
 def load_pl():
@@ -45,8 +45,8 @@ def load_pl():
     pl_info['last_td'] = df.trade_date.drop_duplicates().sort_values().iloc[-1]
     
     pl_info['df'] = df
-    
-    df_train, df_test = split_train_test(df)
+
+    df_train, df_test = split_train_test(df, attname='trade_date')
     
     pl_info['total_train'] = len(df_train.trade_date.drop_duplicates())
     pl_info['total_test'] = len(df_test.trade_date.drop_duplicates())
@@ -64,7 +64,7 @@ def get_result(df, tag='train'):
     return d
 
 def compute(i):
-    df = pl_info.get('df')
+    df = get_pl_df()
     
     df = df.loc[i]
     
@@ -72,7 +72,7 @@ def compute(i):
     
     df = df.groupby('trade_date').first()
     
-    df_train, df_test = split_train_test(df)
+    df_train, df_test = split_train_test(df, attname='index')
     
     d = get_result(df_train,'train')
     

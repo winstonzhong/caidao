@@ -4,6 +4,7 @@ Created on 2022年5月1日
 @author: Administrator
 '''
 from django.db import models
+from evovle.helper_store import compute
 
 NEW_RECORD = 0
 EMPTY_RECORD = -1
@@ -99,6 +100,14 @@ class BaseSection(object):
             index_root = cls.batch_simple_cut_parent(root)
             index = index_root.intersection(index)
         return index
+
+
+    @classmethod
+    def get_single_result(cls, d={'id': 152, 'ancestors': [124082]}):
+        r = compute(cls.batch_simple_cut(ids=d.get('ancestors')))
+        r['id'] = d.get('id')
+        return r
+        
 
 
 # class AbstractDna(models.Model):
