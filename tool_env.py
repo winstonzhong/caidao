@@ -6,6 +6,7 @@ Created on 2022年6月3日
 import platform
 import re
 
+OPENAI = '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'
 
 OS_WIN = platform.system() == 'Windows'
 
