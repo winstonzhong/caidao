@@ -13,11 +13,20 @@ import sys
 
 import pandas
 
+from tool_env import OS_WIN
+
+OS_WIN
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-DATA_DIR = BASE_DIR / 'data'
+
+if OS_WIN:
+    DATA_DIR = BASE_DIR.parent / 'data'
+else:
+    DATA_DIR = BASE_DIR.parent / 'db'
+
+
 
 if not os.path.lexists(DATA_DIR):
     os.mkdir(DATA_DIR)
