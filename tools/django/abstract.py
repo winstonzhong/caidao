@@ -95,10 +95,13 @@ class BaseSection(object):
     @classmethod
     def batch_simple_cut(cls, ids):
         head, root = ids[0], ids[1:]
-        index = cls.do_simple_cut(head, is_first=False)
+        
         if root:
             index_root = cls.batch_simple_cut_parent(root)
+            index = cls.do_simple_cut(head, is_first=False)
             index = index_root.intersection(index)
+        else:
+            index = cls.do_simple_cut(head, is_first=False)
         return index
 
 
