@@ -13,9 +13,11 @@ import sys
 
 import pandas
 
-from tool_env import OS_WIN
+import platform
 
-OS_WIN
+
+OS_WIN = platform.system() == 'Windows'
+
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -71,6 +73,33 @@ def get_result(df, tag='train'):
     d['pl_%s' % tag] = df.pl.mean()
     d['atte_%s' % tag] = len(df) / pl_info.get("total_%s" % tag)
     return d
+
+def get_big_df():
+    if pl_info.get('big') is None:
+        df = pandas.read_csv(FPATH_BIG_DATA)
+        df.pl = df.pl.fillna(-0.1)
+        pl_info['big'] = df
+        pl_info['last_td'] = df.trade_date.drop_duplicates().sort_values().iloc[-1]
+
+        df_train, df_test = split_train_test(df, attname='trade_date')
+        
+        pl_info['total_train'] = len(df_train.trade_date.drop_duplicates())
+        pl_info['total_test'] = len(df_test.trade_date.drop_duplicates())
+
+    return pl_info.get('big') 
+
+def get_train_test_df(i):
+    df = get_big_df()
+    
+    df = df.loc[i]
+    
+    df = df[df.ting == 0]
+    
+    df = df.groupby('trade_date').first()
+    
+    df_train, df_test = split_train_test(df, attname='index')
+
+    return df_train, df_test
 
 def compute(i):
     df = get_pl_df()

@@ -4,7 +4,7 @@ Created on 2022年5月1日
 @author: Administrator
 '''
 from django.db import models
-from evovle.helper_store import compute
+from evovle.helper_store import compute, get_train_test_df
 
 NEW_RECORD = 0
 EMPTY_RECORD = -1
@@ -81,8 +81,8 @@ class BaseSection(object):
     
     @classmethod
     def batch_simple_cut_parent(cls, ids):
-        ids = ids.reverse()
-        key = ','.join(ids)
+        ids.reverse()
+        key = ','.join([str(x) for x in ids])
         if cls.result_cache.get(key) is None:
             index = cls.do_simple_cut(ids[0], is_first=True)
             for oid in ids[1:]:
@@ -103,11 +103,14 @@ class BaseSection(object):
 
 
     @classmethod
-    def get_single_result(cls, d={'id': 152, 'ancestors': [124082]}):
+    def get_single_result(cls, d={'id': 152, 'ancestors': [125311]}):
         r = compute(cls.batch_simple_cut(ids=d.get('ancestors')))
         r['id'] = d.get('id')
         return r
-        
+    
+    @classmethod
+    def get_train_test_df(cls, ancestors=[125311]):
+        return get_train_test_df(cls.batch_simple_cut(ids=ancestors))    
 
 
 # class AbstractDna(models.Model):
