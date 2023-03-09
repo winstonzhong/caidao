@@ -130,9 +130,10 @@ def replace_double_special_to_single(s):
     return s
 
 def has_chinese(line):
-    for ch in line:
-        if is_chinese(ch):
-            return True
+    if line:
+        for ch in line:
+            if is_chinese(ch):
+                return True
     return False
 
 
