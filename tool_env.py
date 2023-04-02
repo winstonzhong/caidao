@@ -12,6 +12,8 @@ OS_WIN = platform.system() == 'Windows'
 
 ptn_chinese = re.compile('[\u4e00-\u9fff]')
 
+ptn_not_chinese = re.compile('[^\u4e00-\u9fff]')
+
 ptn_cd = re.compile('[\da-zA-Z]')
 
 ptn_x = re.compile('\!|？|\?|"')
@@ -160,7 +162,44 @@ def pct_chinese(line):
         return int((1 - len(tmp) / len(line)) * 100)
     return 0
 
+def density_chinese(line):
+    '''
+    >>> density_chinese('') == 0
+    True
+    >>> density_chinese(None) == 0
+    True
+    >>> density_chinese('1') == 0
+    True
+    >>> density_chinese('1人')
+    0.5
+    >>> density_chinese('人家')
+    1.0
+    '''
+    if line and len(line) > 0:
+        return len(remain_chinese(line)) / len(line)
+    return 0
+
+def clear_chinese(line):
+    '''
+    >>> clear_chinese('人家')  == ''
+    True
+    >>> len(clear_chinese(mulline_text)) == 8
+    True
+    '''
+    return ptn_chinese.sub('', line)
+
+def remain_chinese(line):
+    '''
+    >>> remain_chinese('人家')  == '人家'
+    True
+    >>> remain_chinese(mulline_text) == '人家磁带非但没被淘汰容量还比硬盘大了'
+    True
+    '''
+    return ptn_not_chinese.sub('', line)
+    
+
 
 if __name__ == '__main__':
     import doctest
+    mulline_text = r'人家\r\n磁带非但没被淘汰，容量还比硬盘大了123'
     print(doctest.testmod(verbose=False, report=False))
