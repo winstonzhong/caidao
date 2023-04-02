@@ -13,14 +13,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(BASE_DIR / 'caidao'))
 
 
-from msedge.selenium_tools import Edge, EdgeOptions
-
 
 from tool_env import OS_WIN
 
 
 
 if OS_WIN:
+    from msedge.selenium_tools import Edge, EdgeOptions
     DRIVER_PATH = r'E:\迅雷下载\edgedriver_win64\msedgedriver.exe'
     user_data_dir = r'd:\edge'
 else:
