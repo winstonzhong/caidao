@@ -30,6 +30,7 @@ else:
 
 
 
+
 if not os.path.lexists(DATA_DIR):
     os.mkdir(DATA_DIR)
     
@@ -49,18 +50,18 @@ def split_train_test(df, attname='index'):
     df_test = df[getattr(df, attname) > pl_info.get('td')]
     return df_train, df_test
 
-def load_pl():
-    df = pandas.read_csv(FPATH_PL, index_col='test_index')
+def prepare_pl_info(df):
     df.pl = df.pl.fillna(-0.1)
-
     pl_info['last_td'] = df.trade_date.drop_duplicates().sort_values().iloc[-1]
-    
     pl_info['df'] = df
-
     df_train, df_test = split_train_test(df, attname='trade_date')
-    
     pl_info['total_train'] = len(df_train.trade_date.drop_duplicates())
     pl_info['total_test'] = len(df_test.trade_date.drop_duplicates())
+    
+
+def load_pl():
+    df = pandas.read_csv(FPATH_PL, index_col='test_index')
+    prepare_pl_info(df)
     
 
 def get_pl_df():
@@ -92,6 +93,8 @@ def get_train_test_df(i):
     df = get_big_df()
     
     df = df.loc[i]
+    
+    # df.to_csv('f:/debug.csv', index=False)
     
     df = df[df.ting == 0]
     

@@ -12,7 +12,7 @@ OS_WIN = platform.system() == 'Windows'
 
 ptn_chinese = re.compile('[\u4e00-\u9fff]')
 
-ptn_not_chinese = re.compile('[^\u4e00-\u9fff]')
+ptn_not_chinese = re.compile('[^\u4e00-\u9fff]+')
 
 ptn_cd = re.compile('[\da-zA-Z]')
 
@@ -197,7 +197,15 @@ def remain_chinese(line):
     '''
     return ptn_not_chinese.sub('', line)
     
-
+def split_by_not_chinese(line):
+    '''
+    >>> split_by_not_chinese('人11222333大')
+    ['人', '大']
+    >>> split_by_not_chinese('人11222333大kk')
+    ['人', '大']
+    '''
+    rtn = ptn_not_chinese.split(line)
+    return list(filter(lambda x:x, rtn))
 
 if __name__ == '__main__':
     import doctest
