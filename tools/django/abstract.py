@@ -3,15 +3,10 @@ Created on 2022年5月1日
 
 @author: Administrator
 '''
-import bz2
-import io
-import json
 
 from django.db import models
 
 from evovle.helper_store import compute, get_train_test_df, compute_group
-from helper_cmd import CmdProgress
-from msilib.schema import Property
 
 
 NEW_RECORD = 0
