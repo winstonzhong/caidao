@@ -3,15 +3,23 @@ Created on 2022年5月1日
 
 @author: Administrator
 '''
+import bz2
+import io
+import json
+
 from django.db import models
-from evovle.helper_store import compute, get_train_test_df
+
+from evovle.helper_store import compute, get_train_test_df, compute_group
+from helper_cmd import CmdProgress
+from msilib.schema import Property
+
 
 NEW_RECORD = 0
-EMPTY_RECORD = -1
-DOWNLOADED_RECORD = 1
+DEAD_RECORD = EMPTY_RECORD = -1
+COMPUTEED_RECORD = DOWNLOADED_RECORD = 1
 PRODUCED_RECORD = 2
- 
 UPLOADED_RECORD = 3
+ROOT_RECORD = 4
 
 STATUS = ((NEW_RECORD, "新"),
           (EMPTY_RECORD, "空"),
@@ -116,40 +124,122 @@ class BaseSection(object):
         return get_train_test_df(cls.batch_simple_cut(ids=ancestors))    
 
 
-# class AbstractDna(models.Model):
-#     level = models.PositiveSmallIntegerField()
-#     # section = models.ForeignKey(Section, on_delete=models.DO_NOTHING)
-#     parent = models.ForeignKey('Dna', on_delete=models.DO_NOTHING, null=True)
-#     pl_avg = models.FloatField(null=True)
-#     pl_avg_date = models.FloatField(null=True)
-#     atte = models.FloatField(null=True)
-#     atte_date = models.FloatField(null=True)
-#
-#     pl_avg_test = models.FloatField(null=True)
-#     pl_avg_date_test = models.FloatField(null=True)
-#     atte_test = models.FloatField(null=True)
-#     atte_date_test = models.FloatField(null=True)
-#
-#     # dead = models.BooleanField(default=False)
-#     status = models.SmallIntegerField(default=0, choices=STATUS)
-#     update_time = models.DateTimeField(auto_now=True)
-#
-#
-#     class Meta:
-#         abstract = True
+class AbstractSection(BaseSection, models.Model):
+    sid = models.PositiveIntegerField()
+    direction = models.BooleanField(null=True)
+    point = models.FloatField()
+   
+    class Meta:
+        abstract = True
 
-    # class Meta:
-    #     verbose_name_plural = "Dna"
-    #
-    #     indexes = [
-    #         # models.Index(fields=['level', 'status', 'pl_avg_date']),
-    #         models.Index(fields=['level', 'status', 'atte_date', 'pl_avg_date']),
-    #         models.Index(fields=['section']),
-    #         models.Index(fields=['parent']),
-    #         models.Index(fields=['atte_date']),
-    #         models.Index(fields=['status', 'update_time']),
-    #         # models.Index(fields=['status', 'atte_date', 'pl_avg_date']),
-    #         # models.Index(fields=['status', 'pl_avg_date_test']),
-    #     ]
+        indexes = [
+            models.Index(fields=['sid', 'direction']),
+        ]
+    @property
+    def single_chain(self):
+        raise NotImplementedError
+    
+    def simple_cut(self):
+        s = self.single_chain.s
+        if self.direction:
+            s = s[s >= self.point]
+        else:
+            s = s[s <= self.point]
+        return s.index
+
+    @classmethod
+    def do_simple_cut(cls, oid):
+        return cls.objects.get(id=oid).simple_cut()
+
+    @classmethod
+    def batch_simple_cut_parent(cls, ids):
+        key = ','.join([str(x) for x in ids])
+        if cls.result_cache.get(key) is None:
+            index = cls.do_simple_cut(ids[0])
+            for oid in ids[1:]:
+                index = index.intersection(cls.do_simple_cut(oid))
+            cls.result_cache.clear()
+            cls.result_cache[key] = index
+        return cls.result_cache.get(key)
+
+    @classmethod
+    def batch_simple_cut(cls, ids):
+        head, root = ids[-1], ids[:-1]
+        index = cls.do_simple_cut(head)
+        if root:
+            index_root = cls.batch_simple_cut_parent(root)
+            index = index_root.intersection(index)
+        return index
+
+    @classmethod
+    def get_single_result(cls, d={'id': 152, 'ancestors': [125311]}):
+        r = compute_group(cls.batch_simple_cut(ids=d.get('ancestors')))
+        r['id'] = d.get('id')
+        return r
+    
+
+class AbstractDna(models.Model):
+    DNA_STATUS = ((NEW_RECORD, "新"),
+              (PRODUCED_RECORD, "已计算"),
+              (DEAD_RECORD, "停止计算"),
+              (ROOT_RECORD, "根节点"),
+              )
+    
+    section_id = models.PositiveIntegerField()
+    
+    parent_id = models.PositiveBigIntegerField(null=True)
+
+    pl = models.SmallIntegerField(null=True)
+    
+    atte = models.PositiveSmallIntegerField(null=True)
+
+    status = models.SmallIntegerField(default=0, choices=DNA_STATUS)
+
+    update_time = models.DateTimeField(auto_now=True)
+    
+
+    class Meta:
+        abstract = True
         
+        indexes = [
+            models.Index(fields=['status', 'atte', 'pl']),
+            models.Index(fields=['status', 'update_time']),
+        ]
 
+    @property
+    def parent(self):
+        return self.__class__.objects.get(id=self.parent_id) if self.parent_id else None
+    
+    @property
+    def section_ids(self):
+        parent = self.parent
+        if parent is not None:
+            yield parent.section_id
+        yield self.section_id
+        
+    @property
+    def section(self):
+        raise NotImplementedError
+
+    @property
+    def dict(self):
+        return {'id': self.id, 
+                'ancestors': list(self.section_ids), 
+                }
+        
+    @classmethod
+    def has_tasks(cls):
+        return len(cls.redis_conn.lrange(cls.cache_key, 0, 0)) == 1
+    
+    @classmethod
+    def get_tasks_count(cls):
+        return len(cls.redis_conn.lrange(cls.cache_key, 0, 1000))
+    
+    @classmethod
+    def clear_tasks(cls):
+        cls.redis_conn.delete(cls.cache_key)
+
+    @classmethod
+    def book(cls):
+        return cls.redis_conn.rpop(cls.cache_key)
+    

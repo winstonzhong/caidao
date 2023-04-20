@@ -54,9 +54,11 @@ def prepare_pl_info(df):
     df.pl = df.pl.fillna(-0.1)
     pl_info['last_td'] = df.trade_date.drop_duplicates().sort_values().iloc[-1]
     pl_info['df'] = df
+    pl_info['total'] = len(df.trade_date.drop_duplicates())
     df_train, df_test = split_train_test(df, attname='trade_date')
     pl_info['total_train'] = len(df_train.trade_date.drop_duplicates())
     pl_info['total_test'] = len(df_test.trade_date.drop_duplicates())
+    
     
 
 def load_pl():
@@ -120,3 +122,24 @@ def compute(i):
     d.update(get_result(df_test,'test'))
 
     return d
+
+
+def compute_group(i):
+    df = get_pl_df()
+    
+    df = df.loc[i]
+    
+    df = df[df.ting == 0]
+    
+    g = df.groupby('trade_date')
+    
+    tmp = g.pl.mean()
+    
+    d = {}
+    
+    d['pl'] = int(tmp.mean() * 10000)
+    d['atte'] = int(len(tmp) * 100 / pl_info.get("total"))
+    
+    return d
+    
+
