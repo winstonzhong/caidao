@@ -160,10 +160,13 @@ class AbstractSection(BaseSection, models.Model):
     @classmethod
     def batch_simple_cut(cls, ids):
         head, root = ids[-1], ids[:-1]
-        index = cls.do_simple_cut(head)
+        
         if root:
             index_root = cls.batch_simple_cut_parent(root)
+            index = cls.do_simple_cut(head)
             index = index_root.intersection(index)
+        else:
+            index = cls.do_simple_cut(head)
         return index
 
     @classmethod
@@ -199,6 +202,7 @@ class AbstractDna(models.Model):
         indexes = [
             models.Index(fields=['status', 'atte', 'pl']),
             models.Index(fields=['status', 'update_time']),
+            models.Index(fields=['parent_id', 'status']),
         ]
 
     @property

@@ -137,8 +137,11 @@ def compute_group(i):
     
     d = {}
     
-    d['pl'] = int(tmp.mean() * 10000)
-    d['atte'] = int(len(tmp) * 100 / pl_info.get("total"))
+    total = len(tmp)
+    
+    d['pl'] = int(tmp.mean() * 10000) if total > 0 else 0
+    
+    d['atte'] = int(total * 100 / pl_info.get("total")) if total > 0 else 0
     
     return d
     
