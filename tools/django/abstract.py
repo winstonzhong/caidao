@@ -204,23 +204,30 @@ class AbstractDna(models.Model):
             models.Index(fields=['status', 'update_time']),
             models.Index(fields=['parent_id', 'status']),
         ]
-
+    
+    cache_section_ids = {}
+    
     @property
     def parent(self):
         return self.__class__.objects.get(id=self.parent_id) if self.parent_id else None
     
     @property
+    def parent_section_ids(self):
+        if self.parent_id is None:
+            return []
+        rtn = self.cache_section_ids.get(self.parent_id, None)
+        return rtn or self.parent.section_ids
+            
+    
+    @property
     def section_ids(self):
-        # parent = self.parent
-        # if parent is not None:
-        #     for x in parent.section_ids:
-        #         yield x
-        # yield self.section_id
-        if self.parent is None:
-            ids = [self.section_id]
-        else:
-            ids = self.parent.section_ids + [self.section_id]
-        return ids
+        return self.parent_section_ids + [self.section_id]
+        
+        # if self.parent is None:
+        #     ids = [self.section_id]
+        # else:
+        #     ids = self.parent.section_ids + [self.section_id]
+        # return ids
 
     @property
     def section_ids2(self):
