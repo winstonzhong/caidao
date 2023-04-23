@@ -206,6 +206,15 @@ class AbstractDna(models.Model):
         ]
     
     cache_section_ids = {}
+
+    cache_singlechain_ids = {}
+
+    @property
+    def singlechain_id(self):
+        if self.section_id not in self.cache_singlechain_ids:
+            self.cache_singlechain_ids[self.section_id] = self.section.sid
+        return self.cache_singlechain_ids.get(self.section_id)
+
     
     @property
     def parent(self):
@@ -218,10 +227,19 @@ class AbstractDna(models.Model):
         rtn = self.cache_section_ids.get(self.parent_id, None)
         return rtn or self.parent.section_ids
             
+    def set_cache_section_ids(self):
+        self.cache_section_ids[self.id] = self.section_ids
     
     @property
     def section_ids(self):
-        return self.parent_section_ids + [self.section_id]
+        rtn = self.cache_section_ids.get(self.id, None)
+        if rtn is not None:
+            return rtn
+        
+        if self.parent_id is None:
+            return [self.section_id]
+
+        return self.parent.section_ids + [self.section_id]
         
         # if self.parent is None:
         #     ids = [self.section_id]
