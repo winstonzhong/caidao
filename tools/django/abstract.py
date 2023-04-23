@@ -219,7 +219,7 @@ class AbstractDna(models.Model):
         if self.parent is None:
             ids = [self.section_id]
         else:
-            ids = [self.section_id] + self.parent.section_ids
+            ids = self.parent.section_ids + [self.section_id]
         return ids
 
     @property
