@@ -226,7 +226,7 @@ class AbstractDna(models.Model):
     def section_ids2(self):
         parent = self.parent
         if parent is not None:
-            for x in parent.section_ids:
+            for x in parent.section_ids2:
                 yield x
         yield self.section_id
 
