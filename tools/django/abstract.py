@@ -211,10 +211,16 @@ class AbstractDna(models.Model):
     
     @property
     def section_ids(self):
-        parent = self.parent
-        if parent is not None:
-            yield parent.section_id
-        yield self.section_id
+        # parent = self.parent
+        # if parent is not None:
+        #     for x in parent.section_ids:
+        #         yield x
+        # yield self.section_id
+        if self.parent is None:
+            ids = [self.section_id]
+        else:
+            ids = [self.section_id] + self.parent.all_section_ids
+        return ids
         
     @property
     def section(self):
