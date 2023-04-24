@@ -66,10 +66,11 @@ class AbstractTaskOrder(models.Model):
 
     # user = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="用户", related_name='用户')
     # creator = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="创建者", related_name='创建者')
+    # parent = models.ForeignKey('self', on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="来源工单", blank=True, null=True)
+
     status = models.SmallIntegerField(verbose_name='状态', choices=STATUS, default=DEFAULT_STATUS)
     user_requirement = models.CharField(max_length=50, verbose_name='客户要求', default='')
     kf_requirement = models.CharField(max_length=50, verbose_name='客服填写要求', default='')
-    # parent = models.ForeignKey('self', on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="来源工单", blank=True, null=True)
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
 
@@ -131,7 +132,7 @@ class AbstractUser(models.Model):
     )
     name = models.CharField(max_length=50, verbose_name='用户名称', default='')
     open_id = models.CharField(max_length=50, verbose_name='微信Open ID', blank=True, null=True, unique=True)
-    referral = models.ForeignKey('self', on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="推荐人", blank=True, null=True)
+    # referral = models.ForeignKey('self', on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="推荐人", blank=True, null=True)
     # level = models.ForeignKey(UserLevel, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="用户等级", blank=True, null=True)
     amount = models.DecimalField(verbose_name='用户余额', max_digits=10, decimal_places=2, default=0)
     is_signed_eula = models.BooleanField(verbose_name="是否签署用户协议", default=False)
