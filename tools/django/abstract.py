@@ -130,9 +130,11 @@ class AbstractSection(BaseSection, models.Model):
         indexes = [
             models.Index(fields=['sid', 'direction']),
         ]
+    
     @property
     def single_chain(self):
         raise NotImplementedError
+    
     
     def simple_cut(self):
         s = self.single_chain.s
