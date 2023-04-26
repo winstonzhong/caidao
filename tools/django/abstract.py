@@ -222,15 +222,8 @@ class AbstractDna(models.Model):
     def parent(self):
         return self.__class__.objects.get(id=self.parent_id) if self.parent_id else None
     
-    # @property
-    # def parent_section_ids(self):
-    #     if self.parent_id is None:
-    #         return []
-    #     rtn = self.cache_section_ids.get(self.parent_id, None)
-    #     return rtn or self.parent.section_ids
-            
     def set_cache_section_ids(self):
-        self.cache_section_ids[self.id] = self.section_ids
+        self.cache_section_ids[self.id] = self.section_ids_clean
     
     @property
     def section_ids(self):
