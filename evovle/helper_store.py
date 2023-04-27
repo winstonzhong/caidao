@@ -91,7 +91,7 @@ def get_big_df():
 
     return pl_info.get('big') 
 
-def get_train_test_df(i):
+def get_train_test_df(i, do_group=True):
     df = get_big_df()
     
     df = df.loc[i]
@@ -100,11 +100,14 @@ def get_train_test_df(i):
     
     df = df[df.ting == 0]
     
-    df = df.groupby('trade_date').first()
+    df = df.groupby('trade_date').first() if do_group else df
     
     df_train, df_test = split_train_test(df, attname='index')
 
     return df_train, df_test
+
+
+
 
 def compute(i):
     df = get_pl_df()
