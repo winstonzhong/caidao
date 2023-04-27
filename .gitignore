@@ -143,3 +143,4 @@ db.sqlite3-journal
 .vscode
 */migrations/
 *.zip
+.idea/
