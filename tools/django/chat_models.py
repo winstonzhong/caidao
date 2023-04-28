@@ -114,6 +114,9 @@ class AbstractTaskPicDownload(models.Model):
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
 
+    class Meta:
+        abstract = True
+
 
 class AbstractUserLevel(models.Model):
     """等级"""
