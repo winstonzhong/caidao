@@ -218,3 +218,47 @@ class AbstractQuota(models.Model):
     used_num = models.IntegerField(verbose_name="使用次数", default=0)
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+
+
+class AbstractOrder(models.Model):
+    '''
+    订单
+    '''
+    ORDER_STATUS_INIT = 0  # 代付款
+    ORDER_STATUS_COMPLETE = 1  # 付款成功
+    ORDER_STATUS_CANCELLED = -1  # 作废
+    STATUS_CHOICE = (
+        (ORDER_STATUS_INIT, "待付款"),
+        (ORDER_STATUS_COMPLETE, "付款成功"),
+        (ORDER_STATUS_CANCELLED, "作废")
+    )
+    wx_out_trade_no = models.CharField(max_length=50, verbose_name='微信订单号', default='')
+    # user = models.ForeignKey(User, verbose_name="用户", db_constraint=False, on_delete=models.DO_NOTHING, null=True)
+    name = models.CharField(max_length=100, verbose_name='订单名称', default='')
+    amount = models.DecimalField(verbose_name='订单总金额', max_digits=8, decimal_places=2, default=0)
+    total_days = models.IntegerField(verbose_name="总天数", default=0)
+    status = models.SmallIntegerField(verbose_name="订单状态", default=0, choices=STATUS_CHOICE)
+    updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
+    created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+
+
+class AbstractOrderProduct(models.Model):
+    """订单产品"""
+    name = models.CharField(max_length=100, verbose_name='产品名称', default='')
+    # product = models.ForeignKey(Product, verbose_name="产品", db_constraint=False, on_delete=models.DO_NOTHING)
+    price = models.DecimalField(verbose_name="价格", max_digits=8, decimal_places=2, default=0)
+    # order = models.ForeignKey(Order, verbose_name="订单", db_constraint=False, on_delete=models.CASCADE)
+    updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
+    created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+
+
+class AbstractProduct(models.Model):
+    '''
+    产品
+    '''
+    name = models.CharField(max_length=100, verbose_name='产品名称', default="")
+    days = models.IntegerField(verbose_name="天数", default=0)
+    price = models.DecimalField(verbose_name="价格", max_digits=8, decimal_places=2, default=0)
+    # level = models.ForeignKey(UserLevel, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="用户等级", null=True)
+    updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
+    created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
