@@ -222,6 +222,8 @@ class AbstractQuota(models.Model):
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
 
+    class Meta:
+        abstract = True
 
 class AbstractOrder(models.Model):
     '''
@@ -245,6 +247,9 @@ class AbstractOrder(models.Model):
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
 
 
+    class Meta:
+        abstract = True
+
 class AbstractOrderProduct(models.Model):
     """订单产品"""
     name = models.CharField(max_length=100, verbose_name='产品名称', default='')
@@ -253,6 +258,9 @@ class AbstractOrderProduct(models.Model):
     # order = models.ForeignKey(Order, verbose_name="订单", db_constraint=False, on_delete=models.CASCADE)
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+
+    class Meta:
+        abstract = True
 
 
 class AbstractProduct(models.Model):
@@ -265,3 +273,7 @@ class AbstractProduct(models.Model):
     # level = models.ForeignKey(UserLevel, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="用户等级", null=True)
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+    
+    class Meta:
+        abstract = True
+    
