@@ -170,7 +170,10 @@ class AbstractUser(models.Model):
 
     class Meta:
         abstract = True
-
+    
+    def __str__(self):
+        return '[{self.open_id}]{self.name}'.format(self=self)
+        
 
 class AbstractWithdraw(models.Model):
     """体现申请单"""
