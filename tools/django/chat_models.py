@@ -43,6 +43,8 @@ class AbstractTaskPic(models.Model):
 
 class AbstractTaskOrder(models.Model):
     """任务工单"""
+
+    # 工单状态
     STATUS_INVALID = -1
     DEFAULT_STATUS = 0
     STATUS_WAITING = 1
@@ -57,7 +59,11 @@ class AbstractTaskOrder(models.Model):
         (STATUS_COMPLETE, '任务完成'),
         (STATUS_INVALID, '作废'),
     )
-    UNPROCESSED_STATUS_LIST = [DEFAULT_STATUS, STATUS_WAITING, STATUS_IN_PROGRESS]  # 未制作完成的工单
+
+    # 未制作完成的工单
+    UNPROCESSED_STATUS_LIST = [DEFAULT_STATUS, STATUS_WAITING, STATUS_IN_PROGRESS]
+
+    # 页面
     USER_INDEX = 1
     KF_INDEX = 2
     USER_RESULT = 3
@@ -66,12 +72,24 @@ class AbstractTaskOrder(models.Model):
         KF_INDEX: [STATUS_TO_BE_REVIEWED],
         USER_RESULT: [STATUS_COMPLETE],
     }
+    # 优先级
+    DEFAULT_PRIORITY = 99  # 默认优先级
+    VIEWED_AD = 1  # 已观看广告
+    CLICK_BUY = 2  # 已点击购买
+    CLICK_AD = 3  # 已点击广告
 
+    PRIORITIES = (
+        (DEFAULT_PRIORITY, '默认'),
+        (VIEWED_AD, '已观看广告'),
+        (CLICK_BUY, '已点击购买'),
+        (CLICK_AD, '已点击广告'),
+    )
     # user = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="用户", related_name='用户')
     # creator = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="创建者", related_name='创建者')
     # parent = models.ForeignKey('self', on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="来源工单", blank=True, null=True)
 
     status = models.SmallIntegerField(verbose_name='状态', choices=STATUS, default=DEFAULT_STATUS)
+    priority = models.SmallIntegerField(verbose_name='状态', choices=PRIORITIES, default=DEFAULT_PRIORITY)
     user_requirement = models.CharField(max_length=50, verbose_name='客户要求', default='')
     kf_requirement = models.CharField(max_length=50, verbose_name='客服填写要求', default='')
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
@@ -150,6 +168,20 @@ class AbstractUser(models.Model):
         (TYPE_USER, '客户'),
         (TYPE_KF, '客服'),
     )
+
+    PLATFORM_OA = 0  # 微信公众号
+    PLATFORM_MPWX = 1  # 微信小程序
+    PLATFORM_CODES = (
+        (PLATFORM_OA, '微信公众号'),
+        (PLATFORM_MPWX, '微信小程序')
+
+    )
+
+    # 平台映射
+    PLATFORM_MAP = {
+        'web': PLATFORM_OA,
+        'mp-weixin': PLATFORM_MPWX
+    }
     name = models.CharField(max_length=50, verbose_name='用户名称', default='')
     open_id = models.CharField(max_length=50, verbose_name='微信Open ID', blank=True, null=True, unique=True)
     # referral = models.ForeignKey('self', on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="推荐人", blank=True, null=True)
@@ -163,17 +195,19 @@ class AbstractUser(models.Model):
     activation = models.IntegerField(verbose_name='活跃度', default=0)
     last_checkin_at = models.DateTimeField(verbose_name='签到时间', null=True)
     type = models.SmallIntegerField(verbose_name='用户类型', choices=TYPES, default=TYPE_USER)
-
     expired_at = models.DateTimeField(verbose_name='过期时间', null=True)
+
+    platform = models.SmallIntegerField(verbose_name='平台', choices=PLATFORM_CODES, default=PLATFORM_OA)
+
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
 
     class Meta:
         abstract = True
-    
+        unique_together = ('open_id', 'platform', 'name')
+
     def __str__(self):
         return '[{self.open_id}]{self.name}'.format(self=self)
-        
 
 class AbstractWithdraw(models.Model):
     """体现申请单"""
@@ -197,7 +231,14 @@ class AbstractWithdraw(models.Model):
 
 class AbstractMsg(models.Model):
     """用户消息"""
+    TYPE_MSG = 0
+    TYPE_VOICE_MSG = 1
+    TYPES = (
+        (TYPE_MSG, '文字消息'),
+        (TYPE_VOICE_MSG, '语音文字消息')
+    )
     # user = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="用户")
+    type = models.SmallIntegerField(verbose_name="消息内容", choices=TYPES, default=TYPE_MSG)
     content = models.TextField(verbose_name='内容', default="")
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
@@ -209,7 +250,8 @@ class AbstractMsg(models.Model):
 class AbstractPic(models.Model):
     """用户图片"""
     # user = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="用户")
-    url = models.TextField(verbose_name='图片URL', default='')
+    url = models.TextField(verbose_name='图片URL', null=True, blank=True)
+    media_id = models.CharField(max_length=100, verbose_name='素材media_id', null=True, blank=True)
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
 
@@ -279,4 +321,43 @@ class AbstractProduct(models.Model):
     
     class Meta:
         abstract = True
-    
+
+
+class AbstractPk(models.Model):
+    """pk表"""
+    creator_id = models.IntegerField(verbose_name="创建用户ID", default=0)
+    name = models.CharField(max_length=100, verbose_name='名称', default="")
+    description = models.CharField(max_length=200, verbose_name='中奖描述', default="")
+    reward_count = models.IntegerField(verbose_name='中奖人数', default=0)
+    updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
+    created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+
+    class Meta:
+        abstract = True
+
+
+class AbstractPkUser(models.Model):
+    """pk参与用户表"""
+    user_id = models.IntegerField(verbose_name="创建用户ID", default=0)  # 关联user表
+    pic_id = models.IntegerField(verbose_name="图片ID", default=0)  # 关联pic表
+    pk_id = models.IntegerField(verbose_name="PK ID", default=0)  # 关联pk表
+    requirement = models.CharField(max_length=100, verbose_name='要求', default="")
+    reward_code = models.CharField(max_length=50, verbose_name='兑奖码', default="")
+    score = models.IntegerField(verbose_name='得分', default=0)
+    updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
+    created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+
+    class Meta:
+        abstract = True
+
+
+class AbstractPkHelper(models.Model):
+    """pk助力表"""
+    pk_id = models.IntegerField(verbose_name="PK ID", default=0)  # 关联pk表
+    user_id = models.IntegerField(verbose_name="创建用户ID", default=0)  # 关联user表
+    helper_id = models.IntegerField(verbose_name="助力用户ID", default=0)  # 关联user表
+    updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
+    created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+
+    class Meta:
+        abstract = True
