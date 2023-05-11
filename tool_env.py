@@ -203,9 +203,10 @@ def split_by_not_chinese(line):
     ['人', '大']
     >>> split_by_not_chinese('人11222333大kk')
     ['人', '大']
+    >>> split_by_not_chinese(None)
+    []
     '''
-    rtn = ptn_not_chinese.split(line)
-    return list(filter(lambda x:x, rtn))
+    return list(filter(lambda x:x, ptn_not_chinese.split(line))) if line else []
 
 if __name__ == '__main__':
     import doctest

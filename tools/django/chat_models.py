@@ -206,6 +206,8 @@ class AbstractUser(models.Model):
         abstract = True
         unique_together = ('open_id', 'platform', 'name')
 
+    def __str__(self):
+        return '[{self.open_id}]{self.name}'.format(self=self)
 
 class AbstractWithdraw(models.Model):
     """体现申请单"""
