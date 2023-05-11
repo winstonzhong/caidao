@@ -28,6 +28,12 @@ class AbstractTaskRelation(models.Model):
 
 class AbstractTaskPic(models.Model):
     """结果图片"""
+
+    RANKS = (
+        (0, '不合格'),
+        (1, '合格'),
+        (2, '很好'),
+    )
     # user = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="用户")
     url = models.TextField(verbose_name='图片URL', null=True, blank=True)
     media_id = models.CharField(max_length=100, verbose_name='素材media_id', null=True, blank=True)
@@ -36,6 +42,8 @@ class AbstractTaskPic(models.Model):
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
     url_hq = models.TextField(verbose_name='高清图片URL', null=True, blank=True)
     media_id_hq = models.CharField(max_length=100, verbose_name='高清素材media_id', null=True, blank=True)
+    rank = models.SmallIntegerField(verbose_name="合格程度", choices=RANKS, null=True, blank=True)
+    reason = models.CharField(max_length=200, verbose_name='原因', null=True, blank=True)
 
     class Meta:
         abstract = True
@@ -94,6 +102,7 @@ class AbstractTaskOrder(models.Model):
     kf_requirement = models.CharField(max_length=50, verbose_name='客服填写要求', default='')
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+    wait_time = models.IntegerField(verbose_name='等待时间', default=0)
 
     class Meta:
         abstract = True
@@ -140,8 +149,11 @@ class AbstractUserLevel(models.Model):
     """等级"""
     DEFAULT_LEVEL_CODE = 0
     LEVEL_CODE = (
-        (DEFAULT_LEVEL_CODE, "普通用户"),
-        (1, "VIP用户")
+        (DEFAULT_LEVEL_CODE, "免费"),
+        (1, "连续包月VIP"),
+        (2, "季度VIP"),
+        (3, "年度VIP"),
+        (4, "终身VIP")
     )
     name = models.CharField(max_length=50, verbose_name='用户等级描述', default='')
     code = models.SmallIntegerField(verbose_name="用户等级", choices=LEVEL_CODE, default=DEFAULT_LEVEL_CODE)
