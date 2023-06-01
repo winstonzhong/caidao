@@ -269,7 +269,7 @@ class AbstractTaskOrder(models.Model):
         for task_pic_data in task_pic_list:
             insert_task_pic_data = {'user_id': user_id, 'media_id': task_pic_data['media_id']}
             task_pic_obj = task_pic_model.objects.create(**insert_task_pic_data)
-            print(task_pic_obj.id)
+            # print(task_pic_obj.id)
             # print(dir(task_pic_obj))
             # create_task_pic_list.append(task_pic_obj)
 
@@ -316,9 +316,9 @@ class AbstractTaskOrder(models.Model):
         # 更新quota
         quota = user.quota_set.last()
         hq_img_num = len(hq_img_media_id_dict)
-        print('raw....', quota.hq_img_left_num)
+        # print('raw....', quota.hq_img_left_num)
         quota.hq_img_left_num = max(0, quota.hq_img_left_num - hq_img_num)
-        print('hq_img_num.....', hq_img_num, quota.hq_img_left_num)
+        # print('hq_img_num.....', hq_img_num, quota.hq_img_left_num)
         quota.save()
 
 
