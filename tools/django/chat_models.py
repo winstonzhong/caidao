@@ -1,4 +1,16 @@
-from django.db import models
+from django.db import models, transaction
+from django.apps import apps
+all_models = apps.all_models
+
+
+def get_model(app_name, model_name):
+    """
+    根据app名称, 模型名称返回model
+    :param app_name: app名称
+    :param model_name: 模型名称
+    :return:
+    """
+    return all_models[app_name][model_name.lower()]
 
 
 class AbstractTaskRelation(models.Model):
@@ -44,65 +56,7 @@ class AbstractTaskPic(models.Model):
     media_id_hq = models.CharField(max_length=100, verbose_name='高清素材media_id', null=True, blank=True)
     rank = models.SmallIntegerField(verbose_name="合格程度", choices=RANKS, null=True, blank=True)
     reason = models.CharField(max_length=200, verbose_name='原因', null=True, blank=True)
-
-    class Meta:
-        abstract = True
-
-
-class AbstractTaskOrder(models.Model):
-    """任务工单"""
-
-    # 工单状态
-    STATUS_INVALID = -1
-    DEFAULT_STATUS = 0
-    STATUS_WAITING = 1
-    STATUS_IN_PROGRESS = 2
-    STATUS_TO_BE_REVIEWED = 3
-    STATUS_COMPLETE = 4
-    STATUS = (
-        (DEFAULT_STATUS, '排队中'),
-        (STATUS_WAITING, '等待处理'),
-        (STATUS_IN_PROGRESS, '正在处理'),
-        (STATUS_TO_BE_REVIEWED, '等待客服审核'),
-        (STATUS_COMPLETE, '任务完成'),
-        (STATUS_INVALID, '作废'),
-    )
-
-    # 未制作完成的工单
-    UNPROCESSED_STATUS_LIST = [DEFAULT_STATUS, STATUS_WAITING, STATUS_IN_PROGRESS]
-
-    # 页面
-    USER_INDEX = 1
-    KF_INDEX = 2
-    USER_RESULT = 3
-    PAGE_ORDER_MAP = {
-        USER_INDEX: [DEFAULT_STATUS, STATUS_WAITING, STATUS_IN_PROGRESS, STATUS_TO_BE_REVIEWED],
-        KF_INDEX: [STATUS_TO_BE_REVIEWED],
-        USER_RESULT: [STATUS_COMPLETE],
-    }
-    # 优先级
-    DEFAULT_PRIORITY = 99  # 默认优先级
-    VIEWED_AD = 1  # 已观看广告
-    CLICK_BUY = 2  # 已点击购买
-    CLICK_AD = 3  # 已点击广告
-
-    PRIORITIES = (
-        (DEFAULT_PRIORITY, '默认'),
-        (VIEWED_AD, '已观看广告'),
-        (CLICK_BUY, '已点击购买'),
-        (CLICK_AD, '已点击广告'),
-    )
-    # user = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="用户", related_name='用户')
-    # creator = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="创建者", related_name='创建者')
-    # parent = models.ForeignKey('self', on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="来源工单", blank=True, null=True)
-
-    status = models.SmallIntegerField(verbose_name='状态', choices=STATUS, default=DEFAULT_STATUS)
-    priority = models.SmallIntegerField(verbose_name='状态', choices=PRIORITIES, default=DEFAULT_PRIORITY)
-    user_requirement = models.CharField(max_length=50, verbose_name='客户要求', default='')
-    kf_requirement = models.CharField(max_length=50, verbose_name='客服填写要求', default='')
-    updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
-    created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
-    wait_time = models.IntegerField(verbose_name='等待时间', default=0)
+    is_made_hq_img = models.BooleanField(verbose_name='是否制作高清图片', default=False)
 
     class Meta:
         abstract = True
@@ -158,7 +112,8 @@ class AbstractUserLevel(models.Model):
     name = models.CharField(max_length=50, verbose_name='用户等级描述', default='')
     code = models.SmallIntegerField(verbose_name="用户等级", choices=LEVEL_CODE, default=DEFAULT_LEVEL_CODE)
     make_limit = models.IntegerField(verbose_name="制作次数", default=0)
-    download_limit = models.IntegerField(verbose_name="下载次数", default=0)
+    download_limit = models.IntegerField(verbose_name="高清图片下载次数", default=0)
+    data = models.TextField(verbose_name='数据', default='')
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
 
@@ -221,6 +176,152 @@ class AbstractUser(models.Model):
     def __str__(self):
         return '[{self.open_id}]{self.name}'.format(self=self)
 
+
+class AbstractTaskOrder(models.Model):
+    """任务工单"""
+
+    # 工单状态
+    STATUS_INVALID = -1
+    DEFAULT_STATUS = 0
+    STATUS_WAITING = 1
+    STATUS_IN_PROGRESS = 2
+    STATUS_TO_BE_REVIEWED = 3
+    STATUS_NEED_HQ_IMG = 4
+    STATUS_COMPLETE = 100
+    STATUS = (
+        (DEFAULT_STATUS, '排队中'),
+        (STATUS_WAITING, '等待处理'),
+        (STATUS_IN_PROGRESS, '正在处理'),
+        (STATUS_TO_BE_REVIEWED, '等待客服审核'),
+        (STATUS_NEED_HQ_IMG, '需要制作高清图'),
+        (STATUS_COMPLETE, '任务完成'),
+        (STATUS_INVALID, '作废'),
+    )
+
+    # 未制作完成的工单
+    UNPROCESSED_STATUS_LIST = [DEFAULT_STATUS, STATUS_WAITING, STATUS_IN_PROGRESS]
+
+    # 页面
+    USER_INDEX = 1
+    KF_INDEX = 2
+    USER_RESULT = 3
+    PAGE_ORDER_MAP = {
+        USER_INDEX: [DEFAULT_STATUS, STATUS_WAITING, STATUS_IN_PROGRESS, STATUS_TO_BE_REVIEWED, STATUS_COMPLETE],
+        KF_INDEX: [STATUS_TO_BE_REVIEWED],
+        USER_RESULT: [STATUS_NEED_HQ_IMG, STATUS_COMPLETE],
+    }
+    # 优先级
+    DEFAULT_PRIORITY = 99  # 默认优先级
+    VIEWED_AD = 1  # 已观看广告
+    CLICK_BUY = 2  # 已点击购买
+    CLICK_AD = 3  # 已点击广告
+
+    PRIORITIES = (
+        (DEFAULT_PRIORITY, '默认'),
+        (VIEWED_AD, '已观看广告'),
+        (CLICK_BUY, '已点击购买'),
+        (CLICK_AD, '已点击广告'),
+    )
+    # user = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="用户", related_name='用户')
+    # creator = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="创建者", related_name='创建者')
+    # parent = models.ForeignKey('self', on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="来源工单", blank=True, null=True)
+
+    status = models.SmallIntegerField(verbose_name='状态', choices=STATUS, default=DEFAULT_STATUS)
+    priority = models.SmallIntegerField(verbose_name='状态', choices=PRIORITIES, default=DEFAULT_PRIORITY)
+    user_requirement = models.CharField(max_length=50, verbose_name='客户要求', default='')
+    kf_requirement = models.CharField(max_length=50, verbose_name='客服填写要求', default='')
+    updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
+    created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+    wait_time = models.IntegerField(verbose_name='等待时间', default=0)
+    user_level_code = models.SmallIntegerField(verbose_name='用户等级code', choices=AbstractUserLevel.LEVEL_CODE,
+                                               default=AbstractUserLevel.DEFAULT_LEVEL_CODE)
+    platform = models.SmallIntegerField(verbose_name='平台', choices=AbstractUser.PLATFORM_CODES,
+                                        default=AbstractUser.PLATFORM_OA)
+
+    class Meta:
+        abstract = True
+
+
+    @classmethod
+    @transaction.atomic
+    def complete_order(cls, order_id, task_pic_list):
+        """
+        完成图片制作后更新数据库操作
+        1. 更新工单(TaskOrder)状态
+        2. 更新工单图片(TaskPic)数据
+        3. 更新工单图片关系表(TaskRelation)数据
+        4. 扣减制作次数
+        :param order_id: 工单表ID
+        :param task_pic_list: 图片数据 [{media_id: "xxx"}]
+        :return:
+        """
+        task_relation_model = get_model('task', 'TaskRelation')
+        task_pic_model = get_model('task', 'TaskPic')
+        user_quota_model = get_model('user', 'quota')
+        order_record = cls.objects.get(id=order_id)
+        order_record.status = cls.STATUS_COMPLETE
+        order_record.save()
+        user = order_record.user
+        user_id = user.id
+
+        # create_task_pic_list = []
+        create_task_relation_list = []
+        for task_pic_data in task_pic_list:
+            insert_task_pic_data = {'user_id': user_id, 'media_id': task_pic_data['media_id']}
+            task_pic_obj = task_pic_model.objects.create(**insert_task_pic_data)
+            print(task_pic_obj.id)
+            # print(dir(task_pic_obj))
+            # create_task_pic_list.append(task_pic_obj)
+
+            insert_task_relation_data = {'order_id': order_id,
+                                         'relation_id': task_pic_obj.id,
+                                         'relation_type': task_relation_model.RELATIONS_TYPE_TASK_PIC
+                                         }
+            task_relation_obj = task_relation_model(**insert_task_relation_data)
+            create_task_relation_list.append(task_relation_obj)
+
+        # task_pic_model.objects.bulk_create(create_task_pic_list)
+        task_relation_model.objects.bulk_create(create_task_relation_list)
+
+        quota_record = user_quota_model.objects.filter(user_id=user_id).last()
+        quota_record.left_num = max(0, quota_record.left_num - 1)
+        quota_record.save()
+
+    @classmethod
+    @transaction.atomic
+    def update_hq_pics(cls, order_id, hq_img_media_id_dict):
+
+        """
+        制作高清图片后更新数据库操作
+        1. 更新TaskOrder状态
+        2. 更新结果图片的高清图片media_id
+        3. 扣减Quota表高清图片制作次数
+        :param order_id: 工单号
+        :param hq_img_media_id_dict: 高清图片media_id字典{id: media_id}; id - TaskPic表记录的id; media_id: 临时素材库media_id
+        :return:
+        """
+        # 更新taskorder
+        order_record = cls.objects.get(id=order_id)
+        order_record.status = cls.STATUS_COMPLETE
+        order_record.save()
+        user = order_record.user
+        # 更新taskpic
+        task_pic_records = user.taskpic_set.filter(id__in=list(hq_img_media_id_dict.keys()))
+        for task_pic_record in task_pic_records:
+            task_pic_id = task_pic_record.id
+            task_pic_record.media_id_hq = hq_img_media_id_dict[task_pic_id]
+            task_pic_record.save()
+
+
+        # 更新quota
+        quota = user.quota_set.last()
+        hq_img_num = len(hq_img_media_id_dict)
+        print('raw....', quota.hq_img_left_num)
+        quota.hq_img_left_num = max(0, quota.hq_img_left_num - hq_img_num)
+        print('hq_img_num.....', hq_img_num, quota.hq_img_left_num)
+        quota.save()
+
+
 class AbstractWithdraw(models.Model):
     """体现申请单"""
     WITHDRAW_STATUS_INIT = 0
@@ -274,13 +375,16 @@ class AbstractPic(models.Model):
 class AbstractQuota(models.Model):
     """用户制作额度表"""
     # user = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="用户")
-    upper_limit = models.IntegerField(verbose_name="额度", default=0)
-    used_num = models.IntegerField(verbose_name="使用次数", default=0)
+    upper_limit = models.IntegerField(verbose_name="创作额度", default=0)
+    left_num = models.IntegerField(verbose_name="剩余次数", default=0)
+    hq_img_upper_limit = models.IntegerField(verbose_name="高清图片制作额度", default=0)
+    hq_img_left_num = models.IntegerField(verbose_name="高清图片剩余制作次数", default=0)
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
 
     class Meta:
         abstract = True
+
 
 class AbstractOrder(models.Model):
     '''
@@ -303,9 +407,9 @@ class AbstractOrder(models.Model):
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
 
-
     class Meta:
         abstract = True
+
 
 class AbstractOrderProduct(models.Model):
     """订单产品"""
@@ -330,7 +434,7 @@ class AbstractProduct(models.Model):
     # level = models.ForeignKey(UserLevel, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="用户等级", null=True)
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
-    
+
     class Meta:
         abstract = True
 
