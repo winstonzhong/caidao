@@ -222,6 +222,13 @@ class AbstractTaskOrder(models.Model):
         (CLICK_BUY, '已点击购买'),
         (CLICK_AD, '已点击广告'),
     )
+
+    DEFAULT_PIC_MODE = 0
+    PIC_MODES = (
+        (DEFAULT_PIC_MODE, '原图'),
+        (1, '轻度美颜'),
+        (2, '极度美颜'),
+    )
     # user = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="用户", related_name='用户')
     # creator = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="创建者", related_name='创建者')
     # parent = models.ForeignKey('self', on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="来源工单", blank=True, null=True)
@@ -237,6 +244,8 @@ class AbstractTaskOrder(models.Model):
                                                default=AbstractUserLevel.DEFAULT_LEVEL_CODE)
     platform = models.SmallIntegerField(verbose_name='平台', choices=AbstractUser.PLATFORM_CODES,
                                         default=AbstractUser.PLATFORM_OA)
+
+    pic_mode = models.SmallIntegerField(verbose_name='图像模式', choices=PIC_MODES, default=DEFAULT_PIC_MODE)
 
     class Meta:
         abstract = True
@@ -310,6 +319,7 @@ class AbstractTaskOrder(models.Model):
         for task_pic_record in task_pic_records:
             task_pic_id = task_pic_record.id
             task_pic_record.media_id_hq = hq_img_media_id_dict[task_pic_id]
+            task_pic_record.is_made_hq_img = False
             task_pic_record.save()
 
 
@@ -477,3 +487,15 @@ class AbstractPkHelper(models.Model):
 
     class Meta:
         abstract = True
+
+
+class AbstractUserScene(models.Model):
+    """用户和场景的关联表"""
+    user_id = models.IntegerField(verbose_name="用户ID", default=0)
+    scene_id = models.IntegerField(verbose_name="场景ID", default=0)
+    updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
+    created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+
+    class Meta:
+        abstract = True
+        unique_together = [['user_id', 'scene_id']]
