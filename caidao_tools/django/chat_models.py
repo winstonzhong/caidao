@@ -295,9 +295,9 @@ class AbstractTaskOrder(models.Model):
         # task_pic_model.objects.bulk_create(create_task_pic_list)
         task_relation_model.objects.bulk_create(create_task_relation_list)
 
-        quota_record = user_quota_model.objects.filter(user_id=user_id).last()
-        quota_record.left_num = max(0, quota_record.left_num - 1)
-        quota_record.save()
+        # quota_record = user_quota_model.objects.filter(user_id=user_id).last()
+        # quota_record.left_num = max(0, quota_record.left_num - 1)
+        # quota_record.save()
 
     @classmethod
     @transaction.atomic
