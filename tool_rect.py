@@ -176,11 +176,20 @@ class Rect(object):
         return src.is_close(dst)
         
     
-    def expand(self, left, right, top, bottom, width, height):
-        self.left = max(self.left - left, 0)
-        self.top = max(self.top - top, 0)
-        self.right = min(self.right+right, width)
-        self.bottom = min(self.bottom+bottom, height)
+    def expand(self, left, right, top, bottom, width, height, safe=True):
+        if safe:
+            self.left = max(self.left - left, 0)  
+            self.top = max(self.top - top, 0)
+            self.right = min(self.right+right, width)
+            self.bottom = min(self.bottom+bottom, height)
+            return self
+        self.left -= left
+        self.top -= top
+        self.right += right
+        self.bottom += bottom
+        
+        if self.left < 0  or self.top < 0 or self.right > width or self.bottom > height:
+            return None
         return self
     
     def expand_all_directions(self, shape,
@@ -239,6 +248,7 @@ class Rect(object):
         100
         '''
         return abs(self.bottom - self.top)
+    
     
     @property
     def area(self):
@@ -380,9 +390,12 @@ class Rect(object):
         return self.rect_body_virtual.to_real(shape)
     
     def crop_img(self, img):
-        if len(img.shape) == 3:
-            return img[self.top:self.bottom, self.left:self.right, ::]
-        return img[self.top:self.bottom, self.left:self.right]
+        bottom = self.bottom +1
+        right = self.right + 1
+        return img[self.top:bottom, self.left:right, ...]
+        # if len(img.shape) == 3:
+        #     return img[self.top:self.bottom, self.left:self.right, ::]
+        # return img[self.top:self.bottom, self.left:self.right]
     
     
     def is_valid_face(self):
