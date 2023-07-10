@@ -54,7 +54,7 @@ class Rect(object):
         return self.left == other.left and self.right == other.right and self.top == other.top and self.bottom == other.bottom
     
     def contains_point(self, x, y):
-        '''
+        '''判断坐标点是否在矩形范围内
         >>> Rect(*[100, 120, 100, 120]).contains_point(1,1)
         False
         >>> Rect(*[100, 120, 100, 120]).contains_point(110,111)
@@ -65,7 +65,7 @@ class Rect(object):
         return x >= self.left and x <= self.right and y >= self.top and y <= self.bottom
     
     def to_square(self, max_width=10000, max_height=10000):
-        '''
+        '''转换成正方形
         >>> Rect(*[100, 120, 100, 120]).to_square() == Rect(*[100, 120, 100, 120])
         True
         >>> Rect(*[100, 120, 100, 118]).to_square() == Rect(*[100, 120, 99, 119])
