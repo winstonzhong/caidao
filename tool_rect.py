@@ -249,6 +249,9 @@ class Rect(object):
         '''
         return abs(self.bottom - self.top)
     
+    @property
+    def whr(self):
+        return self.width / self.height
     
     @property
     def area(self):
