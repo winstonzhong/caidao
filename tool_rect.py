@@ -142,6 +142,17 @@ class Rect(object):
         self.top = other.top
         self.bottom = other.bottom
     
+    def is_center_y_close(self, other, span=2):
+        '''
+        >>> Rect(0,4,0,4).is_center_y_close(Rect(0,4,0,4), span=2)
+        True
+        >>> Rect(0,4,0,4).is_center_y_close(Rect(0,4,0,3), span=2)
+        True
+        >>> Rect(0,4,0,4).is_center_y_close(Rect(0,4,0,10), span=2)
+        False
+        '''
+        return abs(self.center_y - other.center_y) <= span 
+    
     def is_close(self, other, span=10):
         '''
         >>> Rect(*[0, 576, 166, 768]).is_close(Rect(*[0, 576, 166, 768]))
