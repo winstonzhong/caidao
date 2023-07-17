@@ -3,6 +3,7 @@ Created on 2022年8月24日
 
 @author: lenovo
 '''
+import itertools
 import json
 import os
 import re
@@ -30,6 +31,30 @@ POINT_DOWN = 9 + 100
 POINT_RIGHT = 10 + 100
 POINT_UP = 11 + 100
 POINT_LEFT = 12 + 100
+
+UNKONWN = 34
+TIMER_DOWN = 35
+TIMER_RIGHT = 36
+TIMER_UP = 37
+TIMER_LEFT = 38
+ACTION_HU = 39
+ACTION_CHI = 40
+ACTION_GANG = 41
+ACTION_PENG = 42
+ACTION_TING = 43
+
+OTHERS = {
+    '未知':UNKONWN,
+    '下':TIMER_DOWN,
+    '右':TIMER_RIGHT,
+    '上':TIMER_UP,
+    '左':TIMER_LEFT,
+    '胡':ACTION_HU,
+    '杠':ACTION_GANG,
+    '碰':ACTION_PENG,
+    '吃':ACTION_CHI,
+    '听':ACTION_TING,
+    }
 
 ACTIONS = {
     '胡':HU,
@@ -392,6 +417,10 @@ class Pai(object):
                     cls.singles.append(cls(i, (x,y)))
                     i += 1
         return cls.singles
+    
+    @classmethod
+    def get_tuples(cls):
+        return list((x.index, x.fullname) for x in cls.get_singles())
     
     @classmethod
     def get_name_by_index(cls, i):
@@ -937,6 +966,12 @@ def is_rect_overlaped(rect1, rect2):
     maxx = min(maxx1, maxx2)
     maxy = min(maxy1, maxy2)
     return minx <= maxx and miny <= maxy
+
+ETYPES = list(itertools.chain(
+        list(zip(OTHERS.values(),OTHERS.keys())),
+        Pai.get_tuples(),
+        ))
+
     
 if __name__ == '__main__':
     import doctest
