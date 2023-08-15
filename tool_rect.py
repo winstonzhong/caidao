@@ -414,7 +414,16 @@ class Rect(object):
     
     def is_valid_face(self):
         return self.height > self.MIN_FACE_WIDTH and self.width > self.MIN_FACE_WIDTH
-
+    
+    def cut_margin(self, value):
+        o = self.clone()
+        o.left += value
+        o.right -= value
+        o.top += value
+        o.bottom -= value
+        if o.left >= 0 and o.top >= 0 and o.right > o.left and o.bottom > o.top:
+            return o
+        
 
 if __name__ == "__main__":
     import doctest
