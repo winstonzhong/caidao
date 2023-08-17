@@ -10,7 +10,7 @@ import re
 
 import pandas
 
-
+LAID = -2  # 立牌
 NULLTYPE = -1
 TONG = 1
 TIAO = 2
@@ -54,6 +54,7 @@ OTHERS = {
     '碰':ACTION_PENG,
     '吃':ACTION_CHI,
     '听':ACTION_TING,
+    # '立牌': LAID,
     }
 
 ACTIONS = {
