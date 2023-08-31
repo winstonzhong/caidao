@@ -7,6 +7,7 @@ Created on 2022年5月1日
 from django.db import models
 
 from evovle.helper_store import compute, get_train_test_df, compute_group
+from helper_net import retry
 
 
 NEW_RECORD = 0
@@ -40,6 +41,10 @@ class BaseModel(models.Model):
     @classmethod
     def get_fields_without_id(cls):
         return filter(lambda x:x !='id', cls.get_fields())
+
+    @retry(10, True)
+    def save_safe(self):
+        self.save()
     
     
     class Meta:
