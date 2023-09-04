@@ -10,3 +10,9 @@ class BaseAdmin(admin.ModelAdmin):
         if hasattr(self, 'list_display'):
             return self.list_display
         return list(map(lambda x:x.name, getattr(self.model, "_meta").fields))
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        if "delete_selected" in actions:
+            del actions["delete_selected"]
+        return actions
