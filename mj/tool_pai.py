@@ -43,6 +43,7 @@ ACTION_GANG = 41
 ACTION_PENG = 42
 ACTION_TING = 43
 ACTION_GUO = 44
+READY = 45
 OTHERS = {
     '未知':UNKONWN,
     '下':TIMER_DOWN,
@@ -55,6 +56,7 @@ OTHERS = {
     '吃':ACTION_CHI,
     '听':ACTION_TING,
     '过':ACTION_GUO,
+    '准备':READY,
     # '立牌': LAID,
     }
 
