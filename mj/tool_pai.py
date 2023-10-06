@@ -10,7 +10,7 @@ import re
 
 import pandas
 
-
+LAID = -2  # 立牌
 NULLTYPE = -1
 TONG = 1
 TIAO = 2
@@ -42,7 +42,8 @@ ACTION_CHI = 40
 ACTION_GANG = 41
 ACTION_PENG = 42
 ACTION_TING = 43
-
+ACTION_GUO = 44
+READY = 45
 OTHERS = {
     '未知':UNKONWN,
     '下':TIMER_DOWN,
@@ -54,6 +55,9 @@ OTHERS = {
     '碰':ACTION_PENG,
     '吃':ACTION_CHI,
     '听':ACTION_TING,
+    '过':ACTION_GUO,
+    '准备':READY,
+    # '立牌': LAID,
     }
 
 ACTIONS = {
