@@ -390,6 +390,11 @@ class Rect(object):
     @property
     def space_bottom(self):
         return self.body_height - self.space_top
+
+    @property
+    def space_bottom_full_body(self):
+        return self.body_height + self.space_top
+
     
     @property
     def rect_body_virtual(self):
@@ -399,6 +404,15 @@ class Rect(object):
                     self.center_y + self.space_bottom,
                     )
     
+
+    @property
+    def rect_body_virtual_full_body(self):
+        return Rect(self.center_x - self.space_left,
+                    self.center_x + self.space_right,
+                    self.center_y - self.space_top,
+                    self.center_y + self.space_bottom_full_body,
+                    )
+
     
     def get_rect_body_real(self, shape):
         return self.rect_body_virtual.to_real(shape)
