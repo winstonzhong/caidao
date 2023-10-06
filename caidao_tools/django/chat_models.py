@@ -280,7 +280,7 @@ class AbstractTaskOrder(models.Model):
         # create_task_pic_list = []
         create_task_relation_list = []
         for task_pic_data in task_pic_list:
-            insert_task_pic_data = {'user_id': user_id, 'media_id': task_pic_data['media_id']}
+            insert_task_pic_data = {'user_id': user_id, 'url': task_pic_data['url']}
             task_pic_obj = task_pic_model.objects.create(**insert_task_pic_data)
             # print(task_pic_obj.id)
             # print(dir(task_pic_obj))
