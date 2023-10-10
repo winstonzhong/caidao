@@ -7,11 +7,47 @@ Created on 2023年4月27日
 from pyquery.pyquery import PyQuery
 
 from helper_net import rget, rpost, post_with_random_agent_simple
+from tool_env import remain_chinese, split_by_not_chinese
 
 
 url_trans = 'https://dict.youdao.com/result'
 
 url_baidu = 'https://fanyi.baidu.com/v2transapi?from=zh&to=en'
+
+
+# https://dict.youdao.com/suggest?num=1&ver=3.0&doctype=json&cache=false&le=en&q=manticore
+url_trans_short = 'https://dict.youdao.com/suggest?num=1&ver=3.0&doctype=json&cache=false&le=en&q=%s'
+
+def translate_short(en):
+    url = 'https://dict.youdao.com/suggest?num=1&ver=3.0&doctype=json&cache=false&le=en&q=%s'
+    r = rget(url % en)
+    return r.json()
+
+def translate_short_clean(en):
+    j = translate_short(en)
+    cn = j.get('data').get('entries',[{}])[0].get('explain','')
+    return ' '.join(set(split_by_not_chinese(cn)))
+    
+
+def translate_q(text, lang='en'):
+    payload = {
+        "word": text[:14000],
+        "lang":lang,
+    }
+     
+    r = rget(url_trans, params=payload)
+    
+    html = r.content
+    
+    return PyQuery(html.decode('utf8'))
+
+def translate_safe(text, lang='en'):
+    d = translate_q(text, lang)
+    return d('p.trans-content').text() or \
+        d('div.trans-container ul.basic div.word-exp').text() or \
+        PyQuery(d('div.trans-container ul.trans-list p')[0:1]).text() or \
+        d('div.trans-container ul.basic span').text()
+ 
 
 def translate(text, lang='en'):
     payload = {
@@ -24,6 +60,11 @@ def translate(text, lang='en'):
     # print(r.status_code)
     
     html = r.content
+    
+    # with open('d:/temp/test.html', 'wb') as fp:
+    #     fp.write(html)
+    
+    # print(html)
     
     # return html
     
