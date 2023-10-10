@@ -1,5 +1,4 @@
 import datetime
-
 import requests
 
 APP_ID = '11'
@@ -32,10 +31,10 @@ class MiniProgramBase:
         """
         url = f'https://api.weixin.qq.com/cgi-bin/media/upload?access_token={self.access_token}&type=image'
         file_name = img_path.replace('\\', '/').split('/')[-1]
-        print('file_name', file_name)
+        # print('file_name', file_name)
         multipart_form_data = {'media': (file_name, open(img_path, 'rb'))}
         resp_data = requests.post(url, files=multipart_form_data).json()
-        print('resp_data', resp_data)
+        # print('resp_data', resp_data)
         return resp_data['media_id']
 
     def send_msg(self, open_id, content):
@@ -86,7 +85,7 @@ class MiniProgramBase:
         url = f'https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token={self.access_token}'
         r = requests.post(url, json=data)
         r = r.json()
-        print(r)
+        # print(r)
         return r['errcode'] == 0, r
 
 
@@ -131,7 +130,6 @@ if __name__ == '__main__':
     # mp.upload_img('/mnt/d/tmp.png')
     # mp.send_img(open_id, '/mnt/d/tmp.png')
     # mp.send_msg(open_id, content)
-
 
     source_code = '123'
     order_id = '234'
