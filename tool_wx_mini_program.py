@@ -42,7 +42,6 @@ class MiniProgramBase:
         发送文本消息给客户
         :param open_id: 客户open_id
         :param content: 发送的文本消息
-        :param access_token: access_token
         :return:
         """
         data = {
@@ -79,7 +78,6 @@ class MiniProgramBase:
         """
         发送订阅消息
         :param data:  消息体。字典类型
-        :param accessToken:  接入token
         :return: is success, response data
         """
         url = f'https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token={self.access_token}'
