@@ -2,8 +2,8 @@ import datetime
 
 import requests
 
-APP_ID = 'wx6c94a95d736f1969'
-SECRET = '0d97072344c896e7473cc214a207e847'
+APP_ID = '11'
+SECRET = '22'
 
 
 class MiniProgramBase:
@@ -83,7 +83,6 @@ class MiniProgramBase:
         :param accessToken:  接入token
         :return: is success, response data
         """
-
         url = f'https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token={self.access_token}'
         r = requests.post(url, json=data)
         r = r.json()
