@@ -237,7 +237,7 @@ class AbstractTaskOrder(models.Model):
     # parent = models.ForeignKey('self', on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="来源工单", blank=True, null=True)
 
     status = models.SmallIntegerField(verbose_name='状态', choices=STATUS, default=DEFAULT_STATUS)
-    priority = models.SmallIntegerField(verbose_name='状态', choices=PRIORITIES, default=DEFAULT_PRIORITY)
+    priority = models.SmallIntegerField(verbose_name='优先级', choices=PRIORITIES, default=DEFAULT_PRIORITY)
     user_requirement = models.CharField(max_length=50, verbose_name='客户要求', default='')
     kf_requirement = models.CharField(max_length=50, verbose_name='客服填写要求', default='')
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
@@ -249,6 +249,7 @@ class AbstractTaskOrder(models.Model):
                                         default=AbstractUser.PLATFORM_OA)
 
     pic_mode = models.SmallIntegerField(verbose_name='图像模式', choices=PIC_MODES, default=DEFAULT_PIC_MODE)
+    is_downloaded = models.BooleanField(verbose_name='是否下载', default=False)
 
     class Meta:
         abstract = True
@@ -279,7 +280,7 @@ class AbstractTaskOrder(models.Model):
         # create_task_pic_list = []
         create_task_relation_list = []
         for task_pic_data in task_pic_list:
-            insert_task_pic_data = {'user_id': user_id, 'media_id': task_pic_data['media_id']}
+            insert_task_pic_data = {'user_id': user_id, 'url': task_pic_data['url']}
             task_pic_obj = task_pic_model.objects.create(**insert_task_pic_data)
             # print(task_pic_obj.id)
             # print(dir(task_pic_obj))
