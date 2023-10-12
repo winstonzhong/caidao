@@ -54,7 +54,7 @@ class MiniProgramBase:
                 'content': content
             }
         }
-        print('data', data)
+        # print('data', data)
         url = f'https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token={self.access_token}'
         resp_data = requests.post(url, data=json.dumps(data, ensure_ascii=False).encode()).json()
         return resp_data['errcode'] == 0, resp_data
