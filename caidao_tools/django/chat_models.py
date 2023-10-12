@@ -114,6 +114,7 @@ class AbstractUserLevel(models.Model):
     make_limit = models.IntegerField(verbose_name="制作次数", default=0)
     download_limit = models.IntegerField(verbose_name="高清图片下载次数", default=0)
     data = models.TextField(verbose_name='数据', default='')
+    max_wait_time = models.IntegerField(verbose_name="最大等待时间", default=0)
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
 
@@ -404,8 +405,9 @@ class AbstractOrder(models.Model):
     '''
     订单
     '''
-    ORDER_STATUS_INIT = 0  # 代付款
+    ORDER_STATUS_INIT = 0  # 待付款
     ORDER_STATUS_COMPLETE = 1  # 付款成功
+    ORDER_STATUS_SETTLED = 2  # 已核算(作废)
     ORDER_STATUS_CANCELLED = -1  # 作废
     STATUS_CHOICE = (
         (ORDER_STATUS_INIT, "待付款"),
@@ -416,6 +418,7 @@ class AbstractOrder(models.Model):
     # user = models.ForeignKey(User, verbose_name="用户", db_constraint=False, on_delete=models.DO_NOTHING, null=True)
     name = models.CharField(max_length=100, verbose_name='订单名称', default='')
     amount = models.DecimalField(verbose_name='订单总金额', max_digits=8, decimal_places=2, default=0)
+    make_times = models.IntegerField(verbose_name="制作次数", default=0)
     total_days = models.IntegerField(verbose_name="总天数", default=0)
     status = models.SmallIntegerField(verbose_name="订单状态", default=0, choices=STATUS_CHOICE)
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
@@ -503,3 +506,50 @@ class AbstractUserScene(models.Model):
     class Meta:
         abstract = True
         unique_together = [['user_id', 'scene_id']]
+
+
+class AbstractPicJournalAccount(models.Model):
+    """图片制作次数流水记录"""
+
+    TYPE_PAY = 0
+    TYPE_MAKE_PIC = 1
+    TYPE_MAKE_HQ_PIC = 2
+    TYPE_CHOICE = (
+        (TYPE_PAY, '充值'),
+        (TYPE_MAKE_PIC, '普通图片制作'),
+        (TYPE_MAKE_HQ_PIC, '高清图片制作'),
+    )
+    user_id = models.IntegerField(verbose_name="用户ID", default=0)
+    make_times = models.IntegerField(verbose_name="制作次数", default=0)
+    type = models.SmallIntegerField(verbose_name="订单状态", default=0, choices=TYPE_CHOICE)
+    created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+
+    class Meta:
+        abstract = True
+
+    @classmethod
+    def insert_record(cls, user_id, make_times, type):
+        """
+        插入记录
+        :param user_id: 用户ID
+        :param make_times: 制作次数
+        :param type: 类型(见定义中的类型值)
+        :return:
+        """
+        data = {
+            'user_id': user_id,
+            'make_times': make_times,
+            'type': type,
+        }
+        obj = cls.objects.create(**data)
+        return obj
+
+    @classmethod
+    def get_total_make_times(cls, user_id):
+        """
+        获取指定用户可制作次数
+        :param user_id:
+        :return: 可制作次数
+        """
+        records = cls.objects.filter(user_id=user_id)
+        return sum([record.make_times for record in records])
