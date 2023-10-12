@@ -3,6 +3,8 @@ import json
 import datetime
 import requests
 
+APP_ID = '11'
+SECRET = '22'
 
 class MiniProgramBase:
     APP_ID = None
