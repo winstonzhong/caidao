@@ -1,3 +1,5 @@
+import json
+
 import datetime
 import requests
 
@@ -50,8 +52,9 @@ class MiniProgramBase:
                 'content': content
             }
         }
+        print('data', data)
         url = f'https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token={self.access_token}'
-        resp_data = requests.post(url, json=data).json()
+        resp_data = requests.post(url, data=json.dumps(data, ensure_ascii=False).encode()).json()
         return resp_data['errcode'] == 0, resp_data
 
     def send_img(self, open_id, img_path):
@@ -122,13 +125,13 @@ class MiniProgram(MiniProgramBase):
 
 if __name__ == '__main__':
     open_id = 'o-THh5De90Rdk0YNg_FLvg_KR-6U'
-    content = 'text'
+    content = '你好'
     mp = MiniProgram()
     # mp.upload_img('/mnt/d/tmp.png')
     # mp.send_img(open_id, '/mnt/d/tmp.png')
-    # mp.send_msg(open_id, content)
+    mp.send_msg(open_id, content)
 
-    source_code = '123'
-    order_id = '234'
-    miniprogram_state = 'trail'
-    mp.send_complete_subscribe_message(open_id, source_code, order_id, miniprogram_state=miniprogram_state)
+    # source_code = '123'
+    # order_id = '234'
+    # miniprogram_state = 'trail'
+    # mp.send_complete_subscribe_message(open_id, source_code, order_id, miniprogram_state=miniprogram_state)
