@@ -1,14 +1,13 @@
 import datetime
 import requests
 
-APP_ID = '11'
-SECRET = '22'
-
 
 class MiniProgramBase:
+    APP_ID = None
+    SECRET = None
     def __init__(self):
-        self.app_id = APP_ID
-        self.secret = SECRET
+        self.app_id = self.APP_ID
+        self.secret = self.SECRET
         self.access_token = self.get_access_token()
 
     def get_access_token(self):
