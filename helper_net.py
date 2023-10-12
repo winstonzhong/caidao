@@ -107,7 +107,7 @@ def get_cookies(*args, **kw):
         return ';'.join([k + '=' + v for k, v in r.cookies.items()])
 
 
-@retry(3)
+@retry(5)
 def get_with_random_agent(*args, **kw):
     if kw.get('empty_not_allowed'):
         empty_not_allowed = True
