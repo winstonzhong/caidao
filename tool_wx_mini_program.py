@@ -24,7 +24,8 @@ class MiniProgramBase:
             "appid": self.app_id,
             "secret": self.secret
         }
-        return requests.post(url, json=data).json()['access_token']
+        j = requests.post(url, json=data).json()
+        return j['access_token']
 
     def upload_tmp_img(self, img_path):
         """
