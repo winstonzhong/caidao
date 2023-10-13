@@ -3,6 +3,7 @@ import json
 import datetime
 import requests
 
+
 APP_ID = '11'
 SECRET = '22'
 
@@ -77,6 +78,26 @@ class MiniProgramBase:
         resp_data = requests.post(url, json=data).json()
         return resp_data['errcode'] == 0, resp_data
 
+    def send_card_msessage(self, open_id, title, page_path, img_path):
+        """
+        发哦卡片消息
+        :param data:
+        :return:
+        """
+        media_id = self.upload_tmp_img(img_path)
+        url = f'https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token={self.access_token}'
+        data = {
+            'touser': open_id,
+            'msgtype': 'miniprogrampage',
+            'miniprogrampage': {
+                'thumb_media_id': media_id,
+                'title': title,
+                'pagepath': page_path
+            }
+        }
+        resp_data = requests.post(url, data=json.dumps(data, ensure_ascii=False).encode()).json()
+        return resp_data['errcode'] == 0, resp_data
+
     def send_subscribe_message(self, data):
         """
         发送订阅消息
@@ -84,10 +105,10 @@ class MiniProgramBase:
         :return: is success, response data
         """
         url = f'https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token={self.access_token}'
-        r = requests.post(url, json=data)
-        r = r.json()
+        # r = requests.post(url, json=data)
+        resp_data = requests.post(url, data=json.dumps(data, ensure_ascii=False).encode()).json()
         # print(r)
-        return r['errcode'] == 0, r
+        return resp_data['errcode'] == 0, resp_data
 
 
 class MiniProgram(MiniProgramBase):
@@ -126,11 +147,17 @@ class MiniProgram(MiniProgramBase):
 
 if __name__ == '__main__':
     open_id = 'o-THh5De90Rdk0YNg_FLvg_KR-6U'
+    # open_id = 'oXZGN6weh1jntM7JV-7_kpEhBk0Q'
     content = '你好'
+    img_path = '/mnt/d/tmp.png'
     mp = MiniProgram()
+
     # mp.upload_img('/mnt/d/tmp.png')
-    # mp.send_img(open_id, '/mnt/d/tmp.png')
-    mp.send_msg(open_id, content)
+    # mp.send_img(open_id, img_path)
+    # mp.send_msg(open_id, content)
+    title = '私人定制套餐'
+    page_path = 'pages/mp-weixin/pay'
+    mp.send_card_msessage(open_id, title, page_path, img_path)
 
     # source_code = '123'
     # order_id = '234'
