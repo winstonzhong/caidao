@@ -7,11 +7,12 @@ import requests
 APP_ID = '11'
 SECRET = '22'
 
-
 class MiniProgramBase:
+    APP_ID = None
+    SECRET = None
     def __init__(self):
-        self.app_id = APP_ID
-        self.secret = SECRET
+        self.app_id = self.APP_ID
+        self.secret = self.SECRET
         self.access_token = self.get_access_token()
 
     def get_access_token(self):
@@ -24,7 +25,8 @@ class MiniProgramBase:
             "appid": self.app_id,
             "secret": self.secret
         }
-        return requests.post(url, json=data).json()['access_token']
+        j = requests.post(url, json=data).json()
+        return j['access_token']
 
     def upload_tmp_img(self, img_path):
         """
@@ -54,7 +56,7 @@ class MiniProgramBase:
                 'content': content
             }
         }
-        print('data', data)
+        # print('data', data)
         url = f'https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token={self.access_token}'
         resp_data = requests.post(url, data=json.dumps(data, ensure_ascii=False).encode()).json()
         return resp_data['errcode'] == 0, resp_data
