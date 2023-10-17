@@ -5,10 +5,32 @@ Created on 2023年10月17日
 '''
 import os
 import re
+import threading
 from urllib.parse import urlparse
+
+from helper_net import get_with_random_agent
 
 
 ptn_ftype = re.compile('http.+/format/(\w+)')
+
+class ImageDownloadThread(threading.Thread):
+    def __init__(self, url, fpath):
+        threading.Thread.__init__(self)
+        self.url = url
+        self.fpath = fpath
+ 
+    def run(self):
+        with open(self.fpath, 'wb') as fp:
+            print('downloading:', self.url)
+            fp.write(get_with_random_agent(self.url).content)
+
+    @classmethod
+    def download(cls, url, fpath, wait=False):
+        t = cls(url, fpath)
+        t.start()
+        if wait:
+            t.join()
+
 
 def get_uuid_img_small_red_book(url):
     '''
@@ -41,6 +63,13 @@ def get_fpath_img_small_red_book(url, base='z:/tpl'):
         fpath += '.%s' % ftype
     return os.path.join(base, fpath[1:]).replace('\\', '/')
     
+def download_small_red_book(url, base=r'Z:\shenghuo\tpl', wait=False):
+    fpath = get_fpath_img_small_red_book(url, base)
+    if not os.path.lexists(fpath):
+        if not os.path.lexists(os.path.dirname(fpath)):
+            os.makedirs(os.path.dirname(fpath), exist_ok=True)
+        ImageDownloadThread.download(url, fpath, wait)
+
     
 if __name__ == '__main__':
     import doctest
