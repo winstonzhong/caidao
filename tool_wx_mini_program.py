@@ -1,6 +1,8 @@
+import datetime
+import io
 import json
 
-import datetime
+import cv2
 import requests
 
 
@@ -41,6 +43,14 @@ class MiniProgramBase:
         resp_data = requests.post(url, files=multipart_form_data).json()
         # print('resp_data', resp_data)
         return resp_data['media_id']
+    
+    def upload_tmp_img_cv2(self, img):
+        url = f'https://api.weixin.qq.com/cgi-bin/media/upload?access_token={self.access_token}&type=image'
+        _, buffer = cv2.imencode(".png", img)
+        multipart_form_data = {'media': ('test.png', io.BytesIO(buffer))}
+        resp_data = requests.post(url, files=multipart_form_data).json()
+        return resp_data['media_id']
+        
 
     def send_msg(self, open_id, content):
         """
@@ -61,14 +71,15 @@ class MiniProgramBase:
         resp_data = requests.post(url, data=json.dumps(data, ensure_ascii=False).encode()).json()
         return resp_data['errcode'] == 0, resp_data
 
-    def send_img(self, open_id, img_path):
+    def send_img(self, open_id, img_or_fpath):
         """
         发送图片至用户
         :param open_id:
         :param img_path:
         :return:
         """
-        media_id = self.upload_tmp_img(img_path)
+        # print(type(img_or_fpath), type(img_or_fpath)==str)
+        media_id = self.upload_tmp_img(img_or_fpath) if type(img_or_fpath) == str else self.upload_tmp_img_cv2(img_or_fpath)
         url = f'https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token={self.access_token}'
         data = {
             'touser': open_id,
