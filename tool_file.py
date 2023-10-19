@@ -6,11 +6,13 @@ Created on 2022年6月23日
 import glob
 import os
 
+import cv2
 import ffmpeg
 import pandas
 
-from tool_env import OS_WIN
 from helper_cmd import CmdProgress
+from helper_net import get_with_random_agent
+from tool_env import OS_WIN
 
 
 suffix_mv = ('mp4', 'mkv', 'rmvb')
@@ -74,3 +76,27 @@ def extract_sub_all():
         except:
             pass
         cp.update()
+
+def is_valid_img(fpath, safe=False):
+    if not fpath or not os.path.lexists(fpath):
+        return False
+
+    if os.path.getsize(fpath) <=0:
+        return False
+
+    if not safe:
+        return True
+    
+    try:
+        cv2.imread(fpath).shape
+        return True
+    except:
+        pass
+    return False
+
+
+def download_img(url, fpath, safe=False):
+    if not is_valid_img(fpath, safe):
+        print('downloading:', url)
+        with open(fpath, 'wb') as fp:
+            fp.write(get_with_random_agent(url).content)

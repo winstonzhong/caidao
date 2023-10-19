@@ -69,6 +69,7 @@ def download_small_red_book(url, base=r'Z:\shenghuo\tpl', wait=False):
         if not os.path.lexists(os.path.dirname(fpath)):
             os.makedirs(os.path.dirname(fpath), exist_ok=True)
         ImageDownloadThread.download(url, fpath, wait)
+    return fpath
 
     
 if __name__ == '__main__':
