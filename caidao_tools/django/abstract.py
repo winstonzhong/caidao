@@ -45,6 +45,16 @@ class BaseModel(models.Model):
     @retry(10, True)
     def save_safe(self):
         self.save()
+
+    @classmethod
+    def get_all(cls):
+        start = 0
+        while 1:
+            o = cls.objects.filter(id__gt=start).first()
+            if o is None:
+                break
+            yield o
+            start = o.id
     
     
     class Meta:
