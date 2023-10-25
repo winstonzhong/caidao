@@ -11,18 +11,41 @@ from helper_net import retry
 
 
 NEW_RECORD = 0
-DEAD_RECORD = EMPTY_RECORD = -1
-COMPUTEED_RECORD = DOWNLOADED_RECORD = 1
+DOWNLOADED_RECORD = 1
 PRODUCED_RECORD = 2
 UPLOADED_RECORD = 3
 ROOT_RECORD = 4
+COMPUTEED_RECORD = 5
+TRANSLATED_RECORD = 6
+EMPTY_RECORD = 400
+DEAD_RECORD =  401
+ABNORMAL_RECORD =  402
 
-STATUS = ((NEW_RECORD, "新"),
-          (EMPTY_RECORD, "空"),
+
+STATUS = ((NEW_RECORD, "新记录"),
           (DOWNLOADED_RECORD, "已下载"),
           (PRODUCED_RECORD, "已制作"),
           (UPLOADED_RECORD, "已上传"),
+          (ROOT_RECORD, "根记录"),
+          (COMPUTEED_RECORD, "已计算"),
+          (TRANSLATED_RECORD, "已翻译"),
+          (EMPTY_RECORD, "空记录"),
+          (DEAD_RECORD, "坏记录"),
+          (ABNORMAL_RECORD, "异常记录"),
           )
+
+class FullTextField(models.TextField):
+    def __init__(self, *args, **kwargs):
+        kwargs['null'] = True
+        kwargs['blank'] = True
+        super().__init__(*args, **kwargs)
+
+    def db_type(self, connection):
+        return 'fts'
+
+    def get_prep_value(self, value):
+        return value
+
 
 class Base(object):
     @classmethod
