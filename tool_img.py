@@ -10,8 +10,18 @@ import cv2
 import numpy
 
 
-def img_to_base64url(img):
-    if img:
+def to_buffer(img):
+    if img is not None:
+        is_success, buffer = cv2.imencode(".png", img)
+        return buffer if is_success else None
+
+def cv2_to_base64url(img):
+    if img is not None:
+        content = base64.b64encode(to_buffer(img))
+        return 'data:image/png;base64,' + content.decode('utf8')
+
+def pil_to_base64url(img):
+    if img is not None:
         buf = io.BytesIO()
         img.save(buf, format='PNG')
         buf.seek(0)
