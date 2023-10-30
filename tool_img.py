@@ -30,7 +30,7 @@ def pil_to_base64url(img):
 
 
 def show(img):
-    cv2.imshow('image', img)
+    cv2.imshow('image', img.astype(numpy.uint8))
     cv2.waitKey()
     cv2.destroyAllWindows()
 
@@ -44,13 +44,19 @@ def make_mask_by_low(img, rl, gl, bl):
         (img[...,0] >= bl) * (img[...,1] >= gl) * (img[...,2] >= rl) 
         )
 
+def make_mask_by_high(img, rl, gl, bl):
+    return (
+        (img[...,0] <= bl) * (img[...,1] <= gl) * (img[...,2] <= rl) 
+        )
+
+
 def make_mask_by_equal(img, r, g, b):
     return (
         (img[...,0] == b) * (img[...,1] == g) * (img[...,2] == r) 
         ) 
 
 def mono_to_rgb(mask):
-    return numpy.stack((mask,)*3, axis=-1)
+    return numpy.stack((mask.astype(numpy.uint8),)*3, axis=-1)
 
 def do_remove_background(img, mask):
     mask = mask.astype(numpy.uint8)*255
@@ -103,15 +109,21 @@ def put_water_mark(img, wm):
 
 def get_canvas(width, height):
     return numpy.zeros((height, width, 3), dtype=numpy.uint8)    
+
+def get_dsize(width, height, w, h):
+    # r = min(h / height, w / width)
+    r = min(height/h, width/w)
+    return int(w * r), int(h * r)
     
 def resize_image(img, width, height):
     canvas = get_canvas(width, height)
     h, w = img.shape[:2]
-    if h > w:
-        dsize = (int((height/h) * w), height)
-    else:
-        dsize = (width, int((width/w) * h))
+    # if h > w:
+    #     dsize = (int((height/h) * w), height)
+    # else:
+    #     dsize = (width, int((width/w) * h))
     # print(dsize)
+    dsize = get_dsize(width, height, w, h)
     img = cv2.resize(img,dsize=dsize,fx=None,fy=None,interpolation=cv2.INTER_LINEAR)
     # return img
     # max_len = max(img.shape[:2])
@@ -129,5 +141,24 @@ def resize_image(img, width, height):
     canvas[top:bottom,left:right,...] = img
     return canvas
 
+def get_template_points(img, template, threshold = 0.8):
+    res = cv2.matchTemplate(img, template, cv2.TM_CCOEFF_NORMED)
+    loc = numpy.where(res >= threshold)
+    points = list(zip(*loc[::-1][-2:]))
+    return points
+
+def has_tempate(img, template, threshold = 0.8):
+    return len(get_template_points(img, template, threshold)) > 0
+
+def find_template(img, template, threshold = 0.8):
+    img = img.copy()
+    w, h = template.shape[::-1][-2:]
+     
+    points = get_template_points(img, template, threshold)
     
+    for pt in points:
+        cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
+        
+    return img
+
     

@@ -13,9 +13,29 @@ import pandas
 from helper_cmd import CmdProgress
 from helper_net import get_with_random_agent
 from tool_env import OS_WIN
+from pathlib import Path
+import shutil
 
 
 suffix_mv = ('mp4', 'mkv', 'rmvb')
+
+def has_file(fpath):
+    return os.path.lexists(str(fpath)) and os.path.getsize(fpath) > 0
+
+def copy_dir(fdir_src, fdir_dst):
+    src = Path(fdir_src)
+    dst = Path(fdir_dst)
+    i = 1
+    for x in src.rglob('*.*'):
+        if not os.path.isdir(str(x)):
+            p = dst / x.relative_to(src)
+            bp = has_file(p)
+            print(i, x, bp)
+            if not bp:
+                if not os.path.lexists(p.parent):
+                    os.makedirs(p.parent)
+                shutil.copy(x, p)
+        i += 1
 
 
 def get_all_files(fpath, suffixs):
