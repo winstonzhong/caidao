@@ -4,7 +4,10 @@ Created on 2022年6月23日
 @author: winston
 '''
 import glob
+import hashlib
 import os
+from pathlib import Path
+import shutil
 
 import cv2
 import ffmpeg
@@ -13,11 +16,14 @@ import pandas
 from helper_cmd import CmdProgress
 from helper_net import get_with_random_agent
 from tool_env import OS_WIN
-from pathlib import Path
-import shutil
 
 
 suffix_mv = ('mp4', 'mkv', 'rmvb')
+
+
+def get_dir_key(fname):
+    return hashlib.sha256(fname.encode()).hexdigest()[:4]
+
 
 def has_file(fpath):
     return os.path.lexists(str(fpath)) and os.path.getsize(fpath) > 0
@@ -36,6 +42,23 @@ def copy_dir(fdir_src, fdir_dst):
                     os.makedirs(p.parent)
                 shutil.copy(x, p)
         i += 1
+
+def copy_dir_hashed(fdir_src, fdir_dst):
+    src = Path(fdir_src)
+    dst = Path(fdir_dst)
+    i = 1
+    for x in src.rglob('*.*'):
+        if not os.path.isdir(str(x)):
+            p = dst / x.relative_to(src)
+            p = p.parent / get_dir_key(p.name) / p.name 
+            bp = has_file(p)
+            print(i, x, bp)
+            if not bp:
+                if not os.path.lexists(p.parent):
+                    os.makedirs(p.parent)
+                shutil.copy(x, p)
+        i += 1
+
 
 
 def get_all_files(fpath, suffixs):
@@ -120,3 +143,6 @@ def download_img(url, fpath, safe=False):
         print('downloading:', url)
         with open(fpath, 'wb') as fp:
             fp.write(get_with_random_agent(url).content)
+
+
+
