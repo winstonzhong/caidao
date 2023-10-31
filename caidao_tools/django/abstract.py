@@ -20,6 +20,7 @@ TRANSLATED_RECORD = 6
 EMPTY_RECORD = 400
 DEAD_RECORD =  401
 ABNORMAL_RECORD =  402
+FAILED_TRANS_RECORD = 403
 
 
 STATUS = ((NEW_RECORD, "新记录"),
@@ -32,6 +33,7 @@ STATUS = ((NEW_RECORD, "新记录"),
           (EMPTY_RECORD, "空记录"),
           (DEAD_RECORD, "坏记录"),
           (ABNORMAL_RECORD, "异常记录"),
+          (FAILED_TRANS_RECORD, "翻译失败记录"),          
           )
 
 class FullTextField(models.TextField):
