@@ -6,8 +6,10 @@ Created on 2023 Nov 4
 
 import json
 import logging
+import subprocess
 import time
 
+from pyquery.pyquery import PyQuery
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.options import Options
@@ -16,154 +18,49 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.remote_connection import LOGGER
 from selenium.webdriver.support.wait import WebDriverWait
-from pyquery.pyquery import PyQuery
 
 
 LOGGER.setLevel(logging.CRITICAL)
 
-r"""
-"chrome.exe" --remote-debugging-port=9222 --user-data-dir="d:\cache\google-chrome\default"
-"""
+# r"""
+# "chrome.exe" --remote-debugging-port=9222 --user-data-dir="d:\cache\google-chrome\default"
+# """
+# USER_DATA_DIR = r"d:\cache\google-chrome\default"
 
+# DRIVER_PATH = r'D:\迅雷下载\chromedriver-win64\chromedriver-win64\chromedriver.exe'
 
-USER_DATA_DIR = r"d:\cache\google-chrome\default"
-
-DRIVER_PATH = r'D:\迅雷下载\chromedriver-win64\chromedriver-win64\chromedriver.exe'
-
-def get_driver_service(executable_path, headless=False, host='127.0.0.1', port=9222):
-    chrome_options = Options()
-
-    if headless:
-        chrome_options.add_argument('--headless')
-
-    chrome_options.add_argument("--log-level=3");
-
-    # chrome_options.add_argument(
-    #     "user-data-dir=%s" % USER_DATA_DIR)
-
-    # chrome_options.add_argument("--incognito")  # 无痕模式
-    caps = {
-        # 'browserName': 'chrome',
-        # 'version': '',
-        # 'platform': 'ANY',
-        'goog:loggingPrefs': {'performance': 'ALL'},  # 记录性能日志
-    }
-
-    chrome_options.add_argument('no-sandbox')
-    chrome_options.add_argument('disable-dev-shm-usage')
-    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-    chrome_options.add_argument("--disable-extensions")
-    chrome_options.add_argument("--disable-infobars")
-    chrome_options.add_argument("--disable-popup-blocking")
-    chrome_options.add_argument("--disable-default-apps")
-    chrome_options.add_argument("--disable-plugins-discovery")
-    # chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
-    chrome_options.add_argument('----ignore-certificate-errors-spki-list')
-
-    chrome_options.add_argument('--ignore-ssl-errors')
-    # chrome_options.add_experimental_option("detach", True)
-    chrome_options.add_argument("--disable-extensions")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--disable-features=VizDisplayCompositor")
-    # 设置 set_capability  desired_capabil 在4版本中取消了 替代的是 set_capability
-    # option.set_capability("goog:loggingPrefs", {'performance': 'ALL'})
-
-    # driver = Chrome(desired_capabilities=caps,
-    #                 options=chrome_options, executable_path=DRIVER_PATH)
-
-    # 不显示图片
-    # prefs = {
-    #     'profile.default_content_setting_values': {
-    #         'images': 2,
-    #     }
-    # }
-    # chrome_options.add_experimental_option('prefs', prefs)
-
-
-    chrome_options.add_experimental_option("debuggerAddress", f"{host}:{port}")
-    driver = webdriver.Chrome(options=chrome_options, desired_capabilities=caps)
-    driver.implicitly_wait(30)
-    return driver
-
-def get_driver_new_service(headless=False, port=9222):
-    option = webdriver.ChromeOptions()
-    if headless:
-        option.add_argument('headless')
-    option.add_argument("--log-level=3");
-    option.add_argument("user-data-dir=%s" % USER_DATA_DIR)
-    option.add_argument('no-sandbox')
-    option.add_argument('disable-dev-shm-usage')
-    option.add_argument("--disable-blink-features=AutomationControlled")
-    option.add_argument("--disable-extensions")
-    option.add_argument("--disable-infobars")
-    option.add_argument("--disable-popup-blocking")
-    option.add_argument("--disable-default-apps")
-    option.add_argument("--disable-plugins-discovery")
-    option.add_experimental_option('excludeSwitches', ['enable-automation'])
-    option.add_argument('----ignore-certificate-errors-spki-list')
-
-    option.add_argument('--ignore-ssl-errors')
-    option.add_experimental_option("detach", True)
-    option.add_argument("--disable-extensions")
-    option.add_argument("--disable-gpu")
-    option.add_argument("--disable-features=VizDisplayCompositor")
-    # 设置 set_capability  desired_capabil 在4版本中取消了 替代的是 set_capability
-    option.set_capability("goog:loggingPrefs", {'performance': 'ALL'})
-    # caps = DesiredCapabilities.CHROME
-    # caps['goog:loggingPrefs'] = {'performance': 'ALL'}
-
-    service = Service(port=port)
-    driver = webdriver.Chrome(options=option, service=service)
-    driver.implicitly_wait(5)
-    return driver
-
-def get_driver_new(headless=False):
-    option = webdriver.ChromeOptions()
-    if headless:
-        option.add_argument('headless')
-    option.add_argument("--log-level=3");
-    option.add_argument("user-data-dir=%s" % USER_DATA_DIR)
-    option.add_argument('no-sandbox')
-    option.add_argument('disable-dev-shm-usage')
-    option.add_argument("--disable-blink-features=AutomationControlled")
-    option.add_argument("--disable-extensions")
-    option.add_argument("--disable-infobars")
-    option.add_argument("--disable-popup-blocking")
-    option.add_argument("--disable-default-apps")
-    option.add_argument("--disable-plugins-discovery")
-    option.add_experimental_option('excludeSwitches', ['enable-automation'])
-    option.add_argument('----ignore-certificate-errors-spki-list')
-
-    option.add_argument('--ignore-ssl-errors')
-    option.add_experimental_option("detach", True)
-    option.add_argument("--disable-extensions")
-    option.add_argument("--disable-gpu")
-    option.add_argument("--disable-features=VizDisplayCompositor")
-    # 设置 set_capability  desired_capabil 在4版本中取消了 替代的是 set_capability
-    option.set_capability("goog:loggingPrefs", {'performance': 'ALL'})
-    # caps = DesiredCapabilities.CHROME
-    # caps['goog:loggingPrefs'] = {'performance': 'ALL'}
-
-    service = Service(executable_path=DRIVER_PATH)
-    driver = webdriver.Chrome(options=option, service=service)
-    # 设置自动下载文件的设置
-    # driver = webdriver.Chrome(options=option)
-    # driver.get('https://www.baidu.com')
-    driver.implicitly_wait(5)
-    return driver
 
 class NavigateFailedError(Exception):
     pass
 
 class BaseDriver(object):
-    def __init__(self, headless=False, port=9222):
+    def __init__(self, 
+                 headless=False, 
+                 port=9222,
+                 user_dir=r"d:\cache\google-chrome\default",
+                 ):
+        self.user_dir = user_dir
         self.headless = headless
         self.port = port
         self.implicitly_wait = 5
-        self.driver = self.get_chrome_service_driver()
-        self.prepare()
         self.logs = None
         self.response = {}
+    
+    def start(self):
+        self.open_browser()
+        time.sleep(3)
+        self.driver = self.get_driver_remote()
+        self.prepare()
+        
+    
+    @property
+    def browser_start_cmd(self):
+        return '''chrome.exe --enable-logging --remote-debugging-port={self.port} --user-data-dir="{self.user_dir}"'''.format(self=self)
+    
+    
+    def open_browser(self):
+        self.browser = subprocess.Popen(self.browser_start_cmd)
+
         
     
     def prepare(self):
@@ -216,39 +113,47 @@ class BaseDriver(object):
             print('error:', e)
         return False
     
-    def get_chrome_service_driver(self):
-        option = webdriver.ChromeOptions()
-        if self.headless:
-            option.add_argument('headless')
-        option.add_argument("--log-level=3");
-        option.add_argument("user-data-dir=%s" % USER_DATA_DIR)
-        option.add_argument('no-sandbox')
-        option.add_argument('disable-dev-shm-usage')
-        option.add_argument("--disable-blink-features=AutomationControlled")
-        option.add_argument("--disable-extensions")
-        option.add_argument("--disable-infobars")
-        option.add_argument("--disable-popup-blocking")
-        option.add_argument("--disable-default-apps")
-        option.add_argument("--disable-plugins-discovery")
-        option.add_experimental_option('excludeSwitches', ['enable-automation'])
-        option.add_argument('----ignore-certificate-errors-spki-list')
+    def get_driver_remote(self):
+        options = Options()
+        options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+        options.set_capability("goog:loggingPrefs", {'performance': 'ALL'})
+        return webdriver.Chrome(options=options)
+        
+        
     
-        option.add_argument('--ignore-ssl-errors')
-        option.add_experimental_option("detach", True)
-        option.add_argument("--disable-extensions")
-        option.add_argument("--disable-gpu")
-        option.add_argument("--disable-features=VizDisplayCompositor")
-        option.set_capability("goog:loggingPrefs", {'performance': 'ALL'})
+    # def get_chrome_service_driver(self):
+    #     option = webdriver.ChromeOptions()
+    #     if self.headless:
+    #         option.add_argument('headless')
+    #     option.add_argument("--log-level=3");
+    #     option.add_argument("user-data-dir=%s" % USER_DATA_DIR)
+    #     option.add_argument('no-sandbox')
+    #     option.add_argument('disable-dev-shm-usage')
+    #     option.add_argument("--disable-blink-features=AutomationControlled")
+    #     option.add_argument("--disable-extensions")
+    #     option.add_argument("--disable-infobars")
+    #     option.add_argument("--disable-popup-blocking")
+    #     option.add_argument("--disable-default-apps")
+    #     option.add_argument("--disable-plugins-discovery")
+    #     option.add_experimental_option('excludeSwitches', ['enable-automation'])
+    #     option.add_argument('----ignore-certificate-errors-spki-list')
+    #
+    #     option.add_argument('--ignore-ssl-errors')
+    #     option.add_experimental_option("detach", True)
+    #     option.add_argument("--disable-extensions")
+    #     option.add_argument("--disable-gpu")
+    #     option.add_argument("--disable-features=VizDisplayCompositor")
+    #     option.set_capability("goog:loggingPrefs", {'performance': 'ALL'})
+    #
+    #     service = Service(port=self.port)
+    #     driver = webdriver.Chrome(options=option, service=service)
+    #     # driver.implicitly_wait(self.implicitly_wait)
+    #     return driver
     
-        service = Service(port=self.port)
-        driver = webdriver.Chrome(options=option, service=service)
-        # driver.implicitly_wait(self.implicitly_wait)
-        return driver
-    
-    def get_driver(self):
-        if self.driver is None:
-            self.driver = self.get_chrome_service_driver()
-        return self.driver
+    # def get_driver(self):
+    #     if self.driver is None:
+    #         self.driver = self.get_chrome_service_driver()
+    #     return self.driver
 
     def find(self, by, selector, method, wait_seconds=10):
         return WebDriverWait(self.driver, 
