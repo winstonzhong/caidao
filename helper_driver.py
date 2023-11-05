@@ -4,6 +4,7 @@ Created on 2023 Nov 4
 @author: Winston
 '''
 
+import json
 import logging
 import time
 
@@ -15,6 +16,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.remote_connection import LOGGER
 from selenium.webdriver.support.wait import WebDriverWait
+from pyquery.pyquery import PyQuery
 
 
 LOGGER.setLevel(logging.CRITICAL)
@@ -150,6 +152,8 @@ def get_driver_new(headless=False):
     driver.implicitly_wait(5)
     return driver
 
+class NavigateFailedError(Exception):
+    pass
 
 class BaseDriver(object):
     def __init__(self, headless=False, port=9222):
@@ -158,6 +162,9 @@ class BaseDriver(object):
         self.implicitly_wait = 5
         self.driver = self.get_chrome_service_driver()
         self.prepare()
+        self.logs = None
+        self.response = {}
+        
     
     def prepare(self):
         self.driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
@@ -167,9 +174,47 @@ class BaseDriver(object):
                            })
                          """
         })
+
+    def get_request_pair_all(self, logs):
+        for i in range(len(logs)-1, 0, -1):
+            log = logs[i]
+            logjson = json.loads(log["message"])["message"]
+            if logjson['method'] == 'Network.responseReceived':
+                params = logjson['params']
+                requestUrl = params['response']['url']
+                requestId = params['requestId']
+                yield requestUrl, requestId
+    
+    def do_get_response_body(self, logs, url):
+        for requestUrl, requestId in self.get_request_pair_all(logs):
+            if requestUrl.startswith(url):
+                return self.driver.execute_cdp_cmd('Network.getResponseBody', {'requestId': requestId})
+        return {}
+    
+    def wait_request_untill_finished_or_timeout(self, url, seconds_wait=10):
+        old = time.time()
+        while time.time() - old <= seconds_wait:
+            self.logs = self.driver.get_log("performance")
+            self.response = self.do_get_response_body(self.logs, url)
+            if self.response is not None:
+                return True
+            time.sleep(1)
+        return False
+    
+    @property
+    def query(self):
+        return PyQuery(self.response.get('body','')) 
         
-    def get(self, url):
+    def get(self, url, seconds_wait=30):
         self.driver.get(url)
+        return self.wait_request_untill_finished_or_timeout(url, seconds_wait)
+
+    def get_safe(self, url):
+        try:
+            self.get(url)
+        except Exception as e:
+            print('error:', e)
+        return False
     
     def get_chrome_service_driver(self):
         option = webdriver.ChromeOptions()
@@ -237,6 +282,7 @@ class BaseDriver(object):
 
     def quit(self):
         self.driver.quit()
+
 
 class SrbDriver(BaseDriver):
     def __init__(self, uid='65313910000000000200c253', headless=False, port=9222):
