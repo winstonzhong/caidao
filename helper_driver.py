@@ -5,6 +5,7 @@ Created on 2023 Nov 4
 '''
 
 import logging
+import time
 
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
@@ -156,7 +157,19 @@ class BaseDriver(object):
         self.port = port
         self.implicitly_wait = 5
         self.driver = self.get_chrome_service_driver()
+        self.prepare()
     
+    def prepare(self):
+        self.driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            "source": """
+                           Object.defineProperty(navigator, 'webdriver', {
+                             get: () => undefined
+                           })
+                         """
+        })
+        
+    def get(self, url):
+        self.driver.get(url)
     
     def get_chrome_service_driver(self):
         option = webdriver.ChromeOptions()
@@ -184,7 +197,7 @@ class BaseDriver(object):
     
         service = Service(port=self.port)
         driver = webdriver.Chrome(options=option, service=service)
-        driver.implicitly_wait(self.implicitly_wait)
+        # driver.implicitly_wait(self.implicitly_wait)
         return driver
     
     def get_driver(self):
@@ -192,8 +205,26 @@ class BaseDriver(object):
             self.driver = self.get_chrome_service_driver()
         return self.driver
 
+    def find(self, by, selector, method, wait_seconds=10):
+        return WebDriverWait(self.driver, 
+                             wait_seconds
+                             ).until(lambda x: getattr(x, method)(by, selector))
+
+
     def find_element_css(self, selector, wait_seconds=10):
-        return WebDriverWait(self.driver, wait_seconds).until(lambda x: x.find_element(By.CSS_SELECTOR, selector))
+        # return WebDriverWait(self.driver, wait_seconds).until(lambda x: x.find_element(By.CSS_SELECTOR, selector))
+        return self.find(By.CSS_SELECTOR, selector, method='find_element', wait_seconds=wait_seconds)
+
+    def find_element_xpath(self, selector, wait_seconds=10):
+        return self.find(By.XPATH, selector, method='find_element', wait_seconds=wait_seconds)
+
+
+    def find_elements_css(self, selector, wait_seconds=10):
+        return self.find(By.CSS_SELECTOR, selector, method='find_elements', wait_seconds=wait_seconds)
+
+    def find_elements_xpath(self, selector, wait_seconds=10):
+        return self.find(By.XPATH, selector, method='find_elements', wait_seconds=wait_seconds)
+
 
     def scroll_down(self, scroll_px=500):
         print('scroll down')
@@ -204,20 +235,53 @@ class BaseDriver(object):
         ActionChains(self.driver).move_to_element(e).perform()
         return e
 
-        
     def quit(self):
         self.driver.quit()
 
 class SrbDriver(BaseDriver):
+    def __init__(self, uid='65313910000000000200c253', headless=False, port=9222):
+        BaseDriver.__init__(self, headless, port)
+        self.uid = uid
+        
     def find_reply_root_user(self, user_id):
         try:
             s = 'div.list-container div.avatar a[href="/user/profile/%s"]' % user_id
-            return self.find_element_css(s,wait_seconds=3)
+            e = self.find_element_css(s,wait_seconds=1)
+            return e.find_element(By.XPATH, './/..//..')
         except TimeoutException:
             pass
     
+    def get_reply_container_root(self, e_reply_root_user):
+        return e_reply_root_user.find_element(By.XPATH, './/..//..')
+    
+    
+    def click_expand_if_has_more_replies(self, e_reply_container_root):
+        try:
+            e = e_reply_container_root.find_element(By.CSS_SELECTOR, 'div.reply-container > div:nth-last-child(1)')
+            if e.get_attribute('class') == 'show-more':
+                e.click()
+                time.sleep(1)
+                return True
+        except:
+            pass
+        return False
+        
+    def has_reply_of_user(self, e_reply_container_root, uid):
+        l = list(filter(lambda x:x.get_attribute('href').endswith(uid),e_reply_container_root.find_elements(By.CSS_SELECTOR, 'div.reply-container div.avatar a')))
+        return len(l) > 0
+    
+    def query_reply_of_user_and_expand_more_untill_end(self, e_reply_root_user, uid):
+        r = self.get_reply_container_root(e_reply_root_user)
+        while 1:
+            if self.has_reply_of_user(r, uid):
+                return True
+            if not self.click_expand_if_has_more_replies(r):
+                break
+        return False
+    
     def click_reply_icon(self, e):
-        e = e.find_element(By.XPATH, './/..//..').find_element(By.CSS_SELECTOR, 'div.reply.icon-container')
+        # e = e.find_element(By.XPATH, './/..//..').find_element(By.CSS_SELECTOR, 'div.reply.icon-container')
+        e = e.find_element(By.CSS_SELECTOR, 'div.reply.icon-container')
         e.click()
         
     def input_comments(self, txt):
@@ -232,7 +296,7 @@ class SrbDriver(BaseDriver):
         
     def is_last_comments(self):
         try:
-            self.find_element_css('div.end-container', wait_seconds=3)
+            self.find_element_css('div.end-container', wait_seconds=1)
             return True
         except TimeoutException:
             pass
@@ -241,10 +305,13 @@ class SrbDriver(BaseDriver):
         while 1:
             e = self.find_reply_root_user(user_id)
             if e is not None:
-                self.click_reply_icon(e)
-                self.input_comments(txt)
-                self.submit_comments()
-                return True
+                if not self.query_reply_of_user_and_expand_more_untill_end(e, self.uid):
+                    self.click_reply_icon(e)
+                    self.input_comments(txt)
+                    self.submit_comments()
+                    return True
+                print('already replied!')
+                return False
             if self.is_last_comments():
                 break
             self.move_to_last_comments()
