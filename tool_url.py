@@ -41,6 +41,16 @@ def get_uuid_img_small_red_book(url):
     '''
     return urlparse(url).path
 
+def get_img_file_id_small_red_book(url):
+    '''
+    >>> get_img_file_id_small_red_book('http://ci.xiaohongshu.com/110/0/01e4b0260b46d6fe001000000001895014a4d5_0.jpg?imageView2/2/w/1080/format/jpg')
+    '01e4b0260b46d6fe001000000001895014a4d5_0.jpg'
+    >>> get_img_file_id_small_red_book('http://ci.xiaohongshu.com/spectrum/1000g0k02b3ia1osh20005n4gogf4hna990kn1rg?imageView2/2/w/1080/format/jpg')
+    '1000g0k02b3ia1osh20005n4gogf4hna990kn1rg'
+    '''
+    return os.path.basename(urlparse(url).path)
+
+
 def get_ftype_img_small_red_book(url):
     '''
     >>> get_ftype_img_small_red_book('http://ci.xiaohongshu.com/110/0/01e4b0260b46d6fe001000000001895014a4d5_0.jpg?imageView2/2/w/1080/format/jpg')
