@@ -10,6 +10,11 @@ import cv2
 import numpy
 
 
+def bin2img(b):
+    if b is not None:
+        img = numpy.frombuffer(b, numpy.uint8)
+        return cv2.imdecode(img, cv2.IMREAD_ANYCOLOR)
+
 def to_buffer(img):
     if img is not None:
         is_success, buffer = cv2.imencode(".png", img)
@@ -158,7 +163,7 @@ def find_template(img, template, threshold = 0.8):
     
     for pt in points:
         cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
-        
+
     return img
 
     
