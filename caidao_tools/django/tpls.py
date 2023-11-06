@@ -83,4 +83,22 @@ class AbstractTemplateModel(StatusModel):
             self.status = ABNORMAL_RECORD
             self.save_safe()
             return {}
+    
+    @property
+    def prompt(self):
+        return self.json.get('meta').get('prompt')
+    
+    @property
+    def negativePrompt(self):
+        return self.json.get('meta').get('negativePrompt')
+    
+    
+    @property
+    def names_model(self):
+        for x in self.json.get('meta').get('resources'):
+            yield x.get('name')
+        
+    
+    
+    
 

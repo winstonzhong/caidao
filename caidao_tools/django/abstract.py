@@ -68,6 +68,7 @@ class BaseModel(models.Model):
     @retry(10, True)
     def save_safe(self):
         self.save()
+        return self
 
     @classmethod
     def get_all(cls):

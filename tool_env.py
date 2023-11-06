@@ -77,6 +77,8 @@ def is_special(x):
     False
     >>> is_special('：')
     True
+    >>> is_special(chr(128076))
+    True
     '''
     if is_chinese(x):
         return False
@@ -207,6 +209,16 @@ def split_by_not_chinese(line):
     []
     '''
     return list(filter(lambda x:x, ptn_not_chinese.split(line))) if line else []
+
+def simple_encode(line, v=122):
+    '''
+    >>> simple_encode(simple_encode('h123')) == 'h123'
+    True
+    >>> simple_encode(simple_encode('http://www.baidu.com:8090/')) == 'http://www.baidu.com:8090/'
+    True
+    '''
+    l = list(line)
+    return ''.join(map(lambda x:chr(ord(x) ^ v), l))
 
 if __name__ == '__main__':
     import doctest
