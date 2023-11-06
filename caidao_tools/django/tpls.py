@@ -12,7 +12,7 @@ from django.utils.functional import cached_property
 from caidao_tools.django.abstract import StatusModel, FullTextField, BaseModel,\
     ABNORMAL_RECORD
 from tool_gzip import gzip_decompress
-from tool_file import get_dir_key
+from tool_file import get_dir_key, has_file
 
 
 class AbstractWord(BaseModel):
@@ -57,6 +57,11 @@ class AbstractTemplateModel(StatusModel):
     @cached_property
     def fpath_img(self):
         return os.path.join(self.CACHE_DIR, self.dir_middle, self.fname)
+
+
+    def has_image(self):
+        return has_file(self.fpath_img)
+
 
     @cached_property
     def uuid(self):

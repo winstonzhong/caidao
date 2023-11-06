@@ -10,7 +10,7 @@ from pathlib import Path
 import shutil
 
 import cv2
-import ffmpeg
+
 import pandas
 
 from helper_cmd import CmdProgress
@@ -144,6 +144,7 @@ def get_all_srt():
 
 
 def extract_sub(fpath):
+    import ffmpeg
     stream = ffmpeg.input(fpath)
     fpath = fpath.rsplit('.', maxsplit=1)[0] + '.srt'
     stream = ffmpeg.output(stream, fpath)
