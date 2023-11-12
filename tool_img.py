@@ -9,6 +9,12 @@ import io
 import cv2
 import numpy
 
+from tool_rect import Rect
+
+
+def pil2cv2(img):
+    return cv2.cvtColor(numpy.asarray(img),cv2.COLOR_RGB2BGR)
+
 
 def to_buffer(img):
     if img is not None:
@@ -57,6 +63,9 @@ def make_mask_by_equal(img, r, g, b):
 
 def mono_to_rgb(mask):
     return numpy.stack((mask.astype(numpy.uint8),)*3, axis=-1)
+
+def stack_alpha(img, mask):
+    return numpy.dstack((img, mask)).astype(numpy.uint8)
 
 def do_remove_background(img, mask):
     mask = mask.astype(numpy.uint8)*255
@@ -314,5 +323,32 @@ def make_4_plus_qrcode(img_qrcode, imgs_4):
     return canvas
          
 
+def cut_core(mask, axis, v, vtype=0):
+    a = mask.sum(axis=axis)
+    if vtype == 1:
+        t = numpy.where(a != v)[0]
+    else:
+        t = numpy.where(a == v)[0]
 
-            
+    start, end = None, None
+    
+    if t.shape[0] > 1:
+        start, end = t[0], t[-1]
+        if axis == 1:
+            mask = mask[start:end+1,...]
+        else:
+            mask = mask[..., start:end+1]
+    
+    return mask, start, end
+
+def cut_empty_margin(mask_invert):
+    mask_invert = cut_core(mask_invert, axis=1, v=0, vtype=1)[0]
+    return cut_core(mask_invert, axis=0, v=0, vtype=1)[0]
+
+
+def get_exteral_rect(mask):
+    mask, top, bottom = cut_core(mask, axis=1, v=0, vtype=1)
+    _, left, right = cut_core(mask, axis=0, v=0, vtype=1)
+    return Rect(left, right, top, bottom)
+    
+                
