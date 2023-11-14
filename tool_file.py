@@ -17,7 +17,7 @@ from helper_cmd import CmdProgress
 from helper_net import get_with_random_agent
 from tool_env import OS_WIN, simple_encode
 
-
+ROOT_URL = 'https://btmy.j1.sale:8090/'
 ROOT_DIR = Path(r'v:\static')
 CSITE_DIR = Path(r'v:\static\media')
 TPL_DIR = Path(r'v:\static\media\tpl')
@@ -27,10 +27,13 @@ suffix_mv = ('mp4', 'mkv', 'rmvb')
 
 HEAD = simple_encode('\x12\x0e\x0e\n\t@UU\x18\x0e\x17\x03T\x10KT\t\x1b\x16\x1f@BJCJU')
 
+def get_fpath_from_url(url):
+    assert url.startswith(ROOT_URL)
+    return str(ROOT_DIR / url.replace(ROOT_URL, ''))
+
 def get_url(fpath):
     p = Path(fpath).relative_to(ROOT_DIR)
     return os.path.join(HEAD, p).replace('\\','/')
-
 
 def get_src_path(fpath):
     return Path(fpath).relative_to(ROOT_DIR)
