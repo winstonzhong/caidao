@@ -11,9 +11,9 @@ import time
 
 from pyquery.pyquery import PyQuery
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.service import Service, DEFAULT_EXECUTEABLE_PATH
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.remote_connection import LOGGER
@@ -37,9 +37,11 @@ class BaseDriver(object):
     def __init__(self, 
                  headless=False, 
                  port=9222,
-                 user_dir=r"d:\cache\google-chrome\default",
+                 user_dir=r"c:\cache\google-chrome\default",
+                 driver_path=None,
                  ):
         self.user_dir = user_dir
+        self.driver_path = driver_path or DEFAULT_EXECUTEABLE_PATH
         self.headless = headless
         self.port = port
         self.implicitly_wait = 5
@@ -59,6 +61,7 @@ class BaseDriver(object):
     
     
     def open_browser(self):
+        print('browser_start_cmd', self.browser_start_cmd)
         self.browser = subprocess.Popen(self.browser_start_cmd)
 
         
@@ -115,9 +118,12 @@ class BaseDriver(object):
     
     def get_driver_remote(self):
         options = Options()
-        options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+        options.add_experimental_option("debuggerAddress", f"127.0.0.1:{self.port}")
         options.set_capability("goog:loggingPrefs", {'performance': 'ALL'})
-        return webdriver.Chrome(options=options)
+
+
+
+        return webdriver.Chrome(options=options, executable_path=self.driver_path)
         
         
     
@@ -190,18 +196,24 @@ class BaseDriver(object):
 
 
 class SrbDriver(BaseDriver):
-    def __init__(self, uid='65313910000000000200c253', headless=False, port=9222):
-        BaseDriver.__init__(self, headless, port)
+    def __init__(self, uid='65313910000000000200c253',
+                 headless=False,
+                 port=9222,
+                 user_dir=r"c:\cache\google-chrome\default",
+                 driver_path=None,
+                 ):
+        BaseDriver.__init__(self, headless, port, user_dir=user_dir, driver_path=driver_path)
         self.uid = uid
         
     def find_reply_root_user(self, user_id):
         try:
             s = 'div.list-container div.avatar a[href="/user/profile/%s"]' % user_id
-            e = self.find_element_css(s,wait_seconds=1)
+            e = self.find_element_css(s)
             return e.find_element(By.XPATH, './/..//..')
         except TimeoutException:
             pass
-    
+
+
     def get_reply_container_root(self, e_reply_root_user):
         return e_reply_root_user.find_element(By.XPATH, './/..//..')
     
@@ -233,13 +245,16 @@ class SrbDriver(BaseDriver):
     def click_reply_icon(self, e):
         # e = e.find_element(By.XPATH, './/..//..').find_element(By.CSS_SELECTOR, 'div.reply.icon-container')
         e = e.find_element(By.CSS_SELECTOR, 'div.reply.icon-container')
+        # e = e.find_element(By.XPATH, '//div[@class="reply icon-container"]')
         e.click()
         
     def input_comments(self, txt):
         self.find_element_css('input.comment-input').send_keys(txt)
         
     def submit_comments(self):
-        self.find_element_css('button.submit').click()
+        e = self.find_element_css('button.submit')
+        time.sleep(1)
+        e.click()
     
     def move_to_last_comments(self):
         e = self.find_element_css('div.parent-comment:nth-last-child(1)')
@@ -249,7 +264,7 @@ class SrbDriver(BaseDriver):
         try:
             self.find_element_css('div.end-container', wait_seconds=1)
             return True
-        except TimeoutException:
+        except (TimeoutException, WebDriverException):
             pass
     
     def reply_text(self, user_id, txt):

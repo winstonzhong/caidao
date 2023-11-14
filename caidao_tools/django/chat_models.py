@@ -99,29 +99,6 @@ class AbstractTaskPicDownload(models.Model):
         abstract = True
 
 
-class AbstractUserLevel(models.Model):
-    """等级"""
-    DEFAULT_LEVEL_CODE = 0
-    LEVEL_CODE = (
-        (DEFAULT_LEVEL_CODE, "免费"),
-        (1, "连续包月VIP"),
-        (2, "季度VIP"),
-        (3, "年度VIP"),
-        (4, "终身VIP")
-    )
-    name = models.CharField(max_length=50, verbose_name='用户等级描述', default='')
-    code = models.SmallIntegerField(verbose_name="用户等级", choices=LEVEL_CODE, default=DEFAULT_LEVEL_CODE)
-    make_limit = models.IntegerField(verbose_name="制作次数", default=0)
-    download_limit = models.IntegerField(verbose_name="高清图片下载次数", default=0)
-    data = models.TextField(verbose_name='数据', default='')
-    max_wait_time = models.IntegerField(verbose_name="最大等待时间", default=0)
-    updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
-    created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
-
-    class Meta:
-        abstract = True
-
-
 class AbstractUser(models.Model):
     """用户"""
     MALE_CODE = 0
@@ -176,6 +153,29 @@ class AbstractUser(models.Model):
 
     def __str__(self):
         return '[{self.open_id}]{self.name}'.format(self=self)
+
+
+class AbstractUserLevel(models.Model):
+    """等级"""
+    DEFAULT_LEVEL_CODE = 0
+    LEVEL_CODE = (
+        (DEFAULT_LEVEL_CODE, "免费"),
+        (1, "连续包月VIP"),
+        (2, "季度VIP"),
+        (3, "年度VIP"),
+        (4, "终身VIP")
+    )
+    name = models.CharField(max_length=50, verbose_name='用户等级描述', default='')
+    code = models.SmallIntegerField(verbose_name="用户等级", choices=LEVEL_CODE, default=DEFAULT_LEVEL_CODE)
+    make_limit = models.IntegerField(verbose_name="制作次数", default=0)
+    download_limit = models.IntegerField(verbose_name="高清图片下载次数", default=0)
+    data = models.TextField(verbose_name='数据', default='')
+    max_wait_time = models.IntegerField(verbose_name="最大等待时间", default=0)
+    updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
+    created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+
+    class Meta:
+        abstract = True
 
 
 class AbstractTaskOrder(models.Model):
