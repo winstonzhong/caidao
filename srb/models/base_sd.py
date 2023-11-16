@@ -52,7 +52,6 @@ class AbstractHeadFace(BaseModel):
         verbose_name_plural = "头脸"
 
         indexes = [
-            # models.Index(fields=['gender']),
             models.Index(fields=['uri', 'size']),
             models.Index(fields=['uri', 'left', 'right', 'top', 'bottom']),
         ]
