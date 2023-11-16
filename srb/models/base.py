@@ -52,8 +52,7 @@ class AbstractNote(models.Model):
     status = models.SmallIntegerField(verbose_name="状态", default=NOTE_STATUS_DEFAULT, choices=NOTE_STATUS_CHOICES,
                                       db_index=True)
     search_key = models.CharField(max_length=50, verbose_name='搜索词', default='', db_index=True)
-    # raw_data = models.TextField(verbose_name="源数据", default='')
-    bin_data = models.BinaryField(null=True, blank=True)
+    bin_data = models.BinaryField(null=True, blank=True,verbose_name="源数据")
     need_push = models.BooleanField(verbose_name='是否推送', default=True)
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
