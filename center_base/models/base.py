@@ -45,6 +45,7 @@ class AbstractNote(models.Model):
                                          db_index=True)
     source_note_id = models.CharField(max_length=50, verbose_name='笔记ID', default='', unique=True, db_index=True)
     title = models.CharField(max_length=50, verbose_name='笔记标题', default='')
+    content = models.BinaryField(verbose_name='笔记内容',  blank=True, null=True)
     user_id = models.CharField(max_length=50, verbose_name='用户ID', default='')
     nickname = models.CharField(max_length=50, verbose_name='用户昵称', default='')
     liked_count = models.IntegerField(verbose_name="点赞数", default=0)
