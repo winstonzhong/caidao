@@ -26,16 +26,17 @@ class AbstractNote(models.Model):
     NOTE_STATUS_REPLY_FAILED = 4
     NOTE_STATUS_INVALID = 100
     NOTE_STATUS_DELETED = 200
+    NOTE_STATUS_TOOMANY_REPLIES = 201
 
     NOTE_STATUS_CHOICES = (
         (NOTE_STATUS_DEFAULT, "初始状态"),
-        (NOTE_STATUS_PUSHED, "已提交"),
+        (NOTE_STATUS_PUSHED, "已生成搭讪回复"),
         (NOTE_STATUS_NEED_REPLY, "待回复"),
         (NOTE_STATUS_REPLIED, "已回复"),
         (NOTE_STATUS_REPLY_FAILED, "回复失败"),
         (NOTE_STATUS_INVALID, "无效"),
         (NOTE_STATUS_DELETED, "删除"),
-        # (2, "已回复"),
+        (NOTE_STATUS_TOOMANY_REPLIES, "太多回复"),
     )
 
     NOTE_TYPE_UNKNOWN = 0
