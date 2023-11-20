@@ -9,6 +9,7 @@ import io
 import cv2
 import numpy
 
+from helper_net import get_with_random_agent
 from tool_rect import Rect
 
 
@@ -20,6 +21,10 @@ def bin2img(b):
     if b is not None:
         img = numpy.frombuffer(b, numpy.uint8)
         return cv2.imdecode(img, cv2.IMREAD_ANYCOLOR)
+    
+    
+def url2img(url):
+    return bin2img(get_with_random_agent(url).content)
 
 def to_buffer(img):
     if img is not None:

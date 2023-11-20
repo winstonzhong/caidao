@@ -55,22 +55,3 @@ class AbstractHeadFace(BaseModel):
             models.Index(fields=['uri', 'size']),
             models.Index(fields=['uri', 'left', 'right', 'top', 'bottom']),
         ]
-        
-    @classmethod
-    def get_or_create_head(cls, uri, face):
-        o = cls.objects.filter(uri=uri, 
-                           left=face.left,
-                           right=face.right,
-                           top=face.top,
-                           bottom=face.bottom,
-                           ).first() 
-        if o is None:
-            cls.objects.create(uri=uri, 
-                   left=face.left,
-                   right=face.right,
-                   top=face.top,
-                   bottom=face.bottom,
-                   size=face.area,
-                   points=face.landmark_points.tobytes()
-                   )
-        

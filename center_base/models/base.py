@@ -1,4 +1,10 @@
+import json
+
 from django.db import models
+from django.utils.functional import cached_property
+
+from tool_gzip import gzip_decompress
+
 
 DEVICE_PC = 0
 DEVICE_HUAWEI_MATE10 = 1
@@ -59,6 +65,14 @@ class AbstractNote(models.Model):
 
     class Meta:
         abstract = True
+
+
+    @cached_property
+    def json(self):
+        try:
+            return json.loads(gzip_decompress(self.bin_data).decode('utf8'))
+        except:
+            return {}
 
 
 class AbstractNoteImg(models.Model):
