@@ -136,7 +136,8 @@ class AbstractNoteReplyImg(models.Model):
     status = models.SmallIntegerField(verbose_name="状态", default=STATUS_DEFAULT, choices=STATUS_CHOICES, db_index=True)
     img_id = models.IntegerField(verbose_name='图片id', default=0, blank=True, null=True)  # 废弃
     img_url = models.TextField(verbose_name='图片url', default='', blank=True, null=True)
-    reply_txt = models.CharField(verbose_name='回复内容', max_length=100, blank=True, null=True)
+    # reply_txt = models.CharField(verbose_name='回复内容', max_length=100, blank=True, null=True)
+    reply_txt = models.TextField(verbose_name='回复内容', blank=True, null=True)
     at = models.CharField(max_length=100, verbose_name='@用户', blank=True, null=True)
     source_img_id = models.IntegerField(verbose_name="原图ID", default=0, db_index=True)
     note_id = models.IntegerField(verbose_name="笔记ID", default=0, db_index=True)
