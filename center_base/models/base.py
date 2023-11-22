@@ -27,6 +27,7 @@ class AbstractNote(models.Model):
     NOTE_STATUS_INVALID = 100
     NOTE_STATUS_DELETED = 200
     NOTE_STATUS_TOOMANY_REPLIES = 201
+    NOTE_STATUS_DESC_TOO_LONG = 202
 
     NOTE_STATUS_CHOICES = (
         (NOTE_STATUS_DEFAULT, "初始状态"),
@@ -37,6 +38,8 @@ class AbstractNote(models.Model):
         (NOTE_STATUS_INVALID, "无效"),
         (NOTE_STATUS_DELETED, "删除"),
         (NOTE_STATUS_TOOMANY_REPLIES, "太多回复"),
+        (NOTE_STATUS_DESC_TOO_LONG, "正文太长，疑似营销贴"),
+        
     )
 
     NOTE_TYPE_UNKNOWN = 0
