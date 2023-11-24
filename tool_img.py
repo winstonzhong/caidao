@@ -22,6 +22,11 @@ def bin2img(b):
         img = numpy.frombuffer(b, numpy.uint8)
         return cv2.imdecode(img, cv2.IMREAD_ANYCOLOR)
     
+def base642cv2(b64):
+    return bin2img(base64.b64decode(b64))    
+        # image = numpy.asarray(bytearray(self.bin), dtype="uint8")
+        # return cv2.imdecode(image, cv2.IMREAD_COLOR)
+
     
 def url2img(url):
     return bin2img(get_with_random_agent(url).content)
