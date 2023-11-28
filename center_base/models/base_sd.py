@@ -3,8 +3,9 @@ Created on 2023年11月16日
 
 @author: lenovo
 '''
-from caidao_tools.django.abstract import BaseModel
 from django.db import models
+
+from caidao_tools.django.abstract import BaseModel, AbstractModel
 
 
 class AbstractHeadFace(BaseModel):
@@ -57,14 +58,11 @@ class AbstractHeadFace(BaseModel):
         ]
 
 
-class AbstractTag(BaseModel):
-
+class AbstractTag(AbstractModel):
     name = models.CharField(max_length=50, verbose_name='标签', default='')
     clout = models.IntegerField(verbose_name='热度', default=0)
     is_show = models.BooleanField(verbose_name='是否显示', default=True)
     is_top_level = models.BooleanField(verbose_name='是否顶级分类', default=False)
-    updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
-    created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
 
 
     class Meta:
@@ -72,41 +70,33 @@ class AbstractTag(BaseModel):
         verbose_name_plural = "标签表"
 
 
-class AbstractHairStyleDraft(BaseModel):
-
-    url = models.ImageField(verbose_name='参考图URL', max_length=255)
+class AbstractHairStyleDraft(AbstractModel):
+    img_fpath = models.ImageField(verbose_name='参考图URL', max_length=255)
     tpl_id = models.IntegerField(verbose_name='来源模板ID', default=0)
     mdeta_info = models.BinaryField(verbose_name='Meta信息')
-    mask_url = models.ImageField(verbose_name='掩码图URL', max_length=255)
-    updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
-    created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+    mask_fpath = models.ImageField(verbose_name='掩码图URL', max_length=255)
 
     class Meta:
         abstract = True
         verbose_name_plural = "发型参考图"
 
 
-class AbstractHairStyleImage(BaseModel):
-    url = models.ImageField(verbose_name='参考图URL', max_length=255)
+class AbstractHairStyleImage(AbstractModel):
+    img_fpath = models.ImageField(verbose_name='参考图URL', max_length=255)
     draft_id = models.IntegerField(verbose_name='发型参考图ID', default=0)
     prompt = models.TextField(verbose_name='提示词', blank=True, null=True)
     negative_prompt = models.TextField(verbose_name='反向提示词', blank=True, null=True)
     base_module = models.CharField(max_length=100, verbose_name='基础模型', default='')
-    updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
-    created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
 
     class Meta:
         abstract = True
         verbose_name_plural = "发型模板图"
 
 
-class AbstractTagHairStyleImageRelation(BaseModel):
-
+class AbstractTagHairStyleImageRelation(AbstractModel):
     tag_id = models.IntegerField(verbose_name='标签ID', default=0)
     image_id = models.IntegerField(verbose_name='发型模板图ID', default=0)
     rank = models.IntegerField(verbose_name='关系权重', default=0)
-    updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
-    created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
 
     class Meta:
         abstract = True
