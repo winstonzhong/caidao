@@ -5,10 +5,22 @@ Created on 2023年11月2日
 '''
 import json
 import os
+import re
 
 from pyquery.pyquery import PyQuery
 
 from helper_net import get_with_random_agent
+
+
+ptn_topic = re.compile('\#[^\#]+\[话题\]\#', re.M)
+
+
+def remove_topics(txt):
+    '''
+    >>> remove_topics('截图保存后，加点锐化和颗粒更有胶片氛围哦 #滤镜调色教程[话题]# #大头照[话题]# #来拍照了[话题]# #胶片[话题]#')
+    '''
+    return ptn_topic.sub('', txt).strip()
+
 
 
 def get_all_dict(x):
@@ -58,3 +70,7 @@ def get_note_images(url='https://www.xiaohongshu.com/explore/64c5ec88000000000b0
                   'remark':remark,
                   })
         yield x
+
+if __name__ == '__main__':
+    import doctest
+    print(doctest.testmod(verbose=False, report=False))
