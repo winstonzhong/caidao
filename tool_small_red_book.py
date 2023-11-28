@@ -9,7 +9,9 @@ import re
 
 from pyquery.pyquery import PyQuery
 
+from center_base.models.base_sd import AbstractMedia
 from helper_net import get_with_random_agent
+from tool_file import get_tpl_fpath, download_file
 
 
 ptn_topic = re.compile('\#[^\#]+\[话题\]\#', re.M)
@@ -41,6 +43,12 @@ def get_dict_images(d):
         if x.get('imageScene') == 'CRD_WM_JPG':
             yield x
 
+def get_dict_videos(d):
+    for x in get_all_dict(d):
+        if x.get('masterUrl') and x.get('fps'):
+            yield x
+
+
 def get_dict_info(d):
     for x in get_all_dict(d):
         if x.get('type') and x.get('noteId') and x.get('time'):
@@ -66,6 +74,7 @@ def get_note_images(url='https://www.xiaohongshu.com/explore/64c5ec88000000000b0
     # remark = json.dumps(info.get('tagList'), indent=3)
     tags = ','.join(map(lambda x:x.get('name'), info.get('tagList')))
     remark = '\r\n'.join((info.get('title'), info.get('desc'), tags))
+    
     for x in get_dict_images(info):
         file_id_redbook = os.path.basename(x.get('url')).rsplit('!',1)[0]
         suffix = x.pop('imageScene').rsplit('_', 1)[-1].lower()
@@ -79,6 +88,36 @@ def get_note_images(url='https://www.xiaohongshu.com/explore/64c5ec88000000000b0
                   })
         yield x
 
+def get_note_medias(url):
+    d = get_note_json(url)
+    info = list(get_dict_info(d))[0]
+    tags = ','.join(map(lambda x:x.get('name'), info.get('tagList')))
+    remark = '\r\n'.join((info.get('title'), info.get('desc'), tags))
+    
+    for x in get_dict_images(info):
+        file_id_redbook = os.path.basename(x.get('url')).rsplit('!',1)[0]
+        suffix = x.pop('imageScene').rsplit('_', 1)[-1].lower()
+        fname = '%s.%s' % (file_id_redbook, suffix)
+        
+        yield {
+            'url_from': x.get('url'),
+            'type_media': AbstractMedia.TYPE_IMG, 
+            'status': 0,
+            'meta': remark,
+            'fpath': download_file(x.get('url'), get_tpl_fpath(fname)),
+            }
+
+    for x in get_dict_videos(info):
+        fname = os.path.basename(x.get('masterUrl')).rsplit('!',1)[0]
+        yield {
+            'url_from': x.get('masterUrl'),
+            'type_media': AbstractMedia.TYPE_VIDEO,
+            'status': 0,
+            'meta': remark,
+            'fpath': download_file(x.get('masterUrl'), get_tpl_fpath(fname)),
+            }
+
+    
 if __name__ == '__main__':
     import doctest
     print(doctest.testmod(verbose=False, report=False))

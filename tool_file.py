@@ -189,6 +189,13 @@ def download_img(url, fpath, safe=False):
             fp.write(get_with_random_agent(url).content)
             return fpath
 
+def download_file(url, fpath):
+    if fpath and not os.path.lexists(fpath):
+        print('downloading:', url)
+        with open(fpath, 'wb') as fp:
+            fp.write(get_with_random_agent(url).content)
+    return fpath
+
 def download_img_srb(d):
     fpath = get_tpl_fpath(d.pop('fname'))
     download_img(d.pop('url'), fpath)
