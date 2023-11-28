@@ -247,9 +247,12 @@ class SrbDriver(BaseDriver):
         e = e.find_element(By.CSS_SELECTOR, 'div.reply.icon-container')
         # e = e.find_element(By.XPATH, '//div[@class="reply icon-container"]')
         e.click()
-        
-    def input_comments(self, txt):
-        self.find_element_css('input.comment-input').send_keys(txt)
+
+    def input_comments(self, txt, click=False):
+        el = self.find_element_css('input.comment-input')
+        if click:
+            el.click()
+        el.send_keys(txt)
         
     def submit_comments(self):
         e = self.find_element_css('button.submit')
