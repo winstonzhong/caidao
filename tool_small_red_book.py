@@ -53,11 +53,19 @@ def get_note_json(url='https://www.xiaohongshu.com/explore/64c5ec88000000000b028
     txt = d('script')[-1].text
     return eval(txt[len('window.__INITIAL_STATE__='):].replace('true','True').replace('false','False').replace('undefined','None').replace('null','None'))
 
+def get_note_title_description_tags(url='https://www.xiaohongshu.com/explore/64c5ec88000000000b028d78'):
+    d = get_note_json(url)
+    info = list(get_dict_info(d))[0]
+    tags = ','.join(map(lambda x:x.get('name'), info.get('tagList')))
+    return '\r\n'.join((info.get('title'), info.get('desc'), tags))
+
 
 def get_note_images(url='https://www.xiaohongshu.com/explore/64c5ec88000000000b028d78'):
     d = get_note_json(url)
     info = list(get_dict_info(d))[0]
-    remark = json.dumps(info.get('tagList'), indent=3)
+    # remark = json.dumps(info.get('tagList'), indent=3)
+    tags = ','.join(map(lambda x:x.get('name'), info.get('tagList')))
+    remark = '\r\n'.join((info.get('title'), info.get('desc'), tags))
     for x in get_dict_images(info):
         file_id_redbook = os.path.basename(x.get('url')).rsplit('!',1)[0]
         suffix = x.pop('imageScene').rsplit('_', 1)[-1].lower()

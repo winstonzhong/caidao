@@ -365,5 +365,17 @@ def get_exteral_rect(mask):
     mask, top, bottom = cut_core(mask, axis=1, v=0, vtype=1)
     _, left, right = cut_core(mask, axis=0, v=0, vtype=1)
     return Rect(left, right, top, bottom)
+
+
+def split_image_into_4(img):
+    h, w = img.shape[:2]
+    return {
+        'left_top': img[0:h//2, 0:w//2, ...],
+        'right_top': img[0:h//2, w//2:w, ...],
+        'left_bottom': img[h//2:h, 0:w//2,...],
+        'right_bottom': img[h//2:h, w//2:w,...],
+        }
     
+    
+        
                 
