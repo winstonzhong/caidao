@@ -104,7 +104,7 @@ class AbstractNoteReplyImg(models.Model):
     STATUS_CHECK_HAS_SCAN_BTN = 203
     STATUS_CHECK_IS_IN_SCAN_PAGE = 204
     STATUS_CHECK_IS_IN_SCAN_PIC_SELECT_PAGE = 205
-    STATUS_CHECK_HAS_REPLY_BTN = 206
+    STATUS_CHECK_HAS_IN_REPLY_PAGE = 206
     STATUS_CHECK_HAS_IMG_SELECT_BTN = 301
     STATUS_CHECK_IS_IN_PIC_SELECT_PAGE = 302
     STATUS_CHECK_HAS_NEXT_BTN = 303
@@ -124,7 +124,7 @@ class AbstractNoteReplyImg(models.Model):
         (STATUS_CHECK_HAS_SCAN_BTN, '查找"扫一扫"按钮失败'),
         (STATUS_CHECK_IS_IN_SCAN_PAGE, '打开扫一扫页面失败'),
         (STATUS_CHECK_IS_IN_SCAN_PIC_SELECT_PAGE, '从相册中选择图片进行扫码失败'),
-        (STATUS_CHECK_HAS_REPLY_BTN, '进入笔记主页失败'),
+        (STATUS_CHECK_HAS_IN_REPLY_PAGE, '进入笔记主页失败'),
         (STATUS_CHECK_HAS_IMG_SELECT_BTN, '回帖查找图片选择按钮失败'),
         (STATUS_CHECK_IS_IN_PIC_SELECT_PAGE, '回帖进入选择图片页面失败'),
         (STATUS_CHECK_HAS_NEXT_BTN, '回帖预览图片打开失败'),
