@@ -97,9 +97,6 @@ class AbstractMedia(AbstractModel):
     class Meta:
         abstract = True
 
-        indexes = [
-            models.Index(fields=['url_from']),
-        ]
     
     
     @property
