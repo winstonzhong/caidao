@@ -3,10 +3,12 @@ Created on 2023年11月16日
 
 @author: lenovo
 '''
+import cv2
 from django.db import models
 
 from caidao_tools.django.abstract import BaseModel, AbstractModel, StatusModel
 from tool_file import get_url
+from django.utils.functional import cached_property
 
 
 class AbstractHeadFace(BaseModel):
@@ -99,9 +101,13 @@ class AbstractMedia(AbstractModel):
 
     
     
-    @property
+    @cached_property
     def url(self):
         return get_url(self.fpath)
+    
+    @cached_property
+    def img(self):
+        return cv2.imread(self.fpath)
 
 
 

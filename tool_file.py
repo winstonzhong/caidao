@@ -8,14 +8,15 @@ import hashlib
 import os
 from pathlib import Path
 import shutil
+import time
 
 import cv2
-
 import pandas
 
 from helper_cmd import CmdProgress
 from helper_net import get_with_random_agent
 from tool_env import OS_WIN, simple_encode
+
 
 ROOT_URL = 'https://btmy.j1.sale:8090/'
 ROOT_DIR = Path(r'v:\static')
@@ -53,6 +54,12 @@ def get_tpl_fpath(fpath):
     if not os.path.lexists(base_dir):
         os.makedirs(base_dir, exist_ok=True)
     return os.path.join(base_dir, fname)
+
+def save_image_to_static(img):
+    fname = '%s.png' % (time.time())
+    fpath = get_tpl_fpath(fname)
+    cv2.imwrite(fpath, img)
+    return fpath
 
 
 def get_fpath_with_dirkey_and_create_parent_dirs_if_not_exists(fpath):

@@ -376,6 +376,19 @@ def split_image_into_4(img):
         'right_bottom': img[h//2:h, w//2:w,...],
         }
     
-    
-        
+def make_mask_by_contours(img, contours):
+    height, width = img.shape[:2]
+    mask = numpy.zeros((height, width), numpy.uint8)
+    for points in contours:
+        cv2.fillConvexPoly(mask, cv2.convexHull(points), 255)
+    return mask.astype(numpy.uint8)
+
+def make_mask_by_raw_shape_mask(mask_raw, low=10):
+    mask = to_gray(mask_raw)
+    mask = (mask > low).astype(numpy.uint8)
+    contours, _  = cv2.findContours(mask, 
+                                    cv2.RETR_EXTERNAL,
+                                    cv2.CHAIN_APPROX_SIMPLE, 
+                                    )
+    return make_mask_by_contours(mask_raw, contours)
                 
