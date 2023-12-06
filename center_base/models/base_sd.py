@@ -84,17 +84,26 @@ class AbstractMedia(AbstractModel):
     STATUS_ORIGIN = 0
     STATUS_MASK = 1
     STATUS_RMBGD = 2
+    STATUS_TRANS = 3
+    
+    STATUS_META_EDITED = 10
     
     STATUS = ((STATUS_ORIGIN, "原始记录"),
               (STATUS_MASK, "掩码"),
-              (STATUS_RMBGD, "去背景"),
+              (STATUS_RMBGD, "已去背景"),
+              (STATUS_META_EDITED, "已经编辑信息"),
+              (STATUS_TRANS, "已迁移"),
               )
     
     url_from = models.URLField(verbose_name='来源url')
     fpath = models.FilePathField(verbose_name='路径')
+    file = models.FileField(upload_to=r'V:\static\uploaded', null=True, blank=True)
     type_media = models.PositiveSmallIntegerField(default=TYPE_IMG, choices=TYPES, verbose_name='类别')
     status = models.PositiveSmallIntegerField(default=STATUS_ORIGIN, choices=STATUS, verbose_name='状态')
     meta = models.TextField(null=True, blank=True)
+    prompt = models.TextField(null=True, blank=True)
+    negativePrompt = models.TextField(null=True, blank=True)
+    base_module = models.CharField(max_length=100, verbose_name='基础模型', null=True, blank=True)
     
     class Meta:
         abstract = True
