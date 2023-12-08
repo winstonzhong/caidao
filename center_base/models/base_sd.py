@@ -66,10 +66,19 @@ class AbstractTag(AbstractModel):
     clout = models.IntegerField(verbose_name='热度', default=0)
     is_show = models.BooleanField(verbose_name='是否显示', default=True)
     is_top_level = models.BooleanField(verbose_name='是否顶级分类', default=False)
-
+    repeat = models.PositiveIntegerField(default=0)
+    similarity = models.FloatField(default=0)
+    disabled = models.BooleanField(default=False)
+    
 
     class Meta:
         abstract = True
+
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['disabled']),
+        ]
+
 
 class AbstractMedia(AbstractModel):
     TYPE_IMG = 0
@@ -96,7 +105,7 @@ class AbstractMedia(AbstractModel):
               )
     
     url_from = models.URLField(verbose_name='来源url')
-    fpath = models.FilePathField(verbose_name='路径')
+    # fpath = models.FilePathField(verbose_name='路径')
     file = models.FileField(upload_to=r'V:\static\uploaded', null=True, blank=True)
     type_media = models.PositiveSmallIntegerField(default=TYPE_IMG, choices=TYPES, verbose_name='类别')
     status = models.PositiveSmallIntegerField(default=STATUS_ORIGIN, choices=STATUS, verbose_name='状态')
@@ -112,11 +121,11 @@ class AbstractMedia(AbstractModel):
     
     @cached_property
     def url(self):
-        return get_url(self.fpath)
+        return get_url(self.file.path)
     
     @cached_property
     def img(self):
-        return cv2.imread(self.fpath)
+        return cv2.imread(self.file.path)
 
 
 
@@ -135,68 +144,3 @@ class AbstractRelation(AbstractModel):
 
     class Meta:
         abstract = True
-
-# class AbstractImage(AbstractModel):
-#     url_origin = models.URLField(null=True, blank=True)
-#     img_fpath = models.ImageField(verbose_name='原图')
-#     mask_fpath = models.ImageField(verbose_name='掩码')
-#     result_fpath = models.ImageField(verbose_name='结果')
-#     bin = models.BinaryField(verbose_name='Meta信息')
-#
-#     class Meta:
-#         abstract = True
-
-
-# class AbstractVideo(AbstractModel):
-#     url_origin = models.URLField(null=True, blank=True)
-#     video_fpath = models.FilePathField(verbose_name='原视频')
-#     bin = models.BinaryField(verbose_name='Meta信息')        
-
-# class AbstractImage
-
-# class AbstractHairStyleDraft(AbstractModel):
-#     img_fpath = models.ImageField(verbose_name='图像')
-#     # tpl_id = models.IntegerField(verbose_name='来源模板ID', default=0)
-#     url_origin = models.URLField(null=True, blank=True)
-#     bin = models.BinaryField(verbose_name='Meta信息')
-#     mask_fpath = models.ImageField(verbose_name='掩码')
-#
-#     class Meta:
-#         abstract = True
-#         verbose_name_plural = "发型参考图"
-#         indexes = [
-#             models.Index(fields=['url_origin',]),
-#         ]
-
-
-# class AbstractHairStyleImage(AbstractModel):
-#     img_fpath = models.ImageField(verbose_name='图像')
-#     draft_id = models.IntegerField(verbose_name='发型参考图ID', default=0)
-#     prompt = models.TextField(verbose_name='提示词', blank=True, null=True)
-#     negative_prompt = models.TextField(verbose_name='反向提示词', blank=True, null=True)
-#     base_module = models.CharField(max_length=100, verbose_name='基础模型', default='')
-#
-#     class Meta:
-#         abstract = True
-#         verbose_name_plural = "发型模板图"
-
-
-# class AbstractTagHairStyleImageRelation(AbstractModel):
-#     tag_id = models.IntegerField(verbose_name='标签ID', default=0)
-#     image_id = models.IntegerField(verbose_name='发型模板图ID', default=0)
-#     rank = models.IntegerField(verbose_name='关系权重', default=0)
-#
-#     class Meta:
-#         abstract = True
-#         verbose_name_plural = "标签发型模板图关系表"
-
-        
-        
-# class AbstractFrame(AbstractModel):
-#     img_fpath = models.ImageField(verbose_name='图像')
-#     # tpl_id = models.IntegerField(verbose_name='来源模板ID', default=0)
-#     # bin = models.BinaryField(verbose_name='Meta信息')
-#     mask_fpath = models.ImageField(verbose_name='掩码')
-
-# class AbstractVideo(AbstractModel):
-#     fpath = models.FilePathField(null=True, )        
