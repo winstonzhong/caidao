@@ -233,6 +233,34 @@ class AbstractTaskOrder(models.Model):
         (1, '轻度美颜'),
         (2, '极度美颜'),
     )
+    
+    HAIR_COLORS = (
+        (0, "Ash Blonde"),
+        (1, "Ash Brown"),
+        (2, "Auburn"),
+        (3, "Black"),
+        (4, "Blonde"),
+        (5, "Bronze"),
+        (6, "Brunette"),
+        (7, "Butterscotch"),
+        (8, "Caramel"),
+        (9, "Chestnut"),
+        (10, "Copper"),
+        (11, "Dark Auburn"),
+        (12, "Dark Brown"),
+        (13, "Dark Chestnut"),
+        (14, "Dark Red"),
+        (15, "Ginger"),
+        (16, "Golden Blonde"),
+        (17, "Honey Blonde"),
+        (18, "Light Brown"),
+        (19, "Light Red"),
+        (20, "Mahogany"),
+        (21, "Platinum Blonde"),
+        (22, "Red"),
+        (23, "Salt and Pepper (Gray)"),
+        (24, "Sandy Blonde"),        
+        ) 
     # user = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="用户", related_name='用户')
     # creator = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="创建者", related_name='创建者')
     # parent = models.ForeignKey('self', on_delete=models.DO_NOTHING, db_constraint=False, verbose_name="来源工单", blank=True, null=True)

@@ -99,9 +99,9 @@ class AbstractMedia(AbstractModel):
     
     STATUS = ((STATUS_ORIGIN, "原始记录"),
               (STATUS_MASK, "掩码"),
-              (STATUS_RMBGD, "已去背景"),
-              (STATUS_META_EDITED, "已经编辑信息"),
+              (STATUS_RMBGD, "无背景"),
               (STATUS_TRANS, "已迁移"),
+              (STATUS_META_EDITED, "已编辑"),
               )
     
     url_from = models.URLField(verbose_name='来源url')
@@ -117,7 +117,6 @@ class AbstractMedia(AbstractModel):
     class Meta:
         abstract = True
 
-    
     
     @cached_property
     def url(self):
