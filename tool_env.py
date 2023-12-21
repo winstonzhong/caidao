@@ -198,7 +198,7 @@ def clear_chinese(line):
 
 def remain_chinese(line):
     '''
-    >>> remain_chinese('人家')  == '人家'
+    >>> remain_chinese('人家12')  == '人家'
     True
     >>> remain_chinese(mulline_text) == '人家磁带非但没被淘汰容量还比硬盘大了'
     True
