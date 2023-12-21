@@ -38,6 +38,12 @@ from tool_rect import Rect
 class InvalidHwnd(Exception):
     pass
 
+class WindowNotFound(Exception):
+    pass
+
+class ScreenCopyFailed(Exception):
+    pass
+
 class MsgException(Exception):
     default_msg = '%s'
     code = 4000
@@ -110,11 +116,12 @@ def GET_WINDOWS(clsname=None, title=None, pid=None, visible=None, clsname_starts
                             if debug:
                                 print([win32gui.GetWindowText(hwnd)], tmp_clsname, hwnd)
                             rtn.append(hwnd)
+    if not rtn:
+        raise WindowNotFound
     return rtn
     
 def FIND_WINDOW(clsname=None, title=None, pid=None, visible=None):
-    r = GET_WINDOWS(clsname, title, pid, visible)
-    return r[0] if r else None
+    return GET_WINDOWS(clsname, title, pid, visible)[0]
 
 
 def SET_TOPMOST(hwnd):
@@ -148,7 +155,7 @@ def GET_MAIN_PROCS(proc_name):
     for i, proc in enumerate(psutil.process_iter()):
         # print([proc.name()])
         if proc.name().lower() == proc_name:# and proc.parent() is None:
-            print(i, proc)
+            # print(i, proc)
             rtn.append(proc)
     return rtn
 
@@ -217,4 +224,6 @@ def SCREENSHOT(hwnd):
     except win32ui.error as e:
         print(e)
     
+    if im_PIL is None:
+        raise ScreenCopyFailed
     return im_PIL
