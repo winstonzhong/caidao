@@ -194,14 +194,36 @@ def SCREEN_GRAB(hwnd):
     except Exception as e:
         print(e)
 
-def SCREENSHOT(hwnd):
+def get_width_and_height(hwnd):
     try:
-        left, top, right, bot = win32gui.GetWindowRect(hwnd)
+        # left, top, right, bot = win32gui.GetWindowRect(hwnd)
+        rect = GET_RECT_ACCU(hwnd)
+        return rect.width, rect.height
     except:
         raise InvalidHwnd
+
+def get_width_and_height_old(hwnd):
+    try:
+        left, top, right, bot = win32gui.GetWindowRect(hwnd)
+        return right - left, bot - top
+    except:
+        raise InvalidHwnd
+
+
+def SCREENSHOT(hwnd):
+    # try:
+    #     # left, top, right, bot = win32gui.GetWindowRect(hwnd)
+    #     rect = GET_RECT_ACCU(hwnd)
+    # except:
+    #     raise InvalidHwnd
+    #
+    # # width = right - left
+    # # height = bot - top
+    # width = rect.width
+    # height = rect.height
     
-    width = right - left
-    height = bot - top
+    width, height = get_width_and_height_old(hwnd)
+    
     hWndDC = win32gui.GetWindowDC(hwnd)
     mfcDC = win32ui.CreateDCFromHandle(hWndDC)
     saveDC = mfcDC.CreateCompatibleDC()
