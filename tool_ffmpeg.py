@@ -9,7 +9,7 @@ import subprocess
 from tool_env import is_number
 
 
-ptn_line = re.compile('(\d{2}):(\d{2}).(\d{3})')
+ptn_line = re.compile('(\d{2}):(\d{2}).(\d{2,3})')
 
 def to_seconds(line):
     '''
@@ -17,10 +17,24 @@ def to_seconds(line):
     True
     >>> to_seconds(148.11) == 148.11
     True
+    >>> to_seconds('00:00.10') == 0.1
+    True
+    >>> to_seconds('00:00:03,700') == 3.7
+    True
+    >>> to_seconds('01:00:03,700') == 3603.7
+    True
     '''
     if not is_number(line):
-        l = ptn_line.match(line).groups()
-        line = int(l[0]) * 60 + int(l[1]) + int(l[2]) / 1000
+        l = line.split(':')
+        l.reverse()
+        total = 0
+        for i, x in enumerate(l):
+            if i == 0:
+                s, ms = re.split('[,\.]+',x)
+                total += int(s) + float(f'0.{ms}')
+            else:
+                total += int(x) * (60 ** i)
+        return total
     return line
 
 def to_timestr(seconds):
@@ -29,6 +43,26 @@ def to_timestr(seconds):
     True
     '''
     return '%02d:%02d.%s' % (seconds //  60, int(seconds) % 60, ('%.03f' % seconds)[-3:])
+
+
+def to_timestr_with_hour(seconds):
+    '''
+    >>> to_timestr_with_hour(148.4) == '00:02:28,400'
+    True
+    >>> to_timestr_with_hour(148.004) == '00:02:28,004'
+    True
+    >>> to_timestr_with_hour(148.04) == '00:02:28,040'
+    True
+    '''
+    h = seconds // 3600
+    m = (seconds % 3600) // 60
+    s =  seconds % 60
+    ms = seconds - int(seconds)
+    return '%02d:%02d:%02d,%s' % (h, m, s, f'{ms:.3f}'[2:])
+    
+
+def add_seconds_to_timestr(txt, seconds):
+    return to_timestr(to_seconds(txt) +  seconds)
 
     
 
