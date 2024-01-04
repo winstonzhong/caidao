@@ -3,6 +3,7 @@ Created on 2023年12月27日
 
 @author: lenovo
 '''
+import os
 import re
 import subprocess
 
@@ -70,11 +71,35 @@ def trim_audio(fpath_input, fpath_output, start=0, end=0):
     start_seconds = to_seconds(start)
     end_seconds = to_seconds(end)
     duration = end_seconds - start_seconds
-    subprocess.Popen(
+    process = subprocess.Popen(
         f'''ffmpeg  -i "{fpath_input}" -ss {start_seconds} -t {duration} "{fpath_output}" -y''', 
         shell=True)
+    process.wait()
 
+def concat_mp4s(video_txt, fpath_dst):
+    process = subprocess.Popen(
+        f'''ffmpeg -f concat -i "{video_txt}" -c copy "{fpath_dst}" -y''', 
+        shell=True)
+    process.wait()
 
+def split_mp4(fpath_mp4, dir_dst, fps=30):
+    if not os.path.lexists(dir_dst):
+        os.makedirs(dir_dst)
+    process = subprocess.Popen(
+        f'''ffmpeg -i {fpath_mp4} -vf fps={fps} {dir_dst}/%d.png''', 
+        shell=True)
+    process.wait()
+
+# ffmpeg -i video.mp4 -i audio.mp3 -c:v copy -c:a aac -strict experimental output.mp4
+# ffmpeg -i input_vid.mp4 -itsoffset 00:00:05.0 -i input_audio.wav -vcodec copy -acodec copy output.mp4
+# ffmpeg -i input_vid.mp4 -itsoffset 00:00:05.0 -i input_audio.wav -vcodec libx264 -acodec libmp3lame output.mp4
+# ffmpeg.exe -i .\test.wav  -i video.mp4 -ss 0:0 -t 1.60 o4.mp4 -y
+def merge_mp4_wav(fpath_mp4, fpath_wav, fpath_dst, seconds):
+    process = subprocess.Popen(
+        f'''ffmpeg.exe -i  {fpath_wav}  -i  {fpath_mp4}  -ss 0:0 -t {seconds:.3f} {fpath_dst} -y''',
+        shell=True)
+    process.wait()
+    
 
 if __name__ == "__main__":
     import doctest
