@@ -96,7 +96,7 @@ def split_mp4(fpath_mp4, dir_dst, fps=30):
 # ffmpeg.exe -i .\test.wav  -i video.mp4 -ss 0:0 -t 1.60 o4.mp4 -y
 def merge_mp4_wav(fpath_mp4, fpath_wav, fpath_dst, seconds):
     process = subprocess.Popen(
-        f'''ffmpeg.exe -i  {fpath_wav}  -i  {fpath_mp4}  -ss 0:0 -t {seconds:.3f} {fpath_dst} -y''',
+        f'''ffmpeg -i  {fpath_wav}  -i  {fpath_mp4}  -ss 0:0 -t {seconds:.3f} {fpath_dst} -y''',
         shell=True)
     process.wait()
     
