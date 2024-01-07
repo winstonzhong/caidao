@@ -9,11 +9,36 @@ import io
 import cv2
 import numpy
 
+from helper_net import get_with_random_agent
+from tool_rect import Rect
+
+
+def pil2cv2(img):
+    return cv2.cvtColor(numpy.asarray(img),cv2.COLOR_RGB2BGR)
+
+
+def bin2img(b):
+    if b is not None:
+        img = numpy.frombuffer(b, numpy.uint8)
+        return cv2.imdecode(img, cv2.IMREAD_ANYCOLOR)
+    
+def base642cv2(b64):
+    return bin2img(base64.b64decode(b64))    
+        # image = numpy.asarray(bytearray(self.bin), dtype="uint8")
+        # return cv2.imdecode(image, cv2.IMREAD_COLOR)
+
+    
+def url2img(url):
+    return bin2img(get_with_random_agent(url).content)
 
 def to_buffer(img):
     if img is not None:
         is_success, buffer = cv2.imencode(".png", img)
         return buffer if is_success else None
+
+def img2io(img):
+    return io.BytesIO(to_buffer(img))
+# io_buf = io.BytesIO(im_buf_arr)
 
 def cv2_to_base64url(img):
     if img is not None:
@@ -30,7 +55,7 @@ def pil_to_base64url(img):
 
 
 def show(img):
-    cv2.imshow('image', img.astype(numpy.uint8))
+    cv2.imshow('image', img)
     cv2.waitKey()
     cv2.destroyAllWindows()
 
@@ -58,6 +83,9 @@ def make_mask_by_equal(img, r, g, b):
 def mono_to_rgb(mask):
     return numpy.stack((mask.astype(numpy.uint8),)*3, axis=-1)
 
+def stack_alpha(img, mask):
+    return numpy.dstack((img, mask)).astype(numpy.uint8)
+
 def do_remove_background(img, mask):
     mask = mask.astype(numpy.uint8)*255
     mask_invert = mono_to_rgb(cv2.bitwise_not(mask))
@@ -79,6 +107,125 @@ def remove_background_by_upper_gray_value(img, v):
     mask = mono_to_rgb(mask)
     return cv2.bitwise_and(mask, img)
 
+
+# def put_img_left_top_with_mask(src, mask, dst, left, top, mothod='bitwise_or'):
+#     img = dst.copy()
+#     h, w = src.shape[:2]
+#     right = left + w
+#     bottom = top + h
+#     a = img[top:bottom, left:right, ...]
+#     b = cv2.bitwise_and(a, mask)
+#     b = getattr(cv2, mothod)(wm.astype(numpy.int), a.astype(numpy.int))
+#     img[top:bottom, left:right, ...] = b.astype(numpy.uint8)
+#     return img
+
+def get_mask_invert(mask):
+    return mask == False
+
+def make_watermark(a, mask):
+    mask_invert = mono_to_rgb((get_mask_invert(mask)*255).astype(numpy.uint8))
+    mask = mono_to_rgb(mask.astype(numpy.uint8) * 255)
+    b = cv2.bitwise_and(mask, a)
+    
+    c = (b ^ 255).astype(numpy.uint8)
+    # v = 100
+    # c = (numpy.where(b >= 125, 12, 200)).astype(numpy.uint8)
+    
+    d = cv2.bitwise_and(c, mask)
+    x = cv2.bitwise_and(a, mask_invert)
+    return d+x
+    
+
+
+def get_mask_hairstyle(wm):
+    return make_mask_by_low(wm, 90,0,0)
+
+def get_mask_logo(wm):
+    return to_gray(wm) < 80
+
+def put_better_water_mark_left_top(img, mask, left, top):
+    img = img.copy()
+    # gray = to_gray(wm)
+    # mask = ((gray < v) * 255).astype(numpy.uint8)
+    
+    h,w  = mask.shape[:2]
+    
+    right = left + w
+    bottom = top + h
+    
+    a = img[top:bottom, left:right, ...]
+    
+    img[top:bottom, left:right, ...] = make_watermark(a, mask).astype(numpy.uint8) 
+    
+    return img
+
+
+def put_better_water_mark_middle(img, mask):
+    h,w  = mask.shape[:2]
+    H, W = img.shape[:2]
+    left = (W - w) //2
+    top = (H - h) //2
+    return put_better_water_mark_left_top(img, mask, left, top)
+
+
+def put_logo_and_slogan(img, logo, slogan):
+    mask_logo = get_mask_logo(logo)
+    mask_slogan = get_mask_hairstyle(slogan)    
+    
+    img = put_better_water_mark_middle(img, mask_logo)
+    
+    H, W = img.shape[:2]
+    h1, w1 = mask_slogan.shape[:2]
+    h2, w2 = logo.shape[:2]
+    
+    left =  (W - w1) // 2
+    top = (H - h2) // 2 + h2
+    
+    img = put_better_water_mark_left_top(img, mask_slogan, left, top)
+    return img
+    
+    # img = img.copy()
+    # gray = to_gray(wm)
+    # mask = ((gray < v) * 255).astype(numpy.uint8)
+    #
+    # h,w  = wm.shape[:2]
+    # a = img[0:h,0:w,...]
+    #
+    # H, W = img.shape[:2]
+    #
+    # left = (W - w) //2
+    # right = left + w
+    #
+    # top = (H - h) //2
+    # bottom = top + h
+    #
+    # img[top:bottom, left:right, ...] = make_watermark(a, mask) 
+    #
+    # return img
+
+
+def put_water_mark_left_top(img, wm, left, top, mothod='bitwise_or'):
+    img = img.copy()
+    h, w = wm.shape[:2]
+    right = left + w
+    bottom = top + h
+    a = img[top:bottom, left:right, ...]
+    b = getattr(cv2, mothod)(wm.astype(numpy.int), a.astype(numpy.int))
+    img[top:bottom, left:right, ...] = b.astype(numpy.uint8)
+    return img
+    
+
+# def put_water_mark_left_top_better(img, wm, left, top):
+#     img = img.copy()
+#     h, w = wm.shape[:2]
+#     right = left + w
+#     bottom = top + h
+#     a = img[top:bottom, left:right, ...]
+#     b = getattr(cv2, mothod)(wm.astype(numpy.int), a.astype(numpy.int))
+#     img[top:bottom, left:right, ...] = b.astype(numpy.uint8)
+#     return img
+
+
 def put_water_mark(img, wm):
     h,w = img.shape[:2]
     h1,w1 = wm.shape[:2]
@@ -89,19 +236,10 @@ def put_water_mark(img, wm):
         
     top = h - h1
     bottom = h
-    # top = 0
-    # bottom = h1
 
     left = w - w1
     right = w
-    # left = 0
-    # right = w1
     a = img[top:bottom, left:right, ...]
-    # return a
-    # return a, wm
-    # r = a.astype(numpy.int) + wm
-    # c = r.flatten()
-    # c = numpy.where(c>=255, 255, c).astype(numpy.uint8).reshape(wm.shape)
     
     b = cv2.bitwise_xor(wm.astype(numpy.int), a.astype(numpy.int))
     img[top:bottom, left:right, ...] = b.astype(numpy.uint8)
@@ -158,7 +296,120 @@ def find_template(img, template, threshold = 0.8):
     
     for pt in points:
         cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
-        
+
     return img
 
+def make_4(imgs_4):
+    assert len(imgs_4) == 4
+    h,w = imgs_4[0].shape[:2]
+    canvas = get_canvas(w*2, h*2)
+    for i, img in enumerate(imgs_4):
+        left = 0 + (i %2) * w
+        right = left + w
+        top = 0 + (i // 2) * h
+        bottom = top + h
+        canvas[top:bottom,left:right,...] = img
+    return canvas
+
+def make_4_plus_qrcode(img_qrcode, imgs_4):
+    # assert len(imgs_4) == 4
+    # h,w = imgs_4[0].shape[:2]
+    # canvas = get_canvas(w*2, h*2)
+    # for i, img in enumerate(imgs_4):
+    #     left = 0 + (i %2) * w
+    #     right = left + w
+    #     top = 0 + (i // 2) * h
+    #     bottom = top + h
+    #     canvas[top:bottom,left:right,...] = img
+    canvas = make_4(imgs_4)
+    # s = int(w * 0.4)
+    # img_qrcode = cv2.resize(img_qrcode,dsize=(s,s),fx=None,fy=None,interpolation=cv2.INTER_LINEAR)
+    
+    qh, qw = img_qrcode.shape[:2]
+    
+    H, W = canvas.shape[:2]
+    
+    w = W//2
+    h = H//2
+    
+    left = w - qw//2
+    right = left + qw
+    top = h - qh//2
+    bottom = top + qh
+    
+    canvas[top:bottom,left:right,...] = img_qrcode
+    
+    return canvas
+         
+
+def cut_core(mask, axis, v, vtype=0):
+    a = mask.sum(axis=axis)
+    if vtype == 1:
+        t = numpy.where(a != v)[0]
+    else:
+        t = numpy.where(a == v)[0]
+
+    start, end = None, None
+    
+    if t.shape[0] > 1:
+        start, end = t[0], t[-1]
+        if axis == 1:
+            mask = mask[start:end+1,...]
+        else:
+            mask = mask[..., start:end+1]
+    
+    return mask, start, end
+
+def cut_empty_margin(mask_invert):
+    mask_invert = cut_core(mask_invert, axis=1, v=0, vtype=1)[0]
+    return cut_core(mask_invert, axis=0, v=0, vtype=1)[0]
+
+
+def get_exteral_rect(mask):
+    mask, top, bottom = cut_core(mask, axis=1, v=0, vtype=1)
+    _, left, right = cut_core(mask, axis=0, v=0, vtype=1)
+    return Rect(left, right, top, bottom)
+
+
+def split_image_into_4(img):
+    h, w = img.shape[:2]
+    return {
+        'left_top': img[0:h//2, 0:w//2, ...],
+        'right_top': img[0:h//2, w//2:w, ...],
+        'left_bottom': img[h//2:h, 0:w//2,...],
+        'right_bottom': img[h//2:h, w//2:w,...],
+        }
+    
+def make_mask_by_contours(img, contours):
+    height, width = img.shape[:2]
+    mask = numpy.zeros((height, width), numpy.uint8)
+    for points in contours:
+        cv2.fillConvexPoly(mask, cv2.convexHull(points), 255)
+    return mask.astype(numpy.uint8)
+
+def make_mask_by_raw_shape_mask(mask_raw, low=10):
+    mask = to_gray(mask_raw)
+    mask = (mask > low).astype(numpy.uint8)
+    contours, _  = cv2.findContours(mask, 
+                                    cv2.RETR_EXTERNAL,
+                                    cv2.CHAIN_APPROX_SIMPLE, 
+                                    )
+    return make_mask_by_contours(mask_raw, contours)
+                
+def cut_left_for_kuotu(img, span=100):
+    h,w = img.shape[:2]
+    r = h / w
+    w1 = w - span
+    h1 = r * w1
+    # delta_top = int((h - h1) / 3)
+    # delta_bottom = int(h - h1 - delta_top)
+    top = int((h - h1)/2)
+    # delta_bottom = delta_top
+    left = span
+    # top = delta_top
+    bottom = int(h1 + top)
+    right = w
+    print(left, right, top, bottom)
+    return img[top:bottom, left:right, ...]
+    
     

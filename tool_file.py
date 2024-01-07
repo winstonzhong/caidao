@@ -8,22 +8,66 @@ import hashlib
 import os
 from pathlib import Path
 import shutil
+import time
 
 import cv2
-
 import pandas
 
 from helper_cmd import CmdProgress
 from helper_net import get_with_random_agent
-from tool_env import OS_WIN
+from tool_env import OS_WIN, simple_encode
 
+
+ROOT_URL = 'https://btmy.j1.sale:8090/'
+ROOT_DIR = Path(r'v:\static')
+CSITE_DIR = Path(r'v:\static\media')
+TPL_DIR = Path(r'v:\static\media\tpl')
+RESULT_DIR = Path(r'v:\static\media\result')
 
 suffix_mv = ('mp4', 'mkv', 'rmvb')
 
+HEAD = simple_encode('\x12\x0e\x0e\n\t@UU\x18\x0e\x17\x03T\x10KT\t\x1b\x16\x1f@BJCJU')
+
+def get_fpath_from_url(url):
+    assert url.startswith(ROOT_URL)
+    return str(ROOT_DIR / url.replace(ROOT_URL, ''))
+
+def get_url(fpath):
+    p = Path(fpath).relative_to(ROOT_DIR)
+    return os.path.join(HEAD, p).replace('\\','/')
+
+def get_src_path(fpath):
+    return Path(fpath).relative_to(ROOT_DIR)
 
 def get_dir_key(fname):
     return hashlib.sha256(fname.encode()).hexdigest()[:4]
 
+def get_trans_fpath(fpath, src_dir, dst_dir):
+    fname = os.path.basename(fpath)
+    src = Path(fpath)
+    fpath = dst_dir / src.relative_to(Path(src_dir))
+    return os.path.join(os.path.dirname(fpath), get_dir_key(fname), fname) 
+
+def get_tpl_fpath(fpath):
+    fname = os.path.basename(fpath)
+    base_dir = os.path.join(TPL_DIR, get_dir_key(fname))
+    if not os.path.lexists(base_dir):
+        os.makedirs(base_dir, exist_ok=True)
+    return os.path.join(base_dir, fname)
+
+def save_image_to_static(img):
+    fname = '%s.png' % (time.time())
+    fpath = get_tpl_fpath(fname)
+    cv2.imwrite(fpath, img)
+    return fpath
+
+
+def get_fpath_with_dirkey_and_create_parent_dirs_if_not_exists(fpath):
+    fname = os.path.basename(fpath)
+    base_dir = os.path.join(os.path.dirname(fpath),get_dir_key(fname))
+    if not os.path.lexists(base_dir):
+        os.makedirs(base_dir, exist_ok=True)
+    return os.path.join(base_dir, fname)
 
 def has_file(fpath):
     return os.path.lexists(str(fpath)) and os.path.getsize(fpath) > 0
@@ -43,11 +87,17 @@ def copy_dir(fdir_src, fdir_dst):
                 shutil.copy(x, p)
         i += 1
 
+def get_all_files_not_include(fdir_src):
+    src = Path(fdir_src)
+    for x in src.rglob('*.*'):
+        yield x
+
 def copy_dir_hashed(fdir_src, fdir_dst):
     src = Path(fdir_src)
     dst = Path(fdir_dst)
     i = 1
     for x in src.rglob('*.*'):
+        # if not str(x).lower().startswith(r'z:\shenghuo\tpl'):
         if not os.path.isdir(str(x)):
             p = dst / x.relative_to(src)
             p = p.parent / get_dir_key(p.name) / p.name 
@@ -144,6 +194,19 @@ def download_img(url, fpath, safe=False):
         print('downloading:', url)
         with open(fpath, 'wb') as fp:
             fp.write(get_with_random_agent(url).content)
+            return fpath
 
+def download_file(url, fpath):
+    if fpath and not os.path.lexists(fpath):
+        print('downloading:', url)
+        with open(fpath, 'wb') as fp:
+            fp.write(get_with_random_agent(url).content)
+    return fpath
+
+def download_img_srb(d):
+    fpath = get_tpl_fpath(d.pop('fname'))
+    download_img(d.pop('url'), fpath)
+    d['image'] = fpath
+    return d
 
 

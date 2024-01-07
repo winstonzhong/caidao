@@ -1,0 +1,16 @@
+*.sqlite3
+*.pyc
+*.db
+*.csv
+*.log
+db.sqlite3-journal
+*.project
+*.pydevproject
+*.pyo
+*.prefs
+*.class
+*/__pycache__
+.vscode
+*/migrations/
+/data
+*.pth

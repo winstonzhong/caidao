@@ -20,6 +20,19 @@ ptn_x = re.compile('\!|？|\?|"')
 
 ptn_dot = re.compile('…{2,}')
 
+ptn_emoji = re.compile(u'[\U00010000-\U0010ffff]')
+
+def clear_emoji(content):
+    return ptn_emoji.sub('', content)
+
+def is_number(x):
+    try:
+        int(x)
+        return True
+    except ValueError:
+        pass
+    return False
+
 def is_chinese(ch):
     return '\u4e00' <= ch <= '\u9fff'
 
@@ -76,6 +89,8 @@ def is_special(x):
     >>> is_special('？')
     False
     >>> is_special('：')
+    True
+    >>> is_special(chr(128076))
     True
     '''
     if is_chinese(x):
@@ -190,7 +205,7 @@ def clear_chinese(line):
 
 def remain_chinese(line):
     '''
-    >>> remain_chinese('人家')  == '人家'
+    >>> remain_chinese('人家12')  == '人家'
     True
     >>> remain_chinese(mulline_text) == '人家磁带非但没被淘汰容量还比硬盘大了'
     True
@@ -207,6 +222,16 @@ def split_by_not_chinese(line):
     []
     '''
     return list(filter(lambda x:x, ptn_not_chinese.split(line))) if line else []
+
+def simple_encode(line, v=122):
+    '''
+    >>> simple_encode(simple_encode('h123')) == 'h123'
+    True
+    >>> simple_encode(simple_encode('http://www.baidu.com:8090/')) == 'http://www.baidu.com:8090/'
+    True
+    '''
+    l = list(line)
+    return ''.join(map(lambda x:chr(ord(x) ^ v), l))
 
 if __name__ == '__main__':
     import doctest
