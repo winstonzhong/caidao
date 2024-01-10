@@ -23,10 +23,26 @@ ROOT_DIR = Path(r'v:\static')
 CSITE_DIR = Path(r'v:\static\media')
 TPL_DIR = Path(r'v:\static\media\tpl')
 RESULT_DIR = Path(r'v:\static\media\result')
+UPLOADED_DIR = Path(r'v:\static\media\uploaded')
+
 
 suffix_mv = ('mp4', 'mkv', 'rmvb')
 
 HEAD = simple_encode('\x12\x0e\x0e\n\t@UU\x18\x0e\x17\x03T\x10KT\t\x1b\x16\x1f@BJCJU')
+
+def get_suffix(fpath):
+    return fpath.rsplit('.', 1)[-1]
+
+def get_fpath_to_save_in_uploaded(suffix):
+    fname = f'{time.time()}.{suffix}'
+    base_dir = os.path.join(UPLOADED_DIR, get_dir_key(fname))
+    if not os.path.lexists(base_dir):
+        os.makedirs(base_dir, exist_ok=True)
+    return os.path.join(base_dir, fname)
+
+def get_relative_path(fpath, DIR=CSITE_DIR):
+    p = Path(fpath).relative_to(DIR)
+    return '/static/%s'  % (str(p).replace('\\','/'))
 
 def get_fpath_from_url(url):
     assert url.startswith(ROOT_URL)
