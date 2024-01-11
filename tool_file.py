@@ -18,7 +18,7 @@ from helper_net import get_with_random_agent
 from tool_env import OS_WIN, simple_encode
 import os
 
-REMOTE = os.path.lexists('/home')
+REMOTE = not os.path.lexists('f:/workspace')
 
 ROOT_URL = 'https://btmy.j1.sale:8090/'
 ROOT_DIR = Path(r'v:\static')
