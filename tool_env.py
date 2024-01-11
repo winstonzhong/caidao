@@ -25,6 +25,13 @@ ptn_emoji = re.compile(u'[\U00010000-\U0010ffff]')
 def clear_emoji(content):
     return ptn_emoji.sub('', content)
 
+def is_number(x):
+    try:
+        int(x)
+        return True
+    except:
+        pass
+    return False
 
 def is_chinese(ch):
     return '\u4e00' <= ch <= '\u9fff'

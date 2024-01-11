@@ -396,3 +396,20 @@ def make_mask_by_raw_shape_mask(mask_raw, low=10):
                                     )
     return make_mask_by_contours(mask_raw, contours)
                 
+def cut_left_for_kuotu(img, span=100):
+    h,w = img.shape[:2]
+    r = h / w
+    w1 = w - span
+    h1 = r * w1
+    # delta_top = int((h - h1) / 3)
+    # delta_bottom = int(h - h1 - delta_top)
+    top = int((h - h1)/2)
+    # delta_bottom = delta_top
+    left = span
+    # top = delta_top
+    bottom = int(h1 + top)
+    right = w
+    print(left, right, top, bottom)
+    return img[top:bottom, left:right, ...]
+    
+    
