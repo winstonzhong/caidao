@@ -36,10 +36,10 @@ def to_relative(fpath):
 def get_suffix(fpath):
     return fpath.rsplit('.', 1)[-1]
 
-def get_fpath_to_save_in_uploaded(suffix):
+def get_fpath_to_save_in_uploaded(suffix, mk_dirs_if_not_exists=True):
     fname = f'{time.time()}.{suffix}'
     base_dir = os.path.join(UPLOADED_DIR, get_dir_key(fname))
-    if not os.path.lexists(base_dir):
+    if mk_dirs_if_not_exists and not os.path.lexists(base_dir):
         os.makedirs(base_dir, exist_ok=True)
     return os.path.join(base_dir, fname)
 
