@@ -279,6 +279,7 @@ class AbstractTaskOrder(models.Model):
 
     pic_mode = models.SmallIntegerField(verbose_name='图像模式', choices=PIC_MODES, default=DEFAULT_PIC_MODE)
     is_downloaded = models.BooleanField(verbose_name='是否下载', default=False)
+    hair_color = models.SmallIntegerField(verbose_name='发色', choices=HAIR_COLORS, default=3)
 
     class Meta:
         abstract = True
