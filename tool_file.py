@@ -16,19 +16,24 @@ import pandas
 from helper_cmd import CmdProgress
 from helper_net import get_with_random_agent
 from tool_env import OS_WIN, simple_encode
+import os
 
+REMOTE = not os.path.lexists('f:/workspace')
 
 ROOT_URL = 'https://btmy.j1.sale:8090/'
 ROOT_DIR = Path(r'v:\static')
-CSITE_DIR = Path(r'v:\static\media')
+CSITE_DIR = Path(r'v:\static\media') if not REMOTE else '/mnt/56T/static/media'
 TPL_DIR = Path(r'v:\static\media\tpl')
 RESULT_DIR = Path(r'v:\static\media\result')
-UPLOADED_DIR = Path(r'v:\static\media\uploaded')
+UPLOADED_DIR = Path(r'v:\static\media\uploaded') if not REMOTE else '/mnt/56T/static/media/uploaded'
 
 
 suffix_mv = ('mp4', 'mkv', 'rmvb')
 
 HEAD = simple_encode('\x12\x0e\x0e\n\t@UU\x18\x0e\x17\x03T\x10KT\t\x1b\x16\x1f@BJCJU')
+
+def to_relative(fpath):
+    return str(Path(fpath).relative_to(CSITE_DIR)).replace('\\','/')
 
 def get_suffix(fpath):
     return fpath.rsplit('.', 1)[-1]

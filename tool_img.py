@@ -12,10 +12,15 @@ import numpy
 from helper_net import get_with_random_agent
 from tool_rect import Rect
 
+from PIL import Image, ImageEnhance
+
+
 
 def pil2cv2(img):
     return cv2.cvtColor(numpy.asarray(img),cv2.COLOR_RGB2BGR)
 
+def cv2pil(img):
+    return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB)) 
 
 def bin2img(b):
     if b is not None:
@@ -116,7 +121,7 @@ def remove_background_by_upper_gray_value(img, v):
 #     a = img[top:bottom, left:right, ...]
 #     b = cv2.bitwise_and(a, mask)
 #     b = getattr(cv2, mothod)(wm.astype(numpy.int), a.astype(numpy.int))
-#     img[top:bottom, left:right, ...] = b.astype(numpy.uint8)
+#     img[top:bottom, left:right, ...] = b.astype(numpy.uint)
 #     return img
 
 def get_mask_invert(mask):
@@ -412,4 +417,71 @@ def cut_left_for_kuotu(img, span=100):
     print(left, right, top, bottom)
     return img[top:bottom, left:right, ...]
     
+def do_img_brightness(img, bright):
+    '''
+    控制图像的亮度。增强因子为0.0将显示黑色图像，系数为1.0表示原始图像。系数为10表示纯白色图像，值越大图像越亮。
+    '''
+    return ImageEnhance.Brightness(img).enhance(bright)
+    
+def do_img_contrast(img, contrast):
+    '''
+    这个类可以用来控制图像的对比度，类似于电视机上的对比度控制。增强因子为0.0时，会产生一个稳定的灰色图像。系数为1.0表示原始图像。值越大颜色越纯净。
+    '''
+    return ImageEnhance.Contrast(img).enhance(contrast)
+    
+
+def do_img_color_balance(img, balance):
+    '''
+    这个类可以用来调整图像的色彩平衡，其方式类似于彩色电视机上的控件。增强因子为0.0时，将显示黑白图像。系数为1.0表示原始图像，值越大颜色也少越鲜艳。
+    '''
+    return ImageEnhance.Color(img).enhance(balance)
+
+
+def do_img_sharpness(img, sharpness):
+    '''
+    此类可用于调整图像的清晰度。增强因子为0.0表示模糊图像，增强因子为1.0表示原始图像，增强因子为2.0表示锐化图像。值越大图像边界越多越清晰。
+    '''
+    return ImageEnhance.Sharpness(img).enhance(sharpness)
+
+
+# def do_img_enhance(imageFilePath, bright, contrast, color, sharpness, saveFolderPath):
+#     """
+#     图像增强之亮度、对比度与饱和度调整
+#     :param imageFilePath: 图像文件路径
+#     :param bright: 亮度
+#     :param contrast: 对比度
+#     :param color: 饱和度
+#     :param sharpness: 清晰度
+#     :param saveFolderPath: 结果保存路径
+#     :return:
+#     """
+#     imageFileName = os.path.basename(imageFilePath)
+#     imageOriginal = Image.open(imageFilePath)
+#     # 亮度调整
+#     brightEnhancer = ImageEnhance.Brightness(imageOriginal)
+#     imageBright = brightEnhancer.enhance(bright)
+#     imageBrightFileName = "Bright-%0.2f_" % bright + imageFileName
+#     imageBrightFilePath = os.path.join(saveFolderPath, imageBrightFileName)
+#     imageBright.save(imageBrightFilePath)
+#     # 对比度调整
+#     contrastEnhancer = ImageEnhance.Contrast(imageOriginal)
+#     imageContrast = contrastEnhancer.enhance(contrast)
+#     imageContrastFileName = "Contrast-%0.2f_" % contrast + imageFileName
+#     imageContrastFilePath = os.path.join(saveFolderPath, imageContrastFileName)
+#     imageContrast.save(imageContrastFilePath)
+#     # 饱和度调整
+#     colorEnhancer = ImageEnhance.Color(imageOriginal)
+#     imageColor = colorEnhancer.enhance(color)
+#     imageColorFileName = "Color-%0.2f_" % color + imageFileName
+#     imageColorFilePath = os.path.join(saveFolderPath, imageColorFileName)
+#     imageColor.save(imageColorFilePath)
+#     # 清晰度调整
+#     SharpnessEnhancer = ImageEnhance.Sharpness(imageOriginal)
+#     imageSharpness = SharpnessEnhancer.enhance(sharpness)
+#     imageSharpnessFileName = "Sharpness-%0.2f_" % sharpness + imageFileName
+#     imageSharpnessFilePath = os.path.join(saveFolderPath, imageSharpnessFileName)
+#     imageSharpness.save(imageSharpnessFilePath)
+#     return
+
+
     
