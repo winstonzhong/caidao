@@ -151,3 +151,19 @@ class Video(object):
         # v2 = Video.from_dir(r'Z:\backup\testit\1\1360_1490_f2f0\rtxt')
         v2 = Video.from_dir(r'Z:\backup\testit\1\1360_1490_f2f0')
         v2.save(d_fangdou=d, fpath='f:/test/test2.mp4', margin_top=73)
+        
+        
+    @classmethod
+    def save_first_frame(cls, src=r'V:\tmp\pic', dst_dir=r'V:\tmp\expand_test'):
+        if os.path.isdir(src):
+            files = glob.glob(os.path.join(src, '*.mp4'))
+        else:
+            files = (src,)
+            
+        for x in files:
+            fname = os.path.basename(x).rsplit('.', 1)[0]
+            fpath = os.path.join(dst_dir, f'{fname}.png')
+            if not os.path.lexists(fpath):
+                v = cls.from_video(x)
+                cv2.imwrite(fpath, v.frames[0].img)
+            
