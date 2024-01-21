@@ -5,6 +5,7 @@ Created on 2022年6月3日
 '''
 import platform
 import re
+import numpy
 
 OPENAI = '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'
 
@@ -24,6 +25,10 @@ ptn_emoji = re.compile(u'[\U00010000-\U0010ffff]')
 
 def clear_emoji(content):
     return ptn_emoji.sub('', content)
+
+def smart_range(start, end):
+    s = numpy.sign(end - start)
+    return range(start, end+s, s)
 
 def is_number(x):
     try:
