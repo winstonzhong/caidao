@@ -5,7 +5,10 @@ Created on 2022年6月3日
 '''
 import platform
 import re
+
 import numpy
+from urllib3.util.url import IPV4_RE, IPV4_PAT
+
 
 OPENAI = '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'
 
@@ -22,6 +25,29 @@ ptn_x = re.compile('\!|？|\?|"')
 ptn_dot = re.compile('…{2,}')
 
 ptn_emoji = re.compile(u'[\U00010000-\U0010ffff]')
+
+def to_number_with_chinese(line):
+    '''
+    >>> to_number_with_chinese('307')
+    307
+    >>> to_number_with_chinese('4927')
+    4927
+    >>> to_number_with_chinese('2.4万')
+    24000.0
+    >>> to_number_with_chinese('65.4万')
+    654000.0
+    '''
+    # ['2.4万', '9.1万', '65.4万', '307']
+    # ['4927', '32', '10', '43']
+    try:
+        return int(line)
+    except:
+        return eval(line.replace('万', '*10000'))
+    
+
+
+def is_ipv4(host):
+    return re.match(IPV4_PAT, host) is not None
 
 def clear_emoji(content):
     return ptn_emoji.sub('', content)
