@@ -53,8 +53,25 @@ def clear_emoji(content):
     return ptn_emoji.sub('', content)
 
 def smart_range(start, end):
+    '''
+    >>> list(smart_range(0,10))
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    >>> list(smart_range(10,1))
+    [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+    >>> list(smart_range(*('1-3'.split('-'))))
+    [1, 2, 3]
+    '''
+    end = int(end)
+    start = int(start)
     s = numpy.sign(end - start)
     return range(start, end+s, s)
+
+def smart_range_safe(start, end):
+    try:
+        return smart_range(start, end)
+    except:
+        pass
+    return []
 
 def is_number(x):
     try:
