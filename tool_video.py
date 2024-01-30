@@ -69,6 +69,7 @@ def read_draft_info(fpath):
                 'end': to_timestr_with_hour(end),
                 'duration':duration,
                 'trimed':1,
+                'is_draft':1,
                 }
             if not os.path.lexists(d.get('clip')):
                 trim_video(fpath_input=fpath_src, fpath_output=d.get('clip'),start=d.get('start'), end=d.get('end'))
