@@ -75,6 +75,9 @@ def trim_audio(fpath_input, fpath_output, start=0, end=0):
         f'''ffmpeg  -i "{fpath_input}" -ss {start_seconds} -t {duration} "{fpath_output}" -y''', 
         shell=True)
     process.wait()
+    
+def trim_video(fpath_input, fpath_output, start=0, end=0):
+    return trim_audio(fpath_input, fpath_output, start, end)
 
 def concat_mp4s(video_txt, fpath_dst):
     process = subprocess.Popen(
