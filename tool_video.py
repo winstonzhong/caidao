@@ -43,10 +43,11 @@ def merge_video(images, fpath, fps, margin_top=0, margin_bottom=0):
     out.release() 
 
 
-def read_draft_info(fpath):
+def read_draft_info(fpath, do_trim=True, fpath_video=None):
     with open(fpath, 'r', encoding='utf8') as fp:
         d = json.load(fp)
     # return d.get("draft_materials")
+    base_dir = os.path.dirname(fpath) 
     for i, x in enumerate(d.get("draft_materials")[0].get('value')):
         if x.get('sub_time_range').get('duration') != -1:
             # num = models.PositiveSmallIntegerField(verbose_name='编号', null=True, blank=True)
@@ -56,14 +57,22 @@ def read_draft_info(fpath):
             # end = models.CharField(max_length=12, verbose_name='结束时间', null=True, blank=True)
             # duration = models.FloatField(null=True, blank=True,verbose_name='时长')
             # trimed = models.BooleanField(default=False,verbose_name='是否已剪切到文件')            
-            fpath_src = x.get('file_Path')
-            base_dir = os.path.dirname(fpath_src)
+            fpath_src = fpath_video or x.get('file_Path')
+            
+            if fpath_video is not None:
+                if not os.path.basename(fpath_video) == os.path.basename(x.get('file_Path')):
+                    print(fpath_video)
+                    print(x.get('file_Path'))
+                    raise ValueError
+            
+            # base_dir = os.path.dirname(fpath_src)
             start = x.get('roughcut_time_range').get('start') / 1000000
             duration = x.get('roughcut_time_range').get('duration') / 1000000
             end = start + duration 
             fname = os.path.basename(fpath_src)
             d = {
-                'clip':f'{base_dir}/{i}_{fname}',
+                # 'clip':f'{base_dir}/{i}_{fname}',
+                'clip':os.path.join(base_dir, f'{i}_{fname}'),
                 'num':i, 
                 'start': to_timestr_with_hour(start),
                 'end': to_timestr_with_hour(end),
@@ -71,8 +80,9 @@ def read_draft_info(fpath):
                 'trimed':1,
                 'is_draft':1,
                 }
-            if not os.path.lexists(d.get('clip')):
-                trim_video(fpath_input=fpath_src, fpath_output=d.get('clip'),start=d.get('start'), end=d.get('end'))
+            if do_trim:
+                if not os.path.lexists(d.get('clip')):
+                    trim_video(fpath_input=fpath_src, fpath_output=d.get('clip'),start=d.get('start'), end=d.get('end'))
             yield d
         
         
