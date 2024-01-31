@@ -6,6 +6,10 @@ Created on 2022年6月3日
 import platform
 import re
 
+import numpy
+from urllib3.util.url import IPV4_RE, IPV4_PAT
+
+
 OPENAI = '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'
 
 OS_WIN = platform.system() == 'Windows'
@@ -22,8 +26,52 @@ ptn_dot = re.compile('…{2,}')
 
 ptn_emoji = re.compile(u'[\U00010000-\U0010ffff]')
 
+def to_number_with_chinese(line):
+    '''
+    >>> to_number_with_chinese('307')
+    307
+    >>> to_number_with_chinese('4927')
+    4927
+    >>> to_number_with_chinese('2.4万')
+    24000.0
+    >>> to_number_with_chinese('65.4万')
+    654000.0
+    '''
+    # ['2.4万', '9.1万', '65.4万', '307']
+    # ['4927', '32', '10', '43']
+    try:
+        return int(line)
+    except:
+        return eval(line.replace('万', '*10000'))
+    
+
+
+def is_ipv4(host):
+    return re.match(IPV4_PAT, host) is not None
+
 def clear_emoji(content):
     return ptn_emoji.sub('', content)
+
+def smart_range(start, end):
+    '''
+    >>> list(smart_range(0,10))
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    >>> list(smart_range(10,1))
+    [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+    >>> list(smart_range(*('1-3'.split('-'))))
+    [1, 2, 3]
+    '''
+    end = int(end)
+    start = int(start)
+    s = numpy.sign(end - start)
+    return range(start, end+s, s)
+
+def smart_range_safe(start, end):
+    try:
+        return smart_range(start, end)
+    except:
+        pass
+    return []
 
 def is_number(x):
     try:
