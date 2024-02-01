@@ -26,6 +26,17 @@ ptn_dot = re.compile('…{2,}')
 
 ptn_emoji = re.compile(u'[\U00010000-\U0010ffff]')
 
+def bounds_to_shape(bounds):
+    '''
+    >>> bounds_to_shape('(1,2,3,4)') == '(2,2)'
+    True
+    >>> bounds_to_shape('(0,100,300,401)')
+    '(300,301)'
+    '''
+    rect = eval(bounds)
+    return f'({rect[2]-rect[0]},{rect[3]-rect[1]})'
+
+
 def to_number_with_chinese(line):
     '''
     >>> to_number_with_chinese('307')
@@ -60,9 +71,15 @@ def smart_range(start, end):
     [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
     >>> list(smart_range(*('1-3'.split('-'))))
     [1, 2, 3]
+    >>> list(smart_range(0,0))
+    [0]
+    >>> list(smart_range(1,1))
+    [0]
     '''
     end = int(end)
     start = int(start)
+    if end == start:
+        return range(0,1)
     s = numpy.sign(end - start)
     return range(start, end+s, s)
 
