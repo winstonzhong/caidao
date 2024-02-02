@@ -28,13 +28,13 @@ ptn_emoji = re.compile(u'[\U00010000-\U0010ffff]')
 
 def bounds_to_shape(bounds):
     '''
-    >>> bounds_to_shape('(1,2,3,4)') == '(2,2)'
-    True
+    >>> bounds_to_shape('(1,2,3,4)')
+    (2, 2)
     >>> bounds_to_shape('(0,100,300,401)')
-    '(300,301)'
+    (300, 301)
     '''
     rect = eval(bounds)
-    return f'({rect[2]-rect[0]},{rect[3]-rect[1]})'
+    return (rect[2]-rect[0],rect[3]-rect[1])
 
 
 def to_number_with_chinese(line):
