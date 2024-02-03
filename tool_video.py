@@ -63,7 +63,7 @@ def read_draft_info(fpath, do_trim=True, fpath_video=None):
                 if not os.path.basename(fpath_video) == os.path.basename(x.get('file_Path')):
                     print(fpath_video)
                     print(x.get('file_Path'))
-                    raise ValueError
+                    # raise ValueError
             
             # base_dir = os.path.dirname(fpath_src)
             start = x.get('roughcut_time_range').get('start') / 1000000

@@ -9,6 +9,8 @@ import re
 import numpy
 from urllib3.util.url import IPV4_RE, IPV4_PAT
 
+from tool_rect import Rect
+
 
 OPENAI = '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'
 
@@ -25,6 +27,20 @@ ptn_x = re.compile('\!|？|\?|"')
 ptn_dot = re.compile('…{2,}')
 
 ptn_emoji = re.compile(u'[\U00010000-\U0010ffff]')
+
+def bounds_to_rect(bounds):
+    rect = eval(bounds)
+    return Rect(rect[0],rect[2],rect[1],rect[3])
+
+def bounds_to_center(bounds):
+    '''
+    >>> bounds_to_center('(0,0,4,4)')
+    (2, 2)
+    '''
+    rect = eval(bounds)
+    w, h = (rect[2]-rect[0],rect[3]-rect[1])
+    return (int(rect[0]+w//2),int(rect[1]+h/2))
+    
 
 def bounds_to_shape(bounds):
     '''
