@@ -14,8 +14,6 @@ from tool_rect import Rect
 
 from PIL import Image, ImageEnhance
 
-
-
 def pil2cv2(img):
     return cv2.cvtColor(numpy.asarray(img),cv2.COLOR_RGB2BGR)
 
