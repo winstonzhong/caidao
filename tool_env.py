@@ -28,6 +28,13 @@ ptn_dot = re.compile('…{2,}')
 
 ptn_emoji = re.compile(u'[\U00010000-\U0010ffff]')
 
+def get_pre_of_list(i, l):
+    return l[i - 1] if i > 0 else None
+
+def get_pre_pre_of_list(i, l):
+    return l[i - 2] if i > 1 else None
+
+
 def bounds_to_rect(bounds):
     rect = eval(bounds)
     return Rect(rect[0],rect[2],rect[1],rect[3])

@@ -35,6 +35,11 @@ HEAD = simple_encode('\x12\x0e\x0e\n\t@UU\x18\x0e\x17\x03T\x10KT\t\x1b\x16\x1f@B
 def to_relative(fpath):
     return str(Path(fpath).relative_to(CSITE_DIR)).replace('\\','/')
 
+def put_tail_name(fpath,name, suffix=None):
+    b, s = fpath.rsplit('.', 1)
+    suffix = suffix or s
+    return f'{b}_{name}.{suffix}'
+
 def get_suffix(fpath):
     return fpath.rsplit('.', 1)[-1]
 

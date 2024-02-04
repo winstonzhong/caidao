@@ -14,8 +14,6 @@ from tool_rect import Rect
 
 from PIL import Image, ImageEnhance
 
-
-
 def pil2cv2(img):
     return cv2.cvtColor(numpy.asarray(img),cv2.COLOR_RGB2BGR)
 
@@ -444,44 +442,32 @@ def do_img_sharpness(img, sharpness):
     return ImageEnhance.Sharpness(img).enhance(sharpness)
 
 
-# def do_img_enhance(imageFilePath, bright, contrast, color, sharpness, saveFolderPath):
-#     """
-#     图像增强之亮度、对比度与饱和度调整
-#     :param imageFilePath: 图像文件路径
-#     :param bright: 亮度
-#     :param contrast: 对比度
-#     :param color: 饱和度
-#     :param sharpness: 清晰度
-#     :param saveFolderPath: 结果保存路径
-#     :return:
-#     """
-#     imageFileName = os.path.basename(imageFilePath)
-#     imageOriginal = Image.open(imageFilePath)
-#     # 亮度调整
-#     brightEnhancer = ImageEnhance.Brightness(imageOriginal)
-#     imageBright = brightEnhancer.enhance(bright)
-#     imageBrightFileName = "Bright-%0.2f_" % bright + imageFileName
-#     imageBrightFilePath = os.path.join(saveFolderPath, imageBrightFileName)
-#     imageBright.save(imageBrightFilePath)
-#     # 对比度调整
-#     contrastEnhancer = ImageEnhance.Contrast(imageOriginal)
-#     imageContrast = contrastEnhancer.enhance(contrast)
-#     imageContrastFileName = "Contrast-%0.2f_" % contrast + imageFileName
-#     imageContrastFilePath = os.path.join(saveFolderPath, imageContrastFileName)
-#     imageContrast.save(imageContrastFilePath)
-#     # 饱和度调整
-#     colorEnhancer = ImageEnhance.Color(imageOriginal)
-#     imageColor = colorEnhancer.enhance(color)
-#     imageColorFileName = "Color-%0.2f_" % color + imageFileName
-#     imageColorFilePath = os.path.join(saveFolderPath, imageColorFileName)
-#     imageColor.save(imageColorFilePath)
-#     # 清晰度调整
-#     SharpnessEnhancer = ImageEnhance.Sharpness(imageOriginal)
-#     imageSharpness = SharpnessEnhancer.enhance(sharpness)
-#     imageSharpnessFileName = "Sharpness-%0.2f_" % sharpness + imageFileName
-#     imageSharpnessFilePath = os.path.join(saveFolderPath, imageSharpnessFileName)
-#     imageSharpness.save(imageSharpnessFilePath)
-#     return
+def shape_to_squrare(h, w):
+    '''
+    >>> shape_to_squrare(100,100)
+    {'top': 0, 'bottom': 100, 'left': 0, 'right': 100}
+    >>> shape_to_squrare(1920,1080)
+    {'top': 420, 'bottom': 1500, 'left': 0, 'right': 1080}
+    '''
+    d = {}
+    delta = abs(h - w)
+    head = delta //2
+    tail = delta - head
+    if h >= w:
+        d.update(top=head, bottom=h-tail, left=0, right=w)
+    else:
+        d.update(top=0, bottom=h, left=head, right=w-tail)
+    return d
 
-
+def to_squrare(img):
+    h, w = img.shape[:2]
+    if h == w:
+        return img
     
+    d = shape_to_squrare(h, w)
+    
+    return img[d.get('top'):d.get('bottom'), d.get('left'):d.get('right'),...]      
+    
+if __name__ == '__main__':
+    import doctest
+    print(doctest.testmod(verbose=False, report=False))
