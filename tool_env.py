@@ -10,6 +10,7 @@ import numpy
 from urllib3.util.url import IPV4_RE, IPV4_PAT
 
 from tool_rect import Rect
+from numpy.lib._iotools import _is_string_like
 
 
 OPENAI = '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'
@@ -43,8 +44,10 @@ def bounds_to_center(bounds):
     '''
     >>> bounds_to_center('(0,0,4,4)')
     (2, 2)
+    >>> bounds_to_center((0,0,4,4))
+    (2, 2)
     '''
-    rect = eval(bounds)
+    rect = eval(bounds) if _is_string_like(bounds) else bounds
     w, h = (rect[2]-rect[0],rect[3]-rect[1])
     return (int(rect[0]+w//2),int(rect[1]+h/2))
     

@@ -5,6 +5,7 @@ Created on 2024年1月10日
 '''
 import glob
 import os
+import time
 
 import cv2
 from django.utils.functional import cached_property
@@ -87,7 +88,13 @@ class Video(object):
             cv2.waitKey(10)
         cv2.waitKey()
         cv2.destroyAllWindows()
-        
+    
+    @classmethod
+    def extract_first_frame(cls, fpath):
+        img = cls.from_video(fpath).frames[0].img
+        fpath_output_img = f'{os.path.dirname(fpath)}/{time.time()}.png'
+        cv2.imwrite(fpath_output_img, img)
+        return fpath_output_img
         
     @classmethod
     def from_dir(cls, base_dir, start=0, end=None, suffix='*.png', fps=30):
