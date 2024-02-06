@@ -4,6 +4,25 @@ Created on 2022年7月24日
 @author: lenovo
 '''
 from django.contrib import admin
+from django.utils.safestring import mark_safe
+from tool_file import get_suffix
+
+def to_img_html(fpath, width=100):
+    if fpath.name:
+        return mark_safe(f'''<img src="{fpath.url}" width={width}/>''')
+
+def to_video_html(fpath, width=100):
+    if fpath.name:
+        return  mark_safe(f'''<video controls  playsinline="" style="display: block; max-height: 100%; max-width: 100%;" width={width};>
+        <source src="{fpath.url}" type="video/{get_suffix(fpath.name).lower()}">
+        </video>''')
+    
+def to_media_html(fpath, width=200):
+    if fpath.name:
+        if get_suffix(fpath.name).lower() in ('mp4', 'avi'):
+        # if fpath.name.lower().endswith('.mp4'):
+            return to_video_html(fpath, width)
+        return to_img_html(fpath, width)
 
 class BaseAdmin(admin.ModelAdmin):
     def list_display_filter(self, x):
