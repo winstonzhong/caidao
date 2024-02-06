@@ -118,7 +118,6 @@ class BaseDriver(object):
     
     def get_driver_remote(self):
         options = Options()
-<<<<<<< HEAD
 
         options.add_argument("--log-level=3");
         # options.add_argument("user-data-dir=%s" % USER_DATA_DIR)
