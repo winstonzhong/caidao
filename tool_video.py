@@ -32,7 +32,8 @@ def split_video_into_pngs(fpath):
         
         
 def merge_video(images, fpath, fps, margin_top=0, margin_bottom=0):
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    # fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')
     h, w = images[0].shape[:2]
     h -= margin_top + margin_bottom
     out = cv2.VideoWriter(fpath,fourcc,fps,(w, h), True)
@@ -84,5 +85,4 @@ def read_draft_info(fpath, do_trim=True, fpath_video=None):
                 if not os.path.lexists(d.get('clip')):
                     trim_video(fpath_input=fpath_src, fpath_output=d.get('clip'),start=d.get('start'), end=d.get('end'))
             yield d
-        
         

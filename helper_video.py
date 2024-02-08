@@ -131,7 +131,8 @@ class Video(object):
     
     def save(self, margin_top=0, margin_bottom=0, d_fangdou={}, fpath=None):
         fpath = fpath or self.fpath
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        # fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        fourcc = cv2.VideoWriter_fourcc(*'avc1')
         h, w = self.frames[0].img.shape[:2]
         h -= margin_top + margin_bottom
         out = cv2.VideoWriter(fpath,fourcc,self.fps,(w, h), True)
@@ -173,4 +174,9 @@ class Video(object):
             if not os.path.lexists(fpath):
                 v = cls.from_video(x)
                 cv2.imwrite(fpath, v.frames[0].img)
-            
+
+if  __name__ == "__main__":
+    v1 = Video.from_dir(r'Z:\backup\testit\1', 1360)
+    v1.save(fpath=r'Z:\backup\testit\1\test1111.mp4')
+    print(v1.fpath)
+    print('111')            
