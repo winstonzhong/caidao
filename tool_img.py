@@ -14,6 +14,14 @@ from tool_rect import Rect
 
 from PIL import Image, ImageEnhance
 
+
+def to_9_16(img):
+    h,w = img.shape[:2]
+    v = 9*h // 16
+    left = (w - v) // 2
+    right = v + left
+    return img[0:h, left:right,...]
+
 def pil2cv2(img):
     return cv2.cvtColor(numpy.asarray(img),cv2.COLOR_RGB2BGR)
 
