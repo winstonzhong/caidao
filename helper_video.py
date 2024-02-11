@@ -90,9 +90,10 @@ class Video(object):
         cv2.destroyAllWindows()
     
     @classmethod
-    def extract_first_frame(cls, fpath):
+    def extract_first_frame(cls, fpath, fpath_output_img=None):
         img = cls.from_video(fpath).frames[0].img
-        fpath_output_img = f'{os.path.dirname(fpath)}/{time.time()}.png'
+        if fpath_output_img is None:
+            fpath_output_img = f'{os.path.dirname(fpath)}/{time.time()}.png'
         cv2.imwrite(fpath_output_img, img)
         return fpath_output_img
         
