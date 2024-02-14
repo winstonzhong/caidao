@@ -412,7 +412,6 @@ class Rect(object):
                     self.center_y - self.space_top,
                     self.center_y + self.space_bottom_full_body,
                     )
-
     
     def get_rect_body_real(self, shape):
         return self.rect_body_virtual.to_real(shape)
@@ -421,10 +420,6 @@ class Rect(object):
         bottom = self.bottom +1
         right = self.right + 1
         return img[self.top:bottom, self.left:right, ...]
-        # if len(img.shape) == 3:
-        #     return img[self.top:self.bottom, self.left:self.right, ::]
-        # return img[self.top:self.bottom, self.left:self.right]
-    
     
     def is_valid_face(self):
         return self.height > self.MIN_FACE_WIDTH and self.width > self.MIN_FACE_WIDTH
@@ -438,6 +433,22 @@ class Rect(object):
         if o.left >= 0 and o.top >= 0 and o.right > o.left and o.bottom > o.top:
             return o
         
+    def is_collided(self, other):
+        '''
+        >>> Rect(0,0,10,10).is_collided(Rect(0,0,10,10))
+        True
+        >>> Rect(10,10,110,110).is_collided(Rect(0,0,10,10))
+        False
+        >>> Rect(0,0,10,10).is_collided(Rect(20,30,10,10))
+        False
+        '''
+        if max(self.left, other.left
+               ) <= min(self.right, other.right
+                        ) and max(self.top, other.top
+                                  ) <= min(self.bottom, other.bottom):
+            return True
+        else:
+            return False        
 
 if __name__ == "__main__":
     import doctest

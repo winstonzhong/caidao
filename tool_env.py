@@ -37,7 +37,10 @@ def get_pre_pre_of_list(i, l):
 
 
 def bounds_to_rect(bounds):
-    rect = eval(bounds)
+    if _is_string_like(bounds):
+        rect = eval(bounds)
+    else:
+        rect = bounds
     return Rect(rect[0],rect[2],rect[1],rect[3])
 
 def bounds_to_center(bounds):
@@ -47,9 +50,8 @@ def bounds_to_center(bounds):
     >>> bounds_to_center((0,0,4,4))
     (2, 2)
     '''
-    rect = eval(bounds) if _is_string_like(bounds) else bounds
-    w, h = (rect[2]-rect[0],rect[3]-rect[1])
-    return (int(rect[0]+w//2),int(rect[1]+h/2))
+    rect = bounds_to_rect(bounds)
+    return rect.center_x, rect.center_y
     
 
 def bounds_to_shape(bounds):
@@ -59,29 +61,55 @@ def bounds_to_shape(bounds):
     >>> bounds_to_shape('(0,100,300,401)')
     (300, 301)
     '''
-    rect = eval(bounds)
-    return (rect[2]-rect[0],rect[3]-rect[1])
+    rect = bounds_to_rect(bounds)
+    return rect.width, rect.height
 
 
+def to_number_safe(line):
+    try:
+        return float(line)
+    except ValueError:
+        return numpy.nan
+    
 def to_number_with_chinese(line):
     '''
     >>> to_number_with_chinese('307')
-    307
+    307.0
     >>> to_number_with_chinese('4927')
-    4927
+    4927.0
     >>> to_number_with_chinese('2.4万')
     24000.0
     >>> to_number_with_chinese('65.4万')
     654000.0
+    >>> to_number_with_chinese('65.4万1')
+    nan
+    >>> to_number_with_chinese('65.4万 ')
+    654000.0
+    >>> to_number_with_chinese('65.4')
+    65.4
+    >>> to_number_with_chinese(None)
+    nan
     '''
-    # ['2.4万', '9.1万', '65.4万', '307']
-    # ['4927', '32', '10', '43']
-    try:
-        return int(line)
-    except:
-        return eval(line.replace('万', '*10000'))
+    if not line:
+        return numpy.nan
+    l = line.strip().rsplit('万', 1)
     
+    length = len(l)
+    if length == 2 and not l[1]:
+        u = 10000
+    elif length == 1:
+        u = 1
+    else:
+        u = numpy.nan
+        
+    return to_number_safe(l[0]) * u
 
+def to_number_with_chinese_safe(line):
+    v = to_number_with_chinese(line)
+    return v if not numpy.isnan(v) else line 
+
+def to_number_with_chinese_safe_dict(d):
+    return {k:to_number_with_chinese_safe(v) for k,v in d.items()}
 
 def is_ipv4(host):
     return re.match(IPV4_PAT, host) is not None
