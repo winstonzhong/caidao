@@ -13,7 +13,7 @@ import numpy
 import pandas
 
 from helper_cmd import CmdProgress
-from tool_img import show
+from tool_img import show, cut_empty_and_put_to_center, keep_width_to
 from tool_video import split_video
 
 
@@ -71,6 +71,18 @@ class Frame(object):
                 yield cls(img, i)
                 i += 1
                 
+    def cut_empty_and_put_to_center(self, keep_width=None, keep_height=None):
+        # print(keep_width, keep_height)
+        self.img, height = cut_empty_and_put_to_center(self.img, 
+                                               keep_width=keep_width,
+                                               keep_height=keep_height,
+                                               )
+        return height
+        
+    
+    def keep_width_to(self, width, height=None):
+        self.img, height =  keep_width_to(self.img, width, height)
+        return height
                 
     
     
@@ -81,6 +93,8 @@ class Video(object):
         self.fpath = fpath
         self.fps = fps
         self.d_frames = {x.index:x for x in self.frames}
+        self.index = 0
+        self.total_frames = len(self.frames)
         
     def play(self):
         for frame in self.frames:
@@ -88,6 +102,23 @@ class Video(object):
             cv2.waitKey(10)
         cv2.waitKey()
         cv2.destroyAllWindows()
+    
+    def cut_empty_and_put_to_center_all(self, keep_width=None):
+        cp = CmdProgress(self.total_frames)
+        keep_height = None
+        for x in self.frames:
+            keep_height = x.cut_empty_and_put_to_center(keep_width, keep_height)
+            cp.update()
+
+
+    def keep_width_to_all(self, keep_width):
+        cp = CmdProgress(self.total_frames)
+        keep_height = None
+        keep_width = int(keep_width)
+        for x in self.frames:
+            keep_height = x.keep_width_to(keep_width, keep_height)
+            cp.update()
+
     
     @classmethod
     def extract_first_frame(cls, fpath, fpath_output_img=None):
@@ -104,8 +135,8 @@ class Video(object):
         return cls(frames, fpath=fpath, fps=fps)
     
     @classmethod
-    def from_video(cls, *a):
-        return cls(frames=list(Frame.to_frames(*a)))
+    def from_video(cls, *a, **kws):
+        return cls(frames=list(Frame.to_frames(*a)), **kws)
     
     @property
     def df(self):

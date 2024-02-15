@@ -474,7 +474,37 @@ def to_squrare(img):
     
     d = shape_to_squrare(h, w)
     
-    return img[d.get('top'):d.get('bottom'), d.get('left'):d.get('right'),...]      
+    return img[d.get('top'):d.get('bottom'), d.get('left'):d.get('right'),...]
+
+def keep_width_to(img, width, height=None):
+    h, w = img.shape[:2]
+    height = width * h // w if height is None else height
+    return cv2.resize(img,dsize=(width, height),fx=None,fy=None,interpolation=cv2.INTER_LINEAR),height 
+
+
+def cut_empty_and_put_to_center(img, thresh_hold=0, margin=None, keep_width=None, keep_height=None):
+    height, width = img.shape[:2]
+    mask = to_gray(img) > thresh_hold
+    r = get_exteral_rect(mask)
+    tmp = r.crop_img(img)
+    tmp = tmp[margin:-margin,margin:-margin,...] if margin is not None else tmp
+
+    if keep_width is None:
+        canvas = get_canvas(width, height)
+        h, w = tmp.shape[:2]
+        left = (width - w) // 2
+        top = (height - h) // 2
+        
+        right = left+w
+        bottom = top+h
+        
+        canvas[top:bottom,left:right,...] = tmp
+    else:
+        canvas, keep_height = keep_width_to(tmp, keep_width, keep_height)
+        
+    return canvas, keep_height
+     
+          
     
 if __name__ == '__main__':
     import doctest

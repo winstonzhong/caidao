@@ -362,6 +362,49 @@ class Rect(object):
                     min(self.bottom, h)
                     )
         
+    def to_inner(self, shape):
+        '''
+        >>> Rect(0, 10, 0,10).to_inner((100,100))
+        0 10 0 10<10, 10>
+        >>> Rect(-5, 5, 0,10).to_inner((100,100))
+        5 10 0 10<5, 10>
+        >>> Rect(0, 10, -6,4).to_inner((100,100))
+        0 10 6 10<10, 4>
+        >>> Rect(95, 110, 0,10).to_inner((100,100))
+        0 5 0 10<5, 10>
+        >>> Rect(0, 10, 99,120).to_inner((100,100))
+        0 10 0 1<10, 1>
+        '''
+        h, w = shape[:2]
+        
+        return Rect(abs(min(0, self.left)), 
+             min(self.width, self.width - (self.right - w)),
+             abs(min(0, self.top)),
+             min(self.height, self.height - (self.bottom - h)),
+             )
+
+        # if self.left < 0:
+        #     left = - self.left
+        # else:
+        #     left = 0
+        #
+        # if self.top < 0:
+        #     top =  - self.top
+        # else:
+        #     top = 0
+        #
+        # if self.right > w:
+        #     right = self.width - (self.right - w)
+        # else:
+        #     right = self.width
+        #
+        # if self.bottom > h:
+        #     bottom = self.height - (self.bottom - h)
+        # else:
+        #     bottom = self.height
+        #
+        # return Rect(left, right, top, bottom)
+        
     def to_exact_division_size(self):
         self.right -= self.width - 8 * (self.width  // 8)
         self.bottom -= self.height - 8 * (self.height  // 8)
@@ -417,9 +460,12 @@ class Rect(object):
         return self.rect_body_virtual.to_real(shape)
     
     def crop_img(self, img):
-        bottom = self.bottom +1
-        right = self.right + 1
+        bottom = self.bottom
+        right = self.right
         return img[self.top:bottom, self.left:right, ...]
+    
+    def draw_img(self, canvas, img):
+        canvas[self.top:self.bottom, self.left:self.right, ...] = img
     
     def is_valid_face(self):
         return self.height > self.MIN_FACE_WIDTH and self.width > self.MIN_FACE_WIDTH
