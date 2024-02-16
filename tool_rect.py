@@ -502,7 +502,7 @@ class Rect(object):
             return False        
     
     
-    def get_horizontal_distance(self, other, direction):
+    def get_horizontal_distance(self, other, direction, force_direction=True):
         '''
         >>> Rect(0,10,0,10).get_horizontal_distance(Rect(100,110,10,10), LEFT_DIRECTION) 
         inf
@@ -512,14 +512,14 @@ class Rect(object):
         inf
         >>> Rect(100,110,0,10).get_horizontal_distance(Rect(0,10,10,10), LEFT_DIRECTION)
         90
-        >>> Rect(0,10,0,10).get_horizontal_distance(Rect(0,10,0,10), LEFT_DIRECTION)
+        >>> Rect(0,10,0,10).get_horizontal_distance(Rect(0,10,0,10), LEFT_DIRECTION, False)
         0
-        >>> Rect(0,10,0,10).get_horizontal_distance(Rect(0,10,0,10), RIGHT_DIRECTION)
+        >>> Rect(0,10,0,10).get_horizontal_distance(Rect(0,10,0,10), RIGHT_DIRECTION, False)
         0
-        >>> Rect(0,10,0,10).get_horizontal_distance(Rect(5,15,0,10), LEFT_DIRECTION)
+        >>> Rect(0,10,0,10).get_horizontal_distance(Rect(5,15,0,10), LEFT_DIRECTION, False)
         0
         '''
-        if self.is_collided(other):
+        if not force_direction and self.is_collided(other):
             return 0
         
         if direction == LEFT_DIRECTION:
