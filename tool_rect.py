@@ -7,6 +7,11 @@ import numpy
 import pandas
 
 
+LEFT_DIRECTION = -1
+RIGHT_DIRECTION = 1
+UP_DIRECTION = -1
+DOWN_DIRECTION = 1
+
 class Rect(object):
     SPACE_TOP_RATIO = 1.1
     SPACE_LEFT_RATIO = 2.5
@@ -495,6 +500,54 @@ class Rect(object):
             return True
         else:
             return False        
+    
+    
+    def get_horizontal_distance(self, other, direction):
+        '''
+        >>> Rect(0,10,0,10).get_horizontal_distance(Rect(100,110,10,10), LEFT_DIRECTION) 
+        inf
+        >>> Rect(0,10,0,10).get_horizontal_distance(Rect(100,110,10,10), RIGHT_DIRECTION)
+        90
+        >>> Rect(100,110,0,10).get_horizontal_distance(Rect(0,10,10,10), RIGHT_DIRECTION)
+        inf
+        >>> Rect(100,110,0,10).get_horizontal_distance(Rect(0,10,10,10), LEFT_DIRECTION)
+        90
+        >>> Rect(0,10,0,10).get_horizontal_distance(Rect(0,10,0,10), LEFT_DIRECTION)
+        0
+        >>> Rect(0,10,0,10).get_horizontal_distance(Rect(0,10,0,10), RIGHT_DIRECTION)
+        0
+        >>> Rect(0,10,0,10).get_horizontal_distance(Rect(5,15,0,10), LEFT_DIRECTION)
+        0
+        '''
+        if self.is_collided(other):
+            return 0
+        
+        if direction == LEFT_DIRECTION:
+            v = self.left - other.right
+        elif direction == RIGHT_DIRECTION:
+            v = other.left - self.right
+        else:
+            raise ValueError
+        
+        if v < 0:
+            return numpy.Inf
+        
+        return v
+    
+    def is_in_range(self, other, direction, r):
+        '''
+        >>> Rect(0,10,0,10).is_in_range(Rect(100,110,10,10), RIGHT_DIRECTION, 0)
+        False
+        >>> Rect(0,10,0,10).is_in_range(Rect(100,110,10,10), RIGHT_DIRECTION, 85)
+        True
+        >>> Rect(0,10,0,10).is_in_range(Rect(100,110,10,10), RIGHT_DIRECTION, 84)
+        False
+        >>> Rect(0,10,0,10).is_in_range(Rect(100,110,10,10), LEFT_DIRECTION, 10000)
+        False
+        '''
+        return self.get_horizontal_distance(other, direction) <= (self.width//2 + r)
+        
+    
 
 if __name__ == "__main__":
     import doctest
