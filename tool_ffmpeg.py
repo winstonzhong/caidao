@@ -8,6 +8,7 @@ import re
 import subprocess
 
 from tool_env import is_number
+from tool_file import change_suffix
 
 
 ptn_line = re.compile('(\d{2}):(\d{2}).(\d{2,3})')
@@ -24,6 +25,10 @@ def to_seconds(line):
     True
     >>> to_seconds('01:00:03,700') == 3603.7
     True
+    >>> to_seconds('05:03') == 303
+    True
+    >>> to_seconds('8.8s') == 8.8
+    True
     '''
     if not is_number(line):
         l = line.split(':')
@@ -31,8 +36,17 @@ def to_seconds(line):
         total = 0
         for i, x in enumerate(l):
             if i == 0:
-                s, ms = re.split('[,\.]+',x)
-                total += int(s) + float(f'0.{ms}')
+                tmp = re.split('[,\.]+',x)
+                if len(tmp) == 2:
+                    s, ms = re.split('[,\.]+',x)
+                    ms = ms.lower()
+                    if ms.endswith('s'):
+                        ms = ms[:-1]
+                    total += int(s) + float(f'0.{ms}')
+                elif len(tmp) == 1:
+                    total += int(tmp[0])
+                else:
+                    raise ValueError
             else:
                 total += int(x) * (60 ** i)
         return total
@@ -102,7 +116,24 @@ def merge_mp4_wav(fpath_mp4, fpath_wav, fpath_dst, seconds):
         f'''ffmpeg -i  {fpath_wav}  -i  {fpath_mp4}  -ss 0:0 -t {seconds:.3f} {fpath_dst} -y''',
         shell=True)
     process.wait()
-    
+
+
+# ffmpeg.exe -i .\p1_hurt.mp4 -vn -ar 44100 -ac 2 -ab 192k -f mp3 p1_hurt.mp3
+def extract_mp3(fpath_mp4, fpath_mp3=None):
+    fpath_mp3 = change_suffix(fpath_mp4, 'mp3') if fpath_mp3 is None else fpath_mp3
+    process = subprocess.Popen(
+        f'''ffmpeg -i  {fpath_mp4}  -vn -ar 44100 -ac 2 -ab 192k -f mp3 {fpath_mp3} -y''',
+        shell=True)
+    process.wait()
+
+# ffmpeg -i video.mkv -acodec pcm_s16le -ac 2 audio.wav
+def extract_wav(fpath_mp4, fpath_wav=None):
+    fpath_wav = change_suffix(fpath_mp4, 'wav') if fpath_wav is None else fpath_wav
+    process = subprocess.Popen(
+        f'''ffmpeg -i  {fpath_mp4}  -vn -acodec pcm_s16le -ac 2 {fpath_wav} -y''',
+        shell=True)
+    process.wait()
+
 
 if __name__ == "__main__":
     import doctest

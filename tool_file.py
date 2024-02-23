@@ -40,6 +40,10 @@ def put_tail_name(fpath,name, suffix=None):
     suffix = suffix or s
     return f'{b}_{name}.{suffix}'
 
+def change_suffix(fpath, suffix):
+    b, _ = fpath.rsplit('.', 1)
+    return f'{b}.{suffix}'
+
 def get_suffix(fpath):
     return fpath.rsplit('.', 1)[-1]
 

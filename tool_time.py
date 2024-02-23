@@ -3,8 +3,33 @@ Created on 2023年11月3日
 
 @author: lenovo
 '''
-from django.utils import timezone
+import datetime
+import re
 
+from django.utils import timezone
+import pytz
+from time import strptime, mktime
+from tool_ffmpeg import to_seconds
+from _datetime import timedelta
+
+TIME_ZONE_SHANGHAI = pytz.timezone('Asia/Shanghai')
+
+
+ptn_chinese_datetime1 = re.compile('(\d{4}年\d{1,2}月\d{1,2}日)*\s*([^\d]{0,2})(\d{1,2}):(\d{1,2})')
+ptn_chinese_datetime2 = re.compile('([^\s]+)*\s*([^\d]{0,2})(\d{1,2}):(\d{1,2})', re.U)
+
+ptn_chinese_date1 = re.compile('(\d{4})年(\d{1,2})月(\d{1,2})日') 
+ptn_chinese_date2 = re.compile('(\d{4})*(\d{1,2})月(\d{1,2})日')
+
+WEEKDAY_MAP = {
+    '周一': 0,
+    '周二': 1,
+    '周三': 2,
+    '周四': 3,
+    '周五': 4,
+    '周六': 5,
+    '周日': 6,
+    }
 
 units = {
       60:'分',  
@@ -38,6 +63,159 @@ def seconds_to_friendly_unit(seconds):
 
 def get_firendly_display(dt_utc):
     return seconds_to_friendly_unit((timezone.now() - dt_utc).total_seconds())
+
+def shanghai_time_now():
+    return datetime.datetime.now(TIME_ZONE_SHANGHAI)#.strftime("%H:%M:%S")
+
+def shanghai_yesterday():
+    return shanghai_time_now() - datetime.timedelta(days=1)
+
+def dash_date(tdate):
+    '''
+    >>> dash_date('20160308')
+    '2016-03-08'
+    >>> dash_date('20161231')
+    '2016-12-31'
+    >>> dash_date(datetime.datetime(year=2016,month=12,day=31))
+    '2016-12-31'
+    >>> dash_date(datetime.date(year=2016,month=12,day=31))
+    '2016-12-31'
+    >>> dash_date('2016-12-31')
+    '2016-12-31'
+    >>> dash_date(None)
+    '''
+    if tdate:
+        if isinstance(tdate, datetime.datetime) or isinstance(tdate, datetime.date):
+            tdate = tdate.strftime("%Y-%m-%d")
+        elif '-' not in tdate:
+            tdate = datetime.datetime.fromtimestamp(mktime(strptime(tdate, "%Y%m%d"))).strftime("%Y-%m-%d")
+    return tdate
+
+def from_dashdate(line):
+    if isinstance(line, datetime.datetime) or isinstance(line, datetime.date):
+        return line
+    return datetime.datetime.fromtimestamp(mktime(strptime(line, "%Y-%m-%d")))
+
+def get_today(today=None):
+    return from_dashdate(today) if today is not None else shanghai_time_now()
+
+def get_weekday(name, today=None):
+    '''
+    >>> get_weekday('周一', '2024-02-23')
+    datetime.datetime(2024, 2, 19, 0, 0)
+    >>> get_weekday('周二', '2024-02-23')
+    datetime.datetime(2024, 2, 20, 0, 0)
+    '''
+    v = WEEKDAY_MAP.get(name)
+    assert  v is not None
+    today = get_today(today) 
+    while 1:
+        today -= datetime.timedelta(days=1)
+        if today.weekday() == v:
+            return today
+
+def from_datename(name, today=None):
+    '''
+    >>> from_datename('昨天', '2022-01-01')
+    datetime.datetime(2021, 12, 31, 0, 0)
+    >>> from_datename('周一', '2024-01-01')
+    datetime.datetime(2023, 12, 25, 0, 0)
+    >>> from_datename('天天', '2024-01-01') # doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ValueError: 
+    '''
+    if name == '昨天':
+        return get_today(today) - datetime.timedelta(days=1)
+    
+    if WEEKDAY_MAP.get(name) is not None:
+        return get_weekday(name, today)
+    
+    raise ValueError(name, today)
+
+def split_chinese_datetime(line):
+    '''
+    >>> split_chinese_datetime('2023年12月21日 晚上23:32')
+    ('2023年12月21日', '晚上', '23', '32')
+    >>> split_chinese_datetime('晚上23:32')
+    (None, '晚上', '23', '32')
+    >>> split_chinese_datetime('下午2:56')
+    (None, '下午', '2', '56')
+    >>> split_chinese_datetime('昨天 晚上11:43')
+    ('昨天', '晚上', '11', '43')
+    >>> split_chinese_datetime('上午11:39')
+    (None, '上午', '11', '39')
+    >>> split_chinese_datetime('周二 09:39')
+    ('周二', '', '09', '39')
+    >>> split_chinese_datetime('2月15日 上午10:12')
+    ('2月15日', '上午', '10', '12')
+    >>> split_chinese_datetime('2月15日 晚上10:12')
+    ('2月15日', '晚上', '10', '12')
+    >>> split_chinese_datetime('1月21日 中午12:38')
+    ('1月21日', '中午', '12', '38')
+    >>> split_chinese_datetime('2:56')
+    (None, '', '2', '56')
+    '''
+    m = ptn_chinese_datetime1.match(line) or ptn_chinese_datetime2.match(line)
+    return m.groups()
+
+def chinese_to_date(line, today=None):
+    '''
+    >>> chinese_to_date('2023年12月21日')
+    datetime.datetime(2023, 12, 21, 0, 0)
+    >>> chinese_to_date('12月21日', today='2024-01-01')
+    datetime.datetime(2024, 12, 21, 0, 0)
+    >>> chinese_to_date('昨天', today='2024-01-01')
+    datetime.datetime(2023, 12, 31, 0, 0)
+    >>> chinese_to_date('周二', today='2024-02-23')
+    datetime.datetime(2024, 2, 20, 0, 0)
+    '''
+    today = get_today(today)
+    if not line:
+        return today
+        
+    ptn_chinese_date1 = re.compile('(\d{4})年(\d{1,2})月(\d{1,2})日')
+    ptn_chinese_date2 = re.compile('(\d{4})*(\d{1,2})月(\d{1,2})日')
+    m = ptn_chinese_date1.match(line) or ptn_chinese_date2.match(line)
+    
+    if m is not None:
+        year, month, day = m.groups()
+        year = year if year else today.year
+        return from_dashdate('%d-%02d-%02d' % (int(year), int(month), int(day)))
+    return from_datename(line, today)
+        
+
+def convert_chinese_datetime(line, today=None):
+    '''
+    >>> convert_chinese_datetime('2023年12月21日 晚上23:32', today='2024-02-23')
+    datetime.datetime(2023, 12, 21, 23, 32)
+    >>> convert_chinese_datetime('晚上23:32', today='2024-02-23')
+    datetime.datetime(2024, 2, 23, 23, 32)
+    >>> convert_chinese_datetime('下午2:56', today='2024-02-23')
+    datetime.datetime(2024, 2, 23, 14, 56)
+    >>> convert_chinese_datetime('昨天 晚上11:43', today='2024-02-23')
+    datetime.datetime(2024, 2, 22, 23, 43)
+    >>> convert_chinese_datetime('上午11:39', today='2024-02-23')
+    datetime.datetime(2024, 2, 23, 11, 39)
+    >>> convert_chinese_datetime('周二 09:39', today='2024-02-23')
+    datetime.datetime(2024, 2, 20, 9, 39)
+    >>> convert_chinese_datetime('2月15日 上午10:12', today='1975-02-23')
+    datetime.datetime(1975, 2, 15, 10, 12)
+    >>> convert_chinese_datetime('2月15日 晚上10:12', today='2024-02-23')
+    datetime.datetime(2024, 2, 15, 22, 12)
+    >>> convert_chinese_datetime('1月21日 中午12:38', today='2024-02-23')
+    datetime.datetime(2024, 1, 21, 12, 38)
+    >>> convert_chinese_datetime('2:56', today='2024-02-23')
+    datetime.datetime(2024, 2, 23, 2, 56)
+    '''
+    cd, name, hour, minute =  split_chinese_datetime(line)
+    d = chinese_to_date(cd, today)
+    hour = int(hour)
+    minute = int(minute)
+    if name in ('晚上', '下午') and hour < 12:
+        hour = (int(hour) + 12) % 24
+        
+    seconds = hour *3600 + minute * 60
+    return d + timedelta(seconds=seconds)
 
 
 if __name__ == '__main__':
