@@ -4,15 +4,21 @@ Created on 2023年11月3日
 @author: lenovo
 '''
 import datetime
+from datetime import timedelta
 import re
+from time import strptime, mktime
 
 from django.utils import timezone
+# from django.utils import timezone as datetime
 import pytz
-from time import strptime, mktime
-from tool_ffmpeg import to_seconds
-from _datetime import timedelta
 
+from tool_ffmpeg import to_seconds
+
+
+# from datetime import timedelta
 TIME_ZONE_SHANGHAI = pytz.timezone('Asia/Shanghai')
+
+# TIME_ZONE_CN = pytz.timezone('UTC+8')
 
 
 ptn_chinese_datetime1 = re.compile('(\d{4}年\d{1,2}月\d{1,2}日)*\s*([^\d]{0,2})(\d{1,2}):(\d{1,2})')
@@ -187,28 +193,37 @@ def chinese_to_date(line, today=None):
 def convert_chinese_datetime(line, today=None):
     '''
     >>> convert_chinese_datetime('2023年12月21日 晚上23:32', today='2024-02-23')
-    datetime.datetime(2023, 12, 21, 23, 32)
+    datetime.datetime(2023, 12, 21, 23, 32, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
     >>> convert_chinese_datetime('晚上23:32', today='2024-02-23')
-    datetime.datetime(2024, 2, 23, 23, 32)
+    datetime.datetime(2024, 2, 23, 23, 32, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
     >>> convert_chinese_datetime('下午2:56', today='2024-02-23')
-    datetime.datetime(2024, 2, 23, 14, 56)
+    datetime.datetime(2024, 2, 23, 14, 56, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
     >>> convert_chinese_datetime('昨天 晚上11:43', today='2024-02-23')
-    datetime.datetime(2024, 2, 22, 23, 43)
+    datetime.datetime(2024, 2, 22, 23, 43, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
     >>> convert_chinese_datetime('上午11:39', today='2024-02-23')
-    datetime.datetime(2024, 2, 23, 11, 39)
+    datetime.datetime(2024, 2, 23, 11, 39, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
     >>> convert_chinese_datetime('周二 09:39', today='2024-02-23')
-    datetime.datetime(2024, 2, 20, 9, 39)
+    datetime.datetime(2024, 2, 20, 9, 39, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
     >>> convert_chinese_datetime('2月15日 上午10:12', today='1975-02-23')
-    datetime.datetime(1975, 2, 15, 10, 12)
+    datetime.datetime(1975, 2, 15, 10, 12, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
     >>> convert_chinese_datetime('2月15日 晚上10:12', today='2024-02-23')
-    datetime.datetime(2024, 2, 15, 22, 12)
+    datetime.datetime(2024, 2, 15, 22, 12, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
     >>> convert_chinese_datetime('1月21日 中午12:38', today='2024-02-23')
-    datetime.datetime(2024, 1, 21, 12, 38)
+    datetime.datetime(2024, 1, 21, 12, 38, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
     >>> convert_chinese_datetime('2:56', today='2024-02-23')
-    datetime.datetime(2024, 2, 23, 2, 56)
+    datetime.datetime(2024, 2, 23, 2, 56, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
+    >>> convert_chinese_datetime('周四 10:47', today='2024-02-24')
+    datetime.datetime(2024, 2, 22, 10, 47, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
     '''
+    # print(line)
+    # >>> convert_chinese_datetime('上午10:25', today='2024-02-24')
     cd, name, hour, minute =  split_chinese_datetime(line)
     d = chinese_to_date(cd, today)
+    # d = d.replace(tzinfo=TIME_ZONE_SHANGHAI)
+    d = datetime.datetime(year=d.year, month=d.month, day=d.day)
+    
+    d = TIME_ZONE_SHANGHAI.localize(d)
+    
     hour = int(hour)
     minute = int(minute)
     if name in ('晚上', '下午') and hour < 12:
