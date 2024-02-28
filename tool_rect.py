@@ -546,6 +546,30 @@ class Rect(object):
         False
         '''
         return self.get_horizontal_distance(other, direction) <= (self.width//2 + r)
+    
+    def is_point_in(self, x, y):
+        '''
+        >>> Rect(0,1080,202,1767).is_point_in(0,0)
+        False
+        >>> Rect(0,1080,202,1767).is_point_in(0,202)
+        True
+        >>> Rect(0,1080,202,1767).is_point_in(1081,202)
+        False
+        >>> Rect(0,1080,202,1767).is_point_in(1080,1767)
+        True
+        >>> Rect(0,1080,202,1767).is_point_in(1080,1768)
+        False
+        '''
+        return x >= self.left and x<=self.right and y >= self.top and y <= self.bottom
+    
+    def contains(self, other):
+        '''
+        >>> Rect(0,1080,202,1767).contains(Rect(0,1080,202,1767))
+        True
+        >>> Rect(0,1080,202,1767).contains(Rect(100,1080,1202,1767))
+        True
+        '''
+        return self.is_point_in(other.left, other.top) and self.is_point_in(self.right,self.bottom)
         
     
 
