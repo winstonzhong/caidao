@@ -64,6 +64,9 @@ def pil_to_base64url(img):
         content = base64.b64encode(buf.getvalue())
         return 'data:image/png;base64,' + content.decode('utf8')
 
+def bin_to_base64url(bin_buffer):
+    return 'data:image/png;base64,' + base64.b64encode(bin_buffer).decode()
+
 
 def show(img):
     cv2.imshow('image', img)
