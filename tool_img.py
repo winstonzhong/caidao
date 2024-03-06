@@ -97,6 +97,12 @@ def make_mask_by_equal(img, r, g, b):
 def mono_to_rgb(mask):
     return numpy.stack((mask.astype(numpy.uint8),)*3, axis=-1)
 
+def rgb_to_mono(img):
+    return img[...,0]
+
+def mask_to_img(mask):
+    return mask.astype(numpy.uint8) * 255
+
 def stack_alpha(img, mask):
     return numpy.dstack((img, mask)).astype(numpy.uint8)
 
