@@ -51,6 +51,11 @@ def img2io(img):
     return io.BytesIO(to_buffer(img))
 # io_buf = io.BytesIO(im_buf_arr)
 
+def img2base64(img):
+    if img is not None:
+        return base64.b64encode(to_buffer(img)).decode('utf8')
+    
+
 def cv2_to_base64url(img):
     if img is not None:
         content = base64.b64encode(to_buffer(img))
@@ -264,7 +269,10 @@ def get_dsize(width, height, w, h):
     r = min(height/h, width/w)
     return int(w * r), int(h * r)
     
-def resize_image(img, width, height):
+def resize_image(img, width, height, simple_direct=False):
+    if simple_direct:
+        return cv2.resize(img,dsize=(width, height),fx=None,fy=None,interpolation=cv2.INTER_LINEAR)
+    
     canvas = get_canvas(width, height)
     h, w = img.shape[:2]
     # if h > w:
@@ -378,8 +386,10 @@ def cut_empty_margin(mask_invert):
 
 def get_exteral_rect(mask):
     mask, top, bottom = cut_core(mask, axis=1, v=0, vtype=1)
-    _, left, right = cut_core(mask, axis=0, v=0, vtype=1)
-    return Rect(left, right, top, bottom)
+    if top is not None and bottom is not None:
+        _, left, right = cut_core(mask, axis=0, v=0, vtype=1)
+        if left is not None and right is not None:
+            return Rect(left, right, top, bottom)
 
 
 def split_image_into_4(img):
@@ -504,6 +514,19 @@ def cut_empty_and_put_to_center(img, thresh_hold=0, margin=None, keep_width=None
         
     return canvas, keep_height
      
+
+def pack_img(img, x, y):
+    b = io.BytesIO()
+    b.write(int.to_bytes(x, 2, 'big'))
+    b.write(int.to_bytes(y, 2, 'big'))
+    b.write(to_buffer(img))
+    return b.getvalue() 
+
+def unpack_img(b):
+    x = int.from_bytes(b[:2], 'big')
+    y = int.from_bytes(b[2:4], 'big')
+    img = bin2img(b[4:])
+    return img, x, y    
           
     
 if __name__ == '__main__':

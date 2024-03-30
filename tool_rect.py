@@ -570,6 +570,9 @@ class Rect(object):
         True
         '''
         return self.is_point_in(other.left, other.top) and self.is_point_in(self.right,self.bottom)
+    
+    def to_tuple(self):
+        return self.left, self.top, self.right, self.bottom
         
     
 
