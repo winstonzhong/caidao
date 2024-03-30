@@ -69,6 +69,9 @@ def pil_to_base64url(img):
         content = base64.b64encode(buf.getvalue())
         return 'data:image/png;base64,' + content.decode('utf8')
 
+def bin_to_base64url(bin_buffer):
+    return 'data:image/png;base64,' + base64.b64encode(bin_buffer).decode()
+
 
 def show(img):
     cv2.imshow('image', img)
@@ -98,6 +101,12 @@ def make_mask_by_equal(img, r, g, b):
 
 def mono_to_rgb(mask):
     return numpy.stack((mask.astype(numpy.uint8),)*3, axis=-1)
+
+def rgb_to_mono(img):
+    return img[...,0]
+
+def mask_to_img(mask):
+    return mask.astype(numpy.uint8) * 255
 
 def stack_alpha(img, mask):
     return numpy.dstack((img, mask)).astype(numpy.uint8)

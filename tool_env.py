@@ -7,7 +7,7 @@ import platform
 import re
 
 import numpy
-from urllib3.util.url import IPV4_RE, IPV4_PAT
+
 
 from tool_rect import Rect
 from numpy.lib._iotools import _is_string_like
@@ -112,6 +112,7 @@ def to_number_with_chinese_safe_dict(d):
     return {k:to_number_with_chinese_safe(v) for k,v in d.items()}
 
 def is_ipv4(host):
+    from urllib3.util.url import IPV4_PAT
     return re.match(IPV4_PAT, host) is not None
 
 def clear_emoji(content):
