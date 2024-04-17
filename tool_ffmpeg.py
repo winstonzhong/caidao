@@ -134,6 +134,13 @@ def extract_wav(fpath_mp4, fpath_wav=None):
         shell=True)
     process.wait()
 
+def opus2wav(fpath, fpath_wav=None):
+    fpath_wav = change_suffix(fpath, 'wav') if fpath_wav is None else fpath_wav
+
+    process = subprocess.Popen(
+        f'''ffmpeg  -i  {fpath}  -ac 1  -acodec pcm_s16le   {fpath_wav} -y''',
+        shell=True)
+    process.wait()
 
 if __name__ == "__main__":
     import doctest

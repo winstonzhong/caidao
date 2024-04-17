@@ -309,12 +309,12 @@ class Rect(object):
         '''
         return self.center_x - width //2, self.center_y - height //2
     
-    def move(self, span_x, span_y):
+    def move(self, span_x, span_y, clone=True):
         '''
         >>> Rect(10,100,10,100).move(-10,-10)
         0 90 0 90<90, 90>
         '''
-        r = self.clone()
+        r = self.clone() if clone else self
         r.left += span_x
         r.right += span_x
         r.top += span_y
@@ -470,7 +470,14 @@ class Rect(object):
         return img[self.top:bottom, self.left:right, ...]
     
     def draw_img(self, canvas, img):
-        canvas[self.top:self.bottom, self.left:self.right, ...] = img
+        # tmp = canvas[self.top:self.bottom, self.left:self.right, ...]
+        # h, w = canvas.shape[:2]
+        # r = Rect(0,min(w, self.right), 0, min(h, self.bottom))
+        r = self.to_real(canvas.shape)#.move_left_top_to(0,0)
+        # print('canvas:', canvas.shape)
+        # print('img:', img.shape)
+        # print('rect:', self)
+        canvas[self.top:self.bottom, self.left:self.right, ...] = img[0:r.height,0:r.width,...]
     
     def is_valid_face(self):
         return self.height > self.MIN_FACE_WIDTH and self.width > self.MIN_FACE_WIDTH
