@@ -1,0 +1,1084 @@
+'''
+Created on 2023年11月24日
+@author: lenovo
+'''
+# (base) PS C:\Users\lenovo> adb -s UJN0221118004154 tcpip 7001
+# (base) PS C:\Users\lenovo> adb connect 192.168.0.148:7001
+import glob
+import os
+import os
+from pathlib import Path
+import random
+import re
+import subprocess
+import time
+
+import cv2
+from django.utils.functional import cached_property
+import uiautomator2
+from uiautomator2.xpath import XMLElement
+
+from adb_tools import tool_devices
+from adb_tools.common.exceptions import ElementNotFoundError,\
+    NotNeedFurtherActions, TplNotFoundError
+from adb_tools.tool_xpath import find_by_xpath
+from helper_net import retry
+from tool_env import is_ipv4
+from tool_file import get_suffix
+from tool_img import bin2img, get_template_points, pil2cv2, to_gray, mask_to_img
+
+
+# from base_adb import tool_devices
+# from common.exceptions import ElementNotFoundError, TplNotFoundError, NotNeedFurtherActions
+# from my_agent.settings import IMG_DIR, BASE_DIR, TMP_DIR
+# from tool_rect import Rect
+# from tool_xpath import find_by_xpath
+def click_delay(self, delay=0.5):
+    self.click()
+    time.sleep(delay)
+
+
+XMLElement.click_delay = click_delay
+
+
+adb_exe = 'adb'
+
+CUR_DIR = Path(__file__).resolve().parent
+
+BASE_DIR = CUR_DIR.parent.parent
+
+TMP_DIR = BASE_DIR / 'tmp' 
+
+# ut_base_dir = f'{BASE_DIR}/ut'
+if not TMP_DIR.exists():
+    TMP_DIR.mkdir()
+
+
+DEVICES = [
+        {
+        'ip': '192.168.0.148',
+        'name': 'mate40',
+        'port': '7001',
+        'role': '测试',
+        'id':'UJN0221118004154',
+        'device_name': 'HWOCE-L',
+        },
+
+        {
+        'ip': '192.168.0.115',
+        'name': 'mate10',
+        'port': '7002',
+        'role': '测试2',
+        'id':'D3H7N18126007114',
+        'device_name': 'HWALP'
+        },
+        
+        {
+        'ip': '192.168.0.187',
+        'name': 'honorv50',
+        'port': '5556',
+        'role': '测试3',
+        'id': '8URDU19B26017523',
+        },
+        
+        {
+        'ip': '192.168.3.19',
+        'name': 'honor60',
+        'port': '6000',
+        'role': '测试4',
+        'id': 'A3KUVB1B18016880',
+        },
+    ]
+
+DICT_DEVICES = {v.get('name'):v for v in DEVICES}
+
+def wait_tobe_steady(adb, x, return_all=False, sleep_time=0.1):
+    e = adb.find_xpath_safe(x).wait()
+    while e is not None:
+        time.sleep(sleep_time)
+        new_e = adb.find_xpath_safe(x)
+        new = new_e.wait()
+        if new.info == e.info:
+            return new if not return_all else new_e.all()
+        else:
+            e = new
+
+def wait_to_disappear(adb, x, timeout=120):
+    old = time.time()
+    while time.time() - old < timeout:
+        if adb.find_xpath_safe(x).wait() is None:
+            return
+    raise ValueError('timeout')
+
+
+def scroll_to_most_left(adb, x):
+    old = wait_tobe_steady(adb, x)
+    while old is not None:
+        adb.touch_center_move_right()
+        new = wait_tobe_steady(adb, x)
+        if new is None or new.info == old.info:
+            break 
+        old = new
+
+def scroll_to_left(adb, l, wait=1000):
+    b1 = l[-1].bounds
+    b2 = l[0].bounds
+    c1 = b1[2] - 100, b1[1]
+    c2 = b2[0], b1[1]
+    adb.swipe(c1, c2, wait)
+    return c1[0] - c2[0]
+
+def scroll_to_right(adb, l, wait=1000):
+    b1 = l[-1].bounds
+    b2 = l[0].bounds
+    c1 = b1[2], b1[1]
+    c2 = b2[0]+100, b1[1]
+    adb.swipe(c2, c1, wait)
+    return c2[0] - c1[0]
+
+def scroll_to_bottom(adb, l, wait=1000):
+    b1 = l[-1].bounds
+    b2 = l[0].bounds
+    c1 = b1[0], b1[3] - 100
+    c2 = b2[0], b2[3]
+    adb.swipe(c1, c2, wait)
+    return c1[0] - c2[0]
+
+def scroll_to_top(adb, l, wait=1000, max_span=None):
+    b1 = l[-1].bounds
+    b2 = l[0].bounds
+    
+    c1 = b1[0], b1[3] - 100
+    c2 = b2[0], b2[3]
+    span = c2[1] - c1[1]
+    
+    if max_span is not None and span >  max_span:
+        delta = span - max_span
+        c1 = c1[0], c1[1] - delta
+    
+    print(c2, c1, span)
+    adb.swipe(c2, c1, wait)
+    return span
+
+
+def scroll_to_align(adb, l=None, duration=0.5, steps=None):
+    if l is None:
+        l = get_elements_safe_for_sure(adb, 
+                              '//android.widget.LinearLayout[re:match(@resource-id, ".*/framesLayout")]',
+                              # sleep_time=0.4,
+                              )
+    
+    cx = adb.get_sys_width_height()[0] // 2
+    b = l[-1].bounds
+    y = b[1]-50
+    x = min(b[2], cx*2 -200)
+    print((x, y), (cx, y))
+    adb.swipe((x, y), (cx, y), wait=500)
+    # adb.ua2.swipe(x,y,cx,y, duration=duration, steps=steps)
+    # adb.ua2.swipe_points([(x,y), (cx,y)])
+    # adb.ua2.drag(x,y,cx,y, duration=duration)
+    return x
+
+    
+def get_elements_safe(adb, x, force_not_empty=True):
+    e = adb.find_xpath_safe(x)
+    if force_not_empty:
+        assert e.wait() is not None
+    return e.all()
+
+def get_elements_safe_for_sure(adb, x, sleep_time=0.1):
+    return wait_tobe_steady(adb, x, return_all=True, sleep_time=sleep_time)
+
+def get_all(adb, 
+            xpath='//android.widget.TextView[re:match(@resource-id, ".*/text")]',
+            fun_scroll=scroll_to_left,
+            ):
+    old = get_elements_safe(adb, xpath)
+    while 1:
+        for x in old:
+            yield x
+        fun_scroll(adb, old)
+        new = get_elements_safe(adb, xpath)
+        if new[0].info != old[0].info:
+            old = new
+        else:
+            break
+
+def scroll_to_find(adb, xpath, text, fun_scroll=scroll_to_left):
+    for x in get_all(adb, xpath, fun_scroll):
+        if x.text == text:
+            return x
+        
+def scroll_to_index(adb, xpath, index, fun_scroll=scroll_to_left, exclude=[]):
+    s = set()
+    for x in get_all(adb, xpath, fun_scroll):
+        s.add(x.text)
+        if x.text not in exclude and len(s) >= index:
+            print('selected:', x.text)
+            return x
+        
+ 
+def scroll_to_index_random(adb, 
+                           xpath, 
+                           end_index=100, 
+                           fun_scroll=scroll_to_bottom, 
+                           exclude=['渐渐放大',
+                                    '模糊',
+                                    ]):
+    to_index = random.randint(0, end_index)
+    print('to index:', to_index)
+    return scroll_to_index(adb, xpath, to_index, fun_scroll=fun_scroll, exclude=exclude)
+
+class NoFileDownloadedError(Exception):
+    pass
+
+
+class BaseAdb(object):
+    app_name = None
+    activity = None
+    timeout = 20
+    INSTANCE_DICT = {}
+    NAME = None
+    # ICON = None
+    
+    DIR_CFG = Path(__file__).resolve().parent.parent.parent / 'adb_config'
+    
+    DIR_UPLOAD = '/sdcard/Download'
+    
+    DIR_TMP = '/sdcard/Download/temp'
+    
+    CAMERA_DIR = '/sdcard/DCIM/Camera'
+    
+    if not os.path.lexists(DIR_CFG):
+        os.makedirs(DIR_CFG, exist_ok=True)
+    
+    def get_classname(self):
+        return self.__class__.__name__
+    
+    @property
+    def fpath_icon(self):
+        return CUR_DIR / f'icon_{self.get_classname().lower()}.png'
+    
+    def save_icon(self):
+        cv2.imwrite(str(self.fpath_icon), self.get_icon())
+        
+    @cached_property
+    def icon(self):
+        return cv2.imread(str(self.fpath_icon)) if self.fpath_icon.exists() else None 
+    
+    def get_icon(self):
+        # resource-id="com.huawei.android.launcher:id/icon" class="android.widget.ImageView"
+        e = self.find_xpath_safe(f'//android.widget.ImageView[re:match(@resource-id, ".*/icon")][@content-desc="{self.NAME}"]').wait()
+        i = pil2cv2(e.screenshot())
+        i = to_gray(i) > 250
+        return mask_to_img(i)
+    
+    def has_same_icon(self):
+        return self.icon is None
+    
+    def clear_camera_dir(self):
+        self.clear_temp_dir(base_dir=self.CAMERA_DIR)
+        
+    def get_latest_camera_file(self):
+        return self.get_latest_file(base_dir=self.CAMERA_DIR)
+    
+    def pull_latest_camera_file(self, to_dir):
+        self.pull_lastest_file(to_dir, base_dir=self.CAMERA_DIR)
+        
+    def fix_jy_giveup_draft(self):
+        # text="放弃" resource-id="com.lemon.lv:id/tvCancelResume" class="android.widget.TextView"
+        # text="立即恢复" resource-id="com.lemon.lv:id/tvResumeNow" class="android.widget.Button"
+        e1 = self.find_xpath_safe('//*[@text="放弃"]')
+        e2 = self.find_xpath_safe('//*[@text="立即恢复"]')
+        if e1.exists and e2.exists:
+            e1.click()
+            return True
+        return False
+         
+    
+    def fix_jy_update(self):
+        e1 = self.find_xpath_safe('//android.widget.Button[re:match(@resource-id, ".*/btn_update_cancel")][@text="取消"]')
+        e2 = self.find_xpath_safe('//android.widget.Button[re:match(@resource-id, ".*/btn_update_sure")][@text="更新"]')
+        if e1.exists and e2.exists:
+            e1.click()
+            return True
+        return False
+    
+    def fix_jy_no_in_jianji_tab(self):
+        e1 = self.find_xpath_safe('//android.widget.TextView[re:match(@resource-id, ".*/tab_name")][@text="剪辑"]')
+        if e1.exists:
+            e1.click()
+            return True
+        return False
+    
+    def fix_db_update(self):
+        # text="忽略" resource-id="com.larus.nova:id/tvDialogCancel" class="android.widget.TextView"
+        # text="立即更新" resource-id="com.larus.nova:id/btnDialogConfirm" class="android.widget.TextView" 
+        e1 = self.find_xpath_safe('//android.widget.TextView[re:match(@resource-id, ".*/tvDialogCancel")][@text="忽略"]')
+        e2 = self.find_xpath_safe('//android.widget.TextView[re:match(@resource-id, ".*/btnDialogConfirm")][@text="立即更新"]')
+        if e1.exists and e2.exists:
+            e1.click()
+            return True
+        return False
+    
+    def fix_jy_come_gao(self):
+        # resource-id="com.lemon.lv:id/ivClose" class="android.widget.ImageView"
+        # text="去投稿" resource-id="com.lemon.lv:id/btnConfirm" class="android.widget.Button"
+        e1 = self.find_xpath_safe('//android.widget.ImageView[re:match(@resource-id, ".*/ivClose")][@text=""]')
+        e2 = self.find_xpath_safe('//android.widget.Button[re:match(@resource-id, ".*/btnConfirm")]')
+        if e1.exists and e2.exists:
+            e1.click()
+            return True
+        return False
+
+
+    
+    def get_all_fix_functions(self):
+        return filter(lambda x:x.startswith('fix_'), dir(self))
+        
+    def try_to_fix_exceptions(self):
+        for x in self.get_all_fix_functions():
+            if getattr(self,x)():
+                return True
+        return False
+
+        
+    def go_back(self):
+        self.ua2.keyevent('KEYCODE_BACK')
+
+    def go_home(self):
+        self.ua2.keyevent('KEYCODE_HOME')
+
+    def volume_up(self):
+        self.ua2.keyevent('KEYCODE_VOLUME_UP')
+
+    def volume_down(self):
+        self.ua2.keyevent('KEYCODE_VOLUME_DOWN')
+    
+    @classmethod
+    def get_device_d_by_name(cls, name):
+        d = DICT_DEVICES.get(name)
+        for x in cls.get_devices_as_dict():
+            if x.get('name') == d.get('device_name'):
+                return x
+
+    def __init__(self, device):
+        if hasattr(device, 'device_id'):
+            self.ip_port = device.device_id
+        elif not device.get('ip') and device.get('id'):
+            self.ip_port = device.get('id')
+        else:
+            self.ip_port = f'{device["ip"]}:{device["port"]}'
+        self.device = device
+        self.current_shot = None
+        self.step_name = ''
+    
+    @property
+    def app_info(self):
+        return {k:v for k, v in self.ua2.app_current().items() if k not in ('pid',)}
+            
+    def is_app_opened(self):
+        d = self.ua2.app_current()
+        return d.get('package') == self.app_name and d.get('activity') == self.activity
+    
+    def get_latest_file(self, base_dir='/sdcard/DCIM/Camera'):
+        r = self.ua2.shell(f'ls -t {base_dir}')
+        if r.exit_code == 0 and r.output:
+            return f'{base_dir}/{r.output.splitlines()[0]}'
+        
+    def get_latest_file_size(self, base_dir='/sdcard/DCIM/Camera'):
+        r = self.ua2.shell(f'ls -lt  {base_dir}')
+        if r.exit_code == 0 and r.output:
+            l = r.output.splitlines()
+            return int(re.split('\s+', l[1])[4]) if len(l) > 1 else None
+        
+    def pull_lastest_file(self, to_dir=TMP_DIR, base_dir='/sdcard/DCIM/Camera'):
+        src = self.get_latest_file(base_dir)
+        if src:
+            if not os.path.lexists(to_dir):
+                os.makedirs(to_dir, exist_ok=True)
+            dst = dst=os.path.join(to_dir, os.path.basename(src))
+            self.ua2.pull(src, dst)
+            print(dst)
+            return dst
+    
+        
+    def pull_lastest_file_until(self, 
+                                to_dir=TMP_DIR, 
+                                base_dir='/sdcard/DCIM/Camera',
+                                max_retry=100,
+                                ):
+        old_size = None 
+        for i in range(max_retry):
+            new_size = self.get_latest_file_size(base_dir)
+            if new_size and new_size == old_size:
+                fpath = self.pull_lastest_file(to_dir=to_dir, base_dir=base_dir)  
+                if fpath is not None:
+                    return fpath
+            print(f'waiting file:{i}', new_size, old_size)
+            old_size = new_size
+            time.sleep(1)
+        raise NoFileDownloadedError
+        
+    def pull_lastest_file_to_local_tmp(self, base_dir='/sdcard/DCIM/Camera', tmp_dir=None):
+        return self.pull_lastest_file(to_dir=TMP_DIR if tmp_dir is None else tmp_dir, base_dir=base_dir)
+    
+    def clear_temp_dir(self, base_dir=None):
+        base_dir = base_dir or self.DIR_TMP
+        self.ua2.shell(f'rm -rf {base_dir}')
+        time.sleep(0.1)
+        self.ua2.shell(f'mkdir {base_dir}')
+    
+    def copy_file_to_temp(self, fpath, sleep_span=0.1):
+        src = fpath
+        suffix = os.path.basename(fpath).rsplit('.')[-1] 
+        dst = f'{self.DIR_TMP}/{time.time()}.{suffix}'
+        # print(src, dst)
+        self.ua2.shell(f'cp {src} {dst}')
+        time.sleep(sleep_span)
+        self.broadcast(dst)
+        
+    def push_file_to_temp(self, 
+                          src, 
+                          sleep_span=0.1, 
+                          clean_temp=False, 
+                          use_timestamp=True,
+                          base_dir=None,
+                          ):
+        
+        base_dir = base_dir or self.DIR_TMP
+        if clean_temp:
+            self.clear_temp_dir(base_dir)
+        
+        if not use_timestamp:
+            dst = f'{base_dir}/{os.path.basename(src)}'
+        else:
+            dst = f'{base_dir}/{time.time()}.{get_suffix(src)}'
+        print(src, dst)
+        print(self.push_file(src, dst))
+        time.sleep(sleep_span)
+        self.ua2.shell(f'touch {dst}')
+        time.sleep(sleep_span)
+        self.broadcast(dst)
+        return dst
+        
+    def push_file_to_download(self, 
+                              src, 
+                              sleep_span=0.1, 
+                              clean_temp=False, 
+                              use_timestamp=True,
+                              ):
+        return self.push_file_to_temp(src, sleep_span, clean_temp, use_timestamp, base_dir='/sdcard/Download')
+    
+    def push_file_to_temp_all(self, files):
+        self.clear_temp_dir()
+        for x in files:
+            self.push_file_to_temp(x, clean_temp=False, sleep_span=1)
+        
+    
+    def copy_file_to_temp_all(self, files, sleep_span=0.1):
+        self.clear_temp_dir()
+        for fpath in files:
+            self.copy_file_to_temp(fpath, sleep_span)
+
+    def set_timeout(self, timeout):
+        self.ua2.implicitly_wait(timeout)
+        return self
+    
+    def touch_file(self, fpath):
+        self.ua2.shell(f'touch {fpath}')
+        self.ua2.keyevent('KEYCODE_HOME')
+        time.sleep(1)
+        self.open_filemanager()
+        time.sleep(0.1)
+        self.broadcast(fpath)
+    
+    def broadcast(self, fpath):
+        cmd = f'am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file://{fpath}'
+        return self.ua2.shell(cmd)
+
+
+    @classmethod
+    def get_device(cls, name):
+        return list(filter(lambda x:x.get('name') == name, DEVICES))[0]
+
+
+    @classmethod
+    def get_instance_by_device(cls, name_device):
+        return cls(cls.get_device(name_device))
+
+    def search_ui_element(self, txt):
+        return re.compile(f'<.*{txt}.*\r\n', re.M).findall(self.ua2.dump_hierarchy())
+            
+    @cached_property
+    def ua2(self):
+        obj = uiautomator2.connect(self.ip_port)
+        obj.settings['wait_timeout'] = self.timeout
+        obj.set_fastinput_ime()
+        return obj
+
+    def show_current_app(self):
+        """查看当前打开的app信息, 为打开应用提供信息
+            {'package': 'com.lemon.lv',
+             'activity': 'com.vega.main.MainActivity',
+             'pid': 10166}
+        """
+        return self.ua2.current_app()
+
+    def show_all_apps(self):
+        """
+        查看所有的应用列表
+        :return:
+        """
+        return self.ua2.app_list()
+
+    def open_app(self, force_open=False):
+        if force_open or not self.is_app_opened():
+            self.ua2.app_start(self.app_name, activity=self.activity, stop=True)
+        return self
+
+    def close_app(self):
+        self.ua2.app_stop(self.app_name)
+        return self
+    
+    def open_filemanager(self):
+        d = {'package_name': 'com.huawei.filemanager',
+         'activity': 'com.huawei.hidisk.filemanager.FileManager',
+         'a2':'com.huawei.hidisk.view.activity.category.CategoryFileListActivity',
+         'a3':'com.huawei.hidisk.view.activity.category.StorageActivity',
+         }
+        self.ua2.app_start(package_name=d.get('package_name'),
+                           activity=d.get('activity'))
+        self.ua2.app_start(package_name=d.get('package_name'), 
+                           activity=d.get('activity'))
+        return self
+
+    def open_filemanager2(self):
+        d = {'package_name': 'com.hihonor.filemanager',
+         'activity': 'com.hihonor.honorcloud.filemanager.FileManager',
+         'a2':'com.hihonor.honorcloud.view.activity.category.CategoryFileListActivity',
+         'a3':'com.hihonor.honorcloud.view.activity.category.StorageActivity',
+         }
+        self.ua2.app_start(package_name=d.get('package_name'),
+                           activity=d.get('activity'))
+        self.ua2.app_start(package_name=d.get('package_name'),
+                           activity=d.get('a3'))
+        return self
+
+
+
+    def save_page_content(self, path):
+        content = self.page_content().encode('utf8')
+        with open(path, 'wb') as fp:
+            fp.write(content)
+
+    def page_content(self, debug=False):
+        content = self.ua2.dump_hierarchy()
+        if debug:
+            # print([content])
+            # content = content.replace("'\\", '').encode('utf8')
+            self.save_page_content('page.xml')
+            # content = content.encode('utf8')
+            # with open('page.xml', 'wb') as fp:
+            #     fp.write(content)
+        return content
+
+    def get_page(self):
+        content = self.ua2.dump_hierarchy()
+        content = content.replace("'\\", '').encode('utf8')
+        return content
+    
+    def show_page(self, fpath=None):
+        import webbrowser
+        fpath = BASE_DIR / 'page.xml' if fpath is None else fpath
+        with open(fpath, 'wb') as fp:
+            fp.write(self.get_page())
+        webbrowser.open(f'file:///{fpath}')
+
+    def save_error_page(self, error_dir, page_name=None):
+        import traceback
+        if page_name:
+            fname = f'{page_name}_{int(time.time())}'
+        else:
+            fname = f'{int(time.time())}'
+        if not os.path.lexists(error_dir):
+            os.mkdir(error_dir)
+        error_path = f'{error_dir}/{fname}.xml'
+        error_png = f'{error_dir}/{fname}.png'
+        error_exc = f'{error_dir}/{fname}.txt'
+        # print(error_path, error_png, error_exc)
+        # return
+        # self.save_page_content(error_path)
+        self.show_page(error_path, show=False)
+        with open(error_exc, 'w') as fp:
+            traceback.print_exc(file=fp)
+        cv2.imwrite(error_png, self.ua2.screenshot(format='opencv'))
+
+    def push_files(self, fpaths, dst_dir='/storage/sdcard0/Pictures/Browser'):
+        for fpath in fpaths:
+            self.ua2.push(
+                    src=fpath,
+                    dst='%s/%s' % (dst_dir, os.path.basename(fpath)),
+                )
+            
+    def push_files_glob(self, ptn, dst_dir='/storage/sdcard0/Pictures/Browser'):
+        self.push_files(glob.glob(ptn), dst_dir)
+    
+
+    def  find_new(self, **kwargs):
+        """
+        :param kwargs:
+            "text": (0x01, None),  # MASK_TEXT,
+            "textContains": (0x02, None),  # MASK_TEXTCONTAINS,
+            "textMatches": (0x04, None),  # MASK_TEXTMATCHES,
+            "textStartsWith": (0x08, None),  # MASK_TEXTSTARTSWITH,
+            "className": (0x10, None),  # MASK_CLASSNAME
+            "classNameMatches": (0x20, None),  # MASK_CLASSNAMEMATCHES
+            "description": (0x40, None),  # MASK_DESCRIPTION
+            "descriptionContains": (0x80, None),  # MASK_DESCRIPTIONCONTAINS
+            "descriptionMatches": (0x0100, None),  # MASK_DESCRIPTIONMATCHES
+            "descriptionStartsWith": (0x0200, None),  # MASK_DESCRIPTIONSTARTSWITH
+            "checkable": (0x0400, False),  # MASK_CHECKABLE
+            "checked": (0x0800, False),  # MASK_CHECKED
+            "clickable": (0x1000, False),  # MASK_CLICKABLE
+            "longClickable": (0x2000, False),  # MASK_LONGCLICKABLE,
+            "scrollable": (0x4000, False),  # MASK_SCROLLABLE,
+            "enabled": (0x8000, False),  # MASK_ENABLED,
+            "focusable": (0x010000, False),  # MASK_FOCUSABLE,
+            "focused": (0x020000, False),  # MASK_FOCUSED,
+            "selected": (0x040000, False),  # MASK_SELECTED,
+            "packageName": (0x080000, None),  # MASK_PACKAGENAME,
+            "packageNameMatches": (0x100000, None),  # MASK_PACKAGENAMEMATCHES,
+            "resourceId": (0x200000, None),  # MASK_RESOURCEID,
+            "resourceIdMatches": (0x400000, None),  # MASK_RESOURCEIDMATCHES,
+            "index": (0x800000, 0),  # MASK_INDEX,
+            "instance": (0x01000000, 0)  # MASK_INSTANCE,
+        :return:
+        """
+        # print('kwargs', kwargs)
+        return self.ua2(**kwargs)
+
+    @retry(3)
+    def exists(self, page_name='', **kwargs):
+        if self.find_new(**kwargs).exists():
+            return self
+        else:
+            time.sleep(0.1)
+        raise ElementNotFoundError(f'查找元素失败: {kwargs}', page_name=page_name)
+
+    def exists_no_retry(self, **kwargs):
+        if self.find_new(**kwargs).exists():
+            return True
+        return False
+
+    def exists_no_raise_exception(self, **kwargs):
+        try:
+            return self.exists(**kwargs)
+        except ElementNotFoundError:
+            return False
+
+
+    @retry(3)
+    def click_element(self, find_index=0, page_name='', **kwargs):
+        """
+        点击元素
+        :param find_index: 根据kwargs返回多个结果时, 根据该索引位定位到具体元素
+        :param kwargs: 查询条件
+        :param page_name: 当前页面
+        :return:
+        """
+        try:
+            self.find_new(**kwargs)[find_index].click()
+            return self
+        except:
+            raise ElementNotFoundError(f'查找元素失败: {kwargs}', page_name=page_name)
+
+    @retry(3)
+    def find_by_xpath(self, xpath):
+        """根据xpath查找元素"""
+        return self.ua2.xpath(xpath)
+
+    @retry(3)
+    def exists_by_find_xpath(self, xpath):
+        return self.ua2.xpath(xpath).exists
+    
+    def find_xpath_safe(self, xpath):
+        return find_by_xpath(self.ua2, xpath)
+
+    def click_and_input(self, txt, page_name='', **kwargs):
+        """光标移动至输入框, 并输入内容"""
+        try:
+            el = self.find_new(**kwargs)
+            el.click()
+        except:
+            raise ElementNotFoundError(f'查找元素失败: {kwargs}', page_name=page_name)
+        el.send_keys(txt)
+
+        return self
+
+    def go_back_untill_prompt(self, x, num_retry=5):
+        # clicked = False
+        for i in range(num_retry):
+            self.go_back()
+            e = self.find_xpath_safe(x).wait()
+            if e is not None:
+                return True
+            print(i, 'retrying go back:', x)
+        raise ValueError(x)
+
+    
+    def click_untill_gone(self, x, num_retry=5):
+        clicked = False
+        for i in range(num_retry):
+            # self.find_xpath_safe(x).wait(timeout).click()
+            e = self.find_xpath_safe(x).wait()
+            if e is not None:
+                self.do_click_element_top_center(e)
+                clicked = True
+            if self.find_xpath_safe(x).wait_gone() and clicked:
+                return True
+            print(i, 'retrying:', x)
+        raise ValueError(x)
+    
+    def click_untill_prompt(self, x, y, num_retry=5):
+        clicked = False
+        for i in range(num_retry):
+            # self.find_xpath_safe(x).wait(timeout).click()
+            e = self.find_xpath_safe(x).wait()
+            if e is not None:
+                self.do_click_element_top_center(e)
+                clicked = True
+            if self.find_xpath_safe(y).wait() and clicked:
+                return True
+            print(i, 'retrying:', x)
+        raise ValueError(x)
+    
+    def setup(self, encoding='utf8'):
+        process = subprocess.Popen(f'{adb_exe} -s {self.device["id"]} tcpip {self.device["port"]}', 
+                                   encoding=encoding, 
+                                   shell=True, 
+                                   stdin=subprocess.PIPE, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE
+                                   )
+        print(process.communicate())
+        
+        process = subprocess.Popen(f'{adb_exe} connect {self.ip_port}', 
+                                   encoding=encoding, 
+                                   shell=True, 
+                                   stdin=subprocess.PIPE, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE
+                                   )
+        return process.communicate()
+    
+    def auto_init_wifi_connection(self):
+        if not is_ipv4(self.ip_port):
+            ip = self.ua2.wlan_ip
+            port = random.randint(7006, 8006)
+            self.init_wifi_connection(device_id=self.ip_port, ip=ip, port=port)
+    
+    @classmethod
+    def init_wifi_connection(cls, index=None, ip=None, port=None, device_id=None):
+        d = {}
+        if index is not None:
+            d.update(DEVICES[index])
+            
+        if device_id is not None:
+            d['id'] = device_id
+        
+        if ip is not None:
+            d.update(ip=ip)
+            
+        if port is not None:
+            d.update(port=port) 
+        cls(d).setup()
+        
+    @classmethod
+    def init_wifi_my_mate10(cls, ip=None, port=None):
+        cls.init_wifi_connection(1,ip=ip,port=port)
+        
+    def geo_fix(self):
+        self.execute("emu geo fix 121.49612 31.24010")
+        return self
+    
+    @property
+    def location(self):
+        return self.execute('dumpsys location')
+    
+    def test(self):
+        print(self.execute("am start-activity -a com.android.settings/.Settings\$LocationSettingsActivity"))
+            
+    @property
+    def cmd(self):
+        return f'{adb_exe} -s {self.ip_port} shell'
+    
+    @property
+    def pull(self):
+        pass 
+        
+    
+    # def push_fileobj(self, fileobj, dst="", mode=0o644):
+    #     modestr = oct(mode).replace('o', '')
+    #     pathname = '/upload/' + dst.lstrip('/')
+    #     filesize = 0
+    #     if isinstance(src, six.string_types):
+    #         if re.match(r"^https?://", src):
+    #             r = requests.get(src, stream=True)
+    #             if r.status_code != 200:
+    #                 raise IOError(
+    #                     "Request URL {!r} status_code {}".format(src, r.status_code))
+    #             filesize = int(r.headers.get("Content-Length", "0"))
+    #             fileobj = r.raw
+    #         elif os.path.isfile(src):
+    #             filesize = os.path.getsize(src)
+    #             fileobj = open(src, 'rb')
+    #         else:
+    #             raise IOError("file {!r} not found".format(src))
+    #     else:
+    #         assert hasattr(src, "read")
+    #         fileobj = src
+    #
+    #     try:
+    #         r = self.http.post(pathname,
+    #                            data={'mode': modestr},
+    #                            files={'file': fileobj}, timeout=300.0)
+    #         if r.status_code == 200:
+    #             return r.json()
+    #         raise IOError("push", "%s -> %s" % (src, dst), r.text)
+    #     finally:
+    #         fileobj.close()
+    
+    @classmethod
+    def get_devices(cls):
+        process = subprocess.Popen(f'{adb_exe} devices -l', 
+                                   encoding='utf8', 
+                                   shell=True, 
+                                   stdin=subprocess.PIPE, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE
+                                   )
+        return process.communicate()
+
+    
+
+    
+    @property
+    def devices(self):
+        return self.get_devices()
+        
+
+    @classmethod
+    def get_devices_as_dict(cls):
+        return tool_devices.parse_devices(BaseAdb.get_devices()[0])
+    
+    
+    @classmethod
+    def get_devcie_ids(cls):
+        return list(map(lambda x:x.get('id'), cls.get_devices_as_dict()))
+    
+    
+    @classmethod
+    def first_device(cls):
+        return list(cls.get_devices_as_dict())[0]
+    
+    
+    @classmethod
+    def first_adb(cls):
+        return cls(cls.first_device())
+    
+    @classmethod
+    def get_dids_include_wifi(cls, did):
+        yield did
+        for x in DEVICES:
+            if x.get('id') == did:
+                yield f'{x["ip"]}:{x["port"]}'
+    
+    @classmethod
+    def is_device(cls, did, d):
+        pass
+    
+    
+    @classmethod
+    def get_adb_by_device_id(cls, did):
+        ids = cls.get_devcie_ids()
+        for x in cls.get_dids_include_wifi(did):
+            if x in ids:
+                return cls({'id': x})
+        raise ValueError
+    
+    @classmethod
+    def get_adb_by_device_name(cls, name):
+        d = cls.get_device_d_by_name(name=name)
+        if d is not None:
+            return cls(d)
+        raise ValueError(f'not found devices:{name}')
+    
+    @classmethod
+    def my_mate10(cls):
+        return cls.get_adb_by_device_name(name='mate10')
+
+    @classmethod
+    def my_mate40(cls):
+        return cls.get_adb_by_device_name(name='mate40')
+        # return cls.get_adb_by_device_id(did='UJN0221118004154')
+    
+    @classmethod
+    def lq_honorv50(cls):
+        return cls.get_adb_by_device_id(did='8URDU19B26017523')
+
+
+    @classmethod
+    def lq_honor60(cls):
+        return cls.get_adb_by_device_id(did='A3KUVB1B18016880')
+    
+
+    
+    def execute(self, script, encoding='utf8'):
+        process = subprocess.Popen(self.cmd, 
+                                   encoding=encoding, 
+                                   shell=True, 
+                                   stdin=subprocess.PIPE, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE
+                                   )
+        return process.communicate(input=script)
+    
+    def push_file(self, src, dst, encoding='utf8'):
+        cmd = f'{adb_exe} -s {self.ip_port} push {src} {dst}'
+        process = subprocess.Popen(cmd, 
+                                   encoding=encoding, 
+                                   shell=True, 
+                                   stdin=subprocess.PIPE, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE
+                                   )
+        return process.communicate()
+    
+    def dump(self):
+        return self.execute('uiautomator dump')
+    
+    def screen_shot(self):
+        return bin2img(self.execute(script=b'screencap -p', encoding=None)[0].replace(b'\r\n', b'\n'))
+    
+    def save_screen_shot(self, chrop=False, img_dir=None):
+        cv2.imwrite(str(img_dir / ('%d.png' % int(time.time()))), self.screen_shot(chrop=chrop))
+    
+    def find_template(self, img, img_shot=None):
+        img_shot = img_shot if img_shot is not None else self.screen_shot()
+        return get_template_points(img_shot, img)
+    
+    def has_template(self, img):
+        return len(self.find_template(img)) > 0
+    
+    def do_click(self, x, y):
+        self.execute(f'input tap {x} {y}')
+        return self
+    
+    def do_click_element_top_center(self, e):
+        return self.do_click(e.center()[0], e.rect[1]) if e is not None else None
+    
+    def swipe(self, start, end, wait=100):
+        self.execute(f'input swipe {start[0]} {start[1]} {end[0]} {end[1]} {wait}')
+        return self
+    
+    def do_longclick(self, x=None, y=None, duration=2000):
+        if x is None or y is None:
+            cx, cy = self.get_sys_center()
+            x = x or cx
+            y = y or cy
+        self.swipe((x, y), (x, y), duration)
+
+    # def get_sys_width_height(self):
+    #     if self.current_shot is None:
+    #         self.screen_shot()
+    #     h,w = self.current_shot.shape[:2]
+    #     return w, h
+
+    def get_sys_width_height(self):
+        w,h = self.ua2.window_size()
+        return w, h
+    
+    def get_sys_center(self):
+        w, h = self.get_sys_width_height()
+        return w//2, h//2
+
+    def scroll_down(self,distance=200, duration=None, wait=None):
+        w, h = self.get_sys_width_height()
+        if wait is None:
+            self.ua2.swipe(w // 2, h // 2, w // 2, (h // 2) - distance, duration=duration)
+        else:
+            self.swipe((w // 2, h // 2), (w // 2, (h // 2) - distance), wait=wait)
+        
+    
+    def scroll_down_untill_prompt(self, x, distance=200, retry_num=5):
+        for _ in range(retry_num):
+            if self.find_xpath_safe(x).wait() is not None:
+                break
+            self.scroll_down(distance)
+    
+
+    def scroll_up(self,distance=200, duration=None):
+        w, h = self.get_sys_width_height()
+        self.ua2.swipe(w // 2, h // 2, w // 2, (h // 2) + distance, duration=duration)
+        # self.swipe((w // 2, h // 2), (w // 2, (h // 2) - distance), wait=duration)
+
+    
+    def has_element(self, x, no_wait=False):
+        e = self.find_xpath_safe(x)
+        if no_wait:
+            return len(e.all()) > 0
+        return e.wait() is not None
+    
+    def scroll_up_untill_prompt(self, x, distance=200, retry_num=5, no_wait=True):
+        for _ in range(retry_num):
+            # if self.find_xpath_safe(x).wait() is not None:
+            if self.has_element(x, no_wait):
+                break
+            self.scroll_up(distance)
+
+    
+    def refresh(self):
+        w, h = self.get_sys_width_height()
+        return self.swipe((w//2, h//2-200), (w//2,h//2+200)) 
+
+    def send_text(self, txt):
+        self.execute(f'input text {txt}')
+        return self
+    
+    def send_text_chinese(self, txt):
+        self.execute(f'am broadcast -a ADB_INPUT_TEXT --es msg "{txt}"')
+        return self
+    
+    @retry(3)
+    def find(self, name):
+        return self.INSTANCE_DICT.get(name)(self, name)
+    
+    def not_found(self, name):
+        try:
+            self.INSTANCE_DICT.get(name)(self, name)
+            raise NotNeedFurtherActions
+        except TplNotFoundError:
+            return self
+        
+    def touch_center_move_left(self):
+        x, y = self.get_sys_center()
+        self.ua2.touch.down(x,y).move(0, y)
+        
+    def touch_center_move_right(self):
+        x, y = self.get_sys_center()
+        self.ua2.touch.down(x,y).move(x+x, y)
+    
+    def switch_overview(self):
+        self.ua2.keyevent('KEYCODE_APP_SWITCH')
+
+    @property
+    def xpath_taskview(self):
+        # resource-id="com.huawei.android.launcher:id/task_view" class="android.widget.FrameLayout"
+        return '//android.widget.FrameLayout[re:match(@resource-id, ".*/task_view")]',
+    
+    def open_overview_and_scroll_to_most_left(self):
+        self.switch_overview()
+        scroll_to_most_left(self, self.xpath_taskview)
+    
+        
