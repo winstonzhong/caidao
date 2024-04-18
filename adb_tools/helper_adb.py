@@ -250,6 +250,7 @@ class BaseAdb(object):
     INSTANCE_DICT = {}
     NAME = None
     # ICON = None
+
     
     DIR_CFG = Path(__file__).resolve().parent.parent.parent / 'adb_config'
     
@@ -264,6 +265,22 @@ class BaseAdb(object):
     
     def get_classname(self):
         return self.__class__.__name__
+    
+    @property
+    def SYS_SCR_LOCK(self):
+        return {'package': 'com.huawei.systemmanager',
+         'activity': 'com.huawei.securitycenter.applock.password.LockScreenLaunchLockedAppActivity'}
+
+    @property
+    def APP_LAUNCH_LOCK(self):
+        return {'package': 'com.huawei.systemmanager',
+                'activity': 'com.huawei.securitycenter.applock.password.AuthLaunchLockedAppActivity',}
+
+    def is_in_sys_scr_lock(self):
+        return self.SYS_SCR_LOCK == self.app_info
+    
+    def is_in_app_launch_auth(self):
+        return self.APP_LAUNCH_LOCK == self.app_info
     
     @property
     def fpath_icon(self):
@@ -1105,10 +1122,29 @@ class BaseAdb(object):
     def scroll_center_move_right(self):
         x, y = self.get_sys_center()
         self.swipe((x, y), (x+x, y), wait=500)
-
+        
+    def scroll_center_move_up(self):
+        x, y = self.get_sys_center()
+        self.swipe((x, y), (x, 0), wait=500)
     
     def switch_overview(self):
         self.ua2.keyevent('KEYCODE_APP_SWITCH')
+        
+    def enter(self):
+        self.ua2.keyevent("KEYCODE_ENTER")
+        
+    def poweron(self):
+        self.ua2.keyevent("KEYCODE_POWER")
+        
+    def unlock_screen(self, pwd):
+        self.poweron()
+        self.scroll_center_move_up()
+        while 1:
+            time.sleep(1)
+            self.send_text(pwd)
+            self.enter()
+            if not self.is_in_sys_scr_lock():
+                break
 
     @property
     def xpath_taskview(self):
