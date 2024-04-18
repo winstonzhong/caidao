@@ -26,7 +26,7 @@ from helper_net import retry
 from tool_env import is_ipv4
 from tool_file import get_suffix
 from tool_img import bin2img, get_template_points, pil2cv2, to_gray, mask_to_img,\
-    rgb_to_mono
+    rgb_to_mono, cut_empty_margin
 
 
 # from base_adb import tool_devices
@@ -205,9 +205,17 @@ def get_all(adb,
         else:
             break
 
-def scroll_to_find(adb, xpath, text, fun_scroll=scroll_to_left):
+def is_element_wanted(adb, x, text):
+    return getattr(x,'text') == text
+
+def is_app_wanted(adb, x, text):
+    return getattr(x,'text') == text and adb.has_same_icon()
+
+def scroll_to_find(adb, xpath, text, fun_scroll=scroll_to_left, fun_match=is_element_wanted):
     for x in get_all(adb, xpath, fun_scroll):
-        if x.text == text:
+        # if x.text == text:
+        # print(x.info, x.text)
+        if fun_match(adb, x, text):
             return x
         
 def scroll_to_index(adb, xpath, index, fun_scroll=scroll_to_left, exclude=[]):
@@ -235,8 +243,9 @@ class NoFileDownloadedError(Exception):
 
 
 class BaseAdb(object):
-    app_name = None
-    activity = None
+    # app_name = None
+    # activity = None
+    APP_INFO = {}
     timeout = 20
     INSTANCE_DICT = {}
     NAME = None
@@ -265,12 +274,9 @@ class BaseAdb(object):
         
     @cached_property
     def icon(self):
-        return rgb_to_mono(cv2.imread(str(self.fpath_icon))) if self.fpath_icon.exists() else None 
+        return cut_empty_margin(rgb_to_mono(cv2.imread(str(self.fpath_icon)))) if self.fpath_icon.exists() else None 
     
     def get_icon(self):
-        # resource-id="com.huawei.android.launcher:id/icon" class="android.widget.ImageView"
-        # xpath = f'//android.widget.ImageView[re:match(@resource-id, ".*/icon")][@content-desc="{self.NAME}"]'
-        # text="微信" resource-id="com.huawei.android.launcher:id/title" class="android.widget.TextView"
         xpath = f'//android.widget.TextView[re:match(@resource-id, ".*/title")][@text="{self.NAME}"]/preceding-sibling::android.widget.ImageView'
         e = self.find_xpath_safe(xpath).wait()
         i = pil2cv2(e.screenshot())
@@ -280,10 +286,11 @@ class BaseAdb(object):
     def has_same_icon(self):
         if self.icon is None:
             return True
-        icon = self.get_icon()
+        icon = cut_empty_margin(self.get_icon())
         if icon.shape != self.icon.shape:
             return False
-        return (icon !=self.icon).sum() == 0
+        # return (icon !=self.icon)
+        return (icon !=self.icon).sum() <= 100
     
     def clear_camera_dir(self):
         self.clear_temp_dir(base_dir=self.CAMERA_DIR)
@@ -385,10 +392,19 @@ class BaseAdb(object):
     @property
     def app_info(self):
         return {k:v for k, v in self.ua2.app_current().items() if k not in ('pid',)}
+
+    @property
+    def app_name(self):
+        return self.APP_INFO.get('package')
+    
+    @property
+    def activity(self):
+        return self.APP_INFO.get('activity')
             
     def is_app_opened(self):
-        d = self.ua2.app_current()
-        return d.get('package') == self.app_name and d.get('activity') == self.activity
+        return self.APP_INFO == self.app_info
+        # d = self.ua2.app_current()
+        # return d.get('package') == self.app_name and d.get('activity') == self.activity
     
     def get_latest_file(self, base_dir='/sdcard/DCIM/Camera'):
         r = self.ua2.shell(f'ls -t {base_dir}')
@@ -1071,12 +1087,25 @@ class BaseAdb(object):
             return self
         
     def touch_center_move_left(self):
+        old = time.time()
         x, y = self.get_sys_center()
         self.ua2.touch.down(x,y).move(0, y)
+        print('swipe', time.time() - old)
         
     def touch_center_move_right(self):
+        old = time.time()
         x, y = self.get_sys_center()
         self.ua2.touch.down(x,y).move(x+x, y)
+        print(time.time() - old)
+
+    def scroll_center_move_left(self):
+        x, y = self.get_sys_center()
+        self.swipe((x, y), (0, y), wait=500)
+        
+    def scroll_center_move_right(self):
+        x, y = self.get_sys_center()
+        self.swipe((x, y), (x+x, y), wait=500)
+
     
     def switch_overview(self):
         self.ua2.keyevent('KEYCODE_APP_SWITCH')
@@ -1089,5 +1118,26 @@ class BaseAdb(object):
     def open_overview_and_scroll_to_most_left(self):
         self.switch_overview()
         scroll_to_most_left(self, self.xpath_taskview)
+    
+    @property
+    def xpath_titleview(self):
+        # resource-id="com.huawei.android.launcher:id/title" class="android.widget.TextView
+        return '//android.widget.TextView[re:match(@resource-id, ".*/title")]',
+    
+    def scroll_find_app(self):
+        e = scroll_to_find(self, 
+                       xpath=self.xpath_titleview, 
+                       text=self.NAME, 
+                       fun_scroll=lambda *x:self.scroll_center_move_left(), 
+                       fun_match=is_app_wanted)
+        
+        if e is None:
+            e = scroll_to_find(self, 
+                           xpath=self.xpath_titleview, 
+                           text=self.NAME, 
+                           fun_scroll=lambda *x:self.scroll_center_move_right(), 
+                           fun_match=is_app_wanted)
+        return e
+            
     
         
