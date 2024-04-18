@@ -190,6 +190,9 @@ def get_elements_safe(adb, x, force_not_empty=True):
 def get_elements_safe_for_sure(adb, x, sleep_time=0.1):
     return wait_tobe_steady(adb, x, return_all=True, sleep_time=sleep_time)
 
+def to_info(l):
+    return [x.info for x in l]
+
 def get_all(adb, 
             xpath='//android.widget.TextView[re:match(@resource-id, ".*/text")]',
             fun_scroll=scroll_to_left,
@@ -200,10 +203,16 @@ def get_all(adb,
             yield x
         fun_scroll(adb, old)
         new = get_elements_safe(adb, xpath)
-        if new[0].info != old[0].info:
+        
+        if to_info(new) != to_info(old):
             old = new
         else:
             break
+        
+        # if new[0].info != old[0].info:
+        #     old = new
+        # else:
+        #     break
 
 def is_element_wanted(adb, x, text):
     return getattr(x,'text') == text
@@ -266,6 +275,9 @@ class BaseAdb(object):
     def get_classname(self):
         return self.__class__.__name__
     
+    def get_default_icon_name(self):
+        return self.get_classname()
+    
     @property
     def SYS_SCR_LOCK(self):
         return {'package': 'com.huawei.systemmanager',
@@ -276,6 +288,14 @@ class BaseAdb(object):
         return {'package': 'com.huawei.systemmanager',
                 'activity': 'com.huawei.securitycenter.applock.password.AuthLaunchLockedAppActivity',}
 
+    @property
+    def SYS_OVERVIEW(self):
+        return {'package': 'com.huawei.android.launcher',
+         'activity': '.unihome.UniHomeLauncher',}        
+
+    def is_in_overview(self):
+        return self.SYS_OVERVIEW == self.app_info
+
     def is_in_sys_scr_lock(self):
         return self.SYS_SCR_LOCK == self.app_info
     
@@ -284,7 +304,7 @@ class BaseAdb(object):
     
     @property
     def fpath_icon(self):
-        return CUR_DIR / f'icon_{self.get_classname().lower()}.png'
+        return CUR_DIR / f'icon_{self.get_default_icon_name().lower()}.png'
     
     def save_icon(self):
         cv2.imwrite(str(self.fpath_icon), self.get_icon())
@@ -1128,7 +1148,8 @@ class BaseAdb(object):
         self.swipe((x, y), (x, 0), wait=500)
     
     def switch_overview(self):
-        self.ua2.keyevent('KEYCODE_APP_SWITCH')
+        if not self.is_in_overview():
+            self.ua2.keyevent('KEYCODE_APP_SWITCH')
         
     def enter(self):
         self.ua2.keyevent("KEYCODE_ENTER")
@@ -1145,6 +1166,13 @@ class BaseAdb(object):
             self.enter()
             if not self.is_in_sys_scr_lock():
                 break
+
+    def unlock_app(self, pwd):
+        if self.is_in_sys_scr_lock():
+            self.ua2.click(0.8, 0.95)
+            time.sleep(1)
+            self.send_text(pwd)
+            self.enter()
 
     @property
     def xpath_taskview(self):
@@ -1176,4 +1204,7 @@ class BaseAdb(object):
         return e
             
     
-        
+    def switch_app(self):
+        self.switch_overview()
+        e = self.scroll_find_app()
+        e.click()
