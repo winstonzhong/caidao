@@ -25,7 +25,8 @@ from adb_tools.tool_xpath import find_by_xpath
 from helper_net import retry
 from tool_env import is_ipv4
 from tool_file import get_suffix
-from tool_img import bin2img, get_template_points, pil2cv2, to_gray, mask_to_img
+from tool_img import bin2img, get_template_points, pil2cv2, to_gray, mask_to_img,\
+    rgb_to_mono
 
 
 # from base_adb import tool_devices
@@ -264,17 +265,25 @@ class BaseAdb(object):
         
     @cached_property
     def icon(self):
-        return cv2.imread(str(self.fpath_icon)) if self.fpath_icon.exists() else None 
+        return rgb_to_mono(cv2.imread(str(self.fpath_icon))) if self.fpath_icon.exists() else None 
     
     def get_icon(self):
         # resource-id="com.huawei.android.launcher:id/icon" class="android.widget.ImageView"
-        e = self.find_xpath_safe(f'//android.widget.ImageView[re:match(@resource-id, ".*/icon")][@content-desc="{self.NAME}"]').wait()
+        # xpath = f'//android.widget.ImageView[re:match(@resource-id, ".*/icon")][@content-desc="{self.NAME}"]'
+        # text="微信" resource-id="com.huawei.android.launcher:id/title" class="android.widget.TextView"
+        xpath = f'//android.widget.TextView[re:match(@resource-id, ".*/title")][@text="{self.NAME}"]/preceding-sibling::android.widget.ImageView'
+        e = self.find_xpath_safe(xpath).wait()
         i = pil2cv2(e.screenshot())
         i = to_gray(i) > 250
         return mask_to_img(i)
     
     def has_same_icon(self):
-        return self.icon is None
+        if self.icon is None:
+            return True
+        icon = self.get_icon()
+        if icon.shape != self.icon.shape:
+            return False
+        return (icon !=self.icon).sum() == 0
     
     def clear_camera_dir(self):
         self.clear_temp_dir(base_dir=self.CAMERA_DIR)
