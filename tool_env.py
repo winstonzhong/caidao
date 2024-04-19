@@ -145,6 +145,9 @@ def smart_range_safe(start, end):
         pass
     return []
 
+def is_string(x):
+    return _is_string_like(x)
+
 def is_number(x):
     try:
         int(x)

@@ -23,7 +23,7 @@ from adb_tools.common.exceptions import ElementNotFoundError,\
     NotNeedFurtherActions, TplNotFoundError
 from adb_tools.tool_xpath import find_by_xpath
 from helper_net import retry
-from tool_env import is_ipv4
+from tool_env import is_ipv4, is_string
 from tool_file import get_suffix
 from tool_img import bin2img, get_template_points, pil2cv2, to_gray, mask_to_img,\
     rgb_to_mono, cut_empty_margin
@@ -271,6 +271,15 @@ class BaseAdb(object):
     
     if not os.path.lexists(DIR_CFG):
         os.makedirs(DIR_CFG, exist_ok=True)
+
+    @classmethod
+    def get_all_jobs(cls):
+        v =  list(filter(lambda x:x.startswith('job_'), dir(cls)))
+        k = map(lambda x:f'{cls.NAME} - ' + getattr(cls, x).__doc__.strip(), v)
+        v = map(lambda x:f'{cls.__name__}.{x}', v)
+        return list(zip(v, k))
+        
+
     
     def get_classname(self):
         return self.__class__.__name__
@@ -294,7 +303,8 @@ class BaseAdb(object):
          'activity': '.unihome.UniHomeLauncher',}        
 
     def is_in_overview(self):
-        return self.SYS_OVERVIEW == self.app_info
+        xpath = '//android.widget.FrameLayout[re:match(@resource-id, ".*/task_view")]',
+        return self.SYS_OVERVIEW == self.app_info and self.find_xpath_safe(xpath).exists
 
     def is_in_sys_scr_lock(self):
         return self.SYS_SCR_LOCK == self.app_info
@@ -650,31 +660,31 @@ class BaseAdb(object):
         content = content.replace("'\\", '').encode('utf8')
         return content
     
-    def show_page(self, fpath=None):
+    def show_page(self, fpath=None, show=True):
         import webbrowser
         fpath = BASE_DIR / 'page.xml' if fpath is None else fpath
         with open(fpath, 'wb') as fp:
             fp.write(self.get_page())
-        webbrowser.open(f'file:///{fpath}')
+        if show:
+            webbrowser.open(f'file:///{fpath}')
 
     def save_error_page(self, error_dir, page_name=None):
         import traceback
         if page_name:
-            fname = f'{page_name}_{int(time.time())}'
+            fname = page_name
         else:
             fname = f'{int(time.time())}'
         if not os.path.lexists(error_dir):
-            os.mkdir(error_dir)
+            os.makedirs(error_dir)
+            
         error_path = f'{error_dir}/{fname}.xml'
         error_png = f'{error_dir}/{fname}.png'
         error_exc = f'{error_dir}/{fname}.txt'
-        # print(error_path, error_png, error_exc)
-        # return
-        # self.save_page_content(error_path)
         self.show_page(error_path, show=False)
         with open(error_exc, 'w') as fp:
             traceback.print_exc(file=fp)
         cv2.imwrite(error_png, self.ua2.screenshot(format='opencv'))
+        return error_path, error_png, error_exc
 
     def push_files(self, fpaths, dst_dir='/storage/sdcard0/Pictures/Browser'):
         for fpath in fpaths:
@@ -779,15 +789,21 @@ class BaseAdb(object):
         return self
 
     def go_back_untill_prompt(self, x, num_retry=5):
-        # clicked = False
         for i in range(num_retry):
-            self.go_back()
             e = self.find_xpath_safe(x).wait()
             if e is not None:
                 return True
-            print(i, 'retrying go back:', x)
+            print(i, 'trying go back:', x)
+            self.go_back()
         raise ValueError(x)
-
+    
+    def go_back_untill_gone(self, x, num_retry=5, no_wait=False):
+        for i in range(num_retry):
+            if not self.has_elements(x, no_wait):
+                return 
+            print(i, 'trying go back:', x)
+            self.go_back()
+        raise ValueError(x)
     
     def click_untill_gone(self, x, num_retry=5):
         clicked = False
@@ -805,7 +821,6 @@ class BaseAdb(object):
     def click_untill_prompt(self, x, y, num_retry=5):
         clicked = False
         for i in range(num_retry):
-            # self.find_xpath_safe(x).wait(timeout).click()
             e = self.find_xpath_safe(x).wait()
             if e is not None:
                 self.do_click_element_top_center(e)
@@ -1092,6 +1107,14 @@ class BaseAdb(object):
             return len(e.all()) > 0
         return e.wait() is not None
     
+    def has_elements(self, l, no_wait=False):
+        if not is_string(l):
+            for x in l:
+                if self.has_element(x, no_wait):
+                    return True
+            return False
+        return self.has_element(l, no_wait)
+    
     def scroll_up_untill_prompt(self, x, distance=200, retry_num=5, no_wait=True):
         for _ in range(retry_num):
             # if self.find_xpath_safe(x).wait() is not None:
@@ -1146,6 +1169,10 @@ class BaseAdb(object):
     def scroll_center_move_up(self):
         x, y = self.get_sys_center()
         self.swipe((x, y), (x, 0), wait=500)
+
+    def scroll_center_move_down(self):
+        x, y = self.get_sys_center()
+        self.swipe((x, y), (x, y+y), wait=500)
     
     def switch_overview(self):
         if not self.is_in_overview():
@@ -1168,7 +1195,7 @@ class BaseAdb(object):
                 break
 
     def unlock_app(self, pwd):
-        if self.is_in_sys_scr_lock():
+        if self.is_in_app_launch_auth():
             self.ua2.click(0.8, 0.95)
             time.sleep(1)
             self.send_text(pwd)
@@ -1207,4 +1234,7 @@ class BaseAdb(object):
     def switch_app(self):
         self.switch_overview()
         e = self.scroll_find_app()
-        e.click()
+        if e is not None:
+            e.click()
+        else:
+            self.open_app()
