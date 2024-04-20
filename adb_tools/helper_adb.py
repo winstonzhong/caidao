@@ -250,6 +250,8 @@ def scroll_to_index_random(adb,
 class NoFileDownloadedError(Exception):
     pass
 
+class DummyTestException(Exception):
+    pass
 
 class BaseAdb(object):
     # app_name = None
@@ -275,7 +277,7 @@ class BaseAdb(object):
     @classmethod
     def get_all_jobs(cls):
         v =  list(filter(lambda x:x.startswith('job_'), dir(cls)))
-        k = map(lambda x:f'{cls.NAME} - ' + getattr(cls, x).__doc__.strip(), v)
+        k = map(lambda x:f'{cls.NAME} - ' + (getattr(cls, x).__doc__ or '').strip(), v)
         v = map(lambda x:f'{cls.__name__}.{x}', v)
         return list(zip(v, k))
         
@@ -1232,9 +1234,10 @@ class BaseAdb(object):
             
     
     def switch_app(self):
-        self.switch_overview()
-        e = self.scroll_find_app()
-        if e is not None:
-            e.click()
-        else:
-            self.open_app()
+        if not self.is_app_opened():
+            self.switch_overview()
+            e = self.scroll_find_app()
+            if e is not None:
+                e.click()
+            else:
+                self.open_app()

@@ -3,6 +3,10 @@ Created on 2023年12月21日
 
 @author: lenovo
 '''
+import os
+
+from PIL import Image
+import cv2
 from uiautomator2.xpath import XPath
 
 
@@ -48,6 +52,39 @@ class SnapShotDevice(DummyDevice):
     
     def find_xpath_safe(self, x):
         return find_by_xpath(self, x)    
+    
+class TaskSnapShotDevice(SnapShotDevice):
+    def __init__(self, adb, task, base_dir):
+        adb.switch_app()
+        SnapShotDevice.__init__(self, adb)
+        task.fpath_xml = os.path.join(base_dir , f'{task.id}.xml')
+        with open(task.fpath_xml.path, 'wb') as fp:
+            fp.write(self.source.replace("'\\", '').encode('utf8'))
+        task.fpath_screenshot = os.path.join(base_dir , f'{task.id}.jpeg')
+        # cv2.imwrite(task.fpath_screenshot, adb.ua2.screenshot(format='opencv'))
+        cv2.imwrite(task.fpath_screenshot.path, adb.screen_shot())
+        task.save()
+
+class TaskDumpedDevice(SnapShotDevice):
+    def __init__(self, task):
+        with open(task.fpath_xml.path, 'rb') as fp:
+            self.init(fp.read().decode('utf8'), 0)
+        self.img = Image.open(task.fpath_screenshot.path)
+    
+    def screenshot(self):
+        return self.img
+    
+    # def __getattr__(self, name):
+    #     pass
+    #
+    # def __getattribute__(self, item):
+    #     """属性拦截器"""
+    #     if item != 'find_xpath_safe':
+    #         print('item', item)
+    #         self.step_name = item
+    #     return object.__getattribute__(self, item)
+
+    
     
 def find_by_xpath(adb_device, xpath):
     '''
