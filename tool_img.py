@@ -322,8 +322,11 @@ def find_template(img, template, threshold = 0.8):
      
     points = get_template_points(img, template, threshold)
     
+    
+    color = (0, 0, 255) if len(img.shape) > 2 else 255
+    
     for pt in points:
-        cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
+        cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), color, 2)
 
     return img
 
@@ -537,6 +540,11 @@ def unpack_img(b):
     img = bin2img(b[4:])
     return img, x, y    
           
+def img2edges(img):
+    img_blur = cv2.GaussianBlur(to_gray(img), (3,3), 0) 
+    edges = cv2.Canny(img_blur,80,200)
+    return edges
+    
     
 if __name__ == '__main__':
     import doctest

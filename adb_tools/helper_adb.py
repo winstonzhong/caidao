@@ -854,7 +854,7 @@ class BaseAdb(object):
     def auto_init_wifi_connection(self):
         if not is_ipv4(self.ip_port):
             ip = self.ua2.wlan_ip
-            port = random.randint(7006, 8006)
+            port = 7080#random.randint(7006, 8006)
             self.init_wifi_connection(device_id=self.ip_port, ip=ip, port=port)
     
     @classmethod
@@ -1033,6 +1033,50 @@ class BaseAdb(object):
                                    stderr=subprocess.PIPE
                                    )
         return process.communicate()
+
+    def pull_file(self, src, dst, encoding='utf8'):
+        cmd = f'{adb_exe} -s {self.ip_port} pull "{src}" "{dst}"'
+        process = subprocess.Popen(cmd, 
+                                   encoding=encoding, 
+                                   shell=True, 
+                                   stdin=subprocess.PIPE, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE
+                                   )
+        return process.communicate()
+    
+    def move_files_to_tmp(self,
+                          cmd='find / -name *.mp4 -type f -size +100M 2>&1 | grep -v "Permission denied"'
+                          ):
+        self.clear_temp_dir()
+        r = self.execute(cmd)
+        for i, x in enumerate(r[0].splitlines()):
+            print(i, x)
+            fname =os.path.basename(x)
+            # fpath = os.path.join(self.DIR_TMP, fname)
+            self.ua2.shell(f'mv "{x}" "{self.DIR_TMP}/{fname}"', stream=True)
+        
+    def move_temp_dir(self, to_dir='z:/movie'):
+        print(self.pull_file(self.DIR_TMP, to_dir))
+    
+    def move_files_to_pc(self, 
+                         cmd='find / -name *.mp4 -type f -size +100M 2>&1 | grep -v "Permission denied"', 
+                         to_dir='z:/movie'):
+        self.move_files_to_tmp(cmd)
+        self.move_temp_dir(to_dir)
+        self.clear_temp_dir()
+        # r = self.execute(cmd)
+        # for i, x in enumerate(r[0].splitlines()):
+        #     print(i, x)
+        #     fname =os.path.basename(x)
+        #     fpath = os.path.join(to_dir, fname)
+        #     if not os.path.lexists(fpath):
+        #         self.ua2.pull(x, fpath)
+        #     self.ua2.shell(f'rm -f "{x}"')
+        
+    def move_flac_to_pc(self):
+        self.move_files_to_pc(cmd='find / -name *.flac 2>&1 | grep -v "Permission denied"')
+            
     
     def dump(self):
         return self.execute('uiautomator dump')

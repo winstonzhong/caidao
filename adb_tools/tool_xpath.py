@@ -9,6 +9,8 @@ from PIL import Image
 import cv2
 from uiautomator2.xpath import XPath
 
+from tool_img import get_template_points
+
 
 class NoTemplatePopupException(Exception):
     pass
@@ -62,7 +64,8 @@ class TaskSnapShotDevice(SnapShotDevice):
             fp.write(self.source.replace("'\\", '').encode('utf8'))
         task.fpath_screenshot = os.path.join(base_dir , f'{task.id}.jpeg')
         # cv2.imwrite(task.fpath_screenshot, adb.ua2.screenshot(format='opencv'))
-        cv2.imwrite(task.fpath_screenshot.path, adb.screen_shot())
+        self.img = adb.screen_shot()
+        cv2.imwrite(task.fpath_screenshot.path, self.img)
         task.save()
 
 class TaskDumpedDevice(SnapShotDevice):
@@ -73,6 +76,24 @@ class TaskDumpedDevice(SnapShotDevice):
     
     def screenshot(self):
         return self.img
+    
+class TaskExecuteDevice(SnapShotDevice):
+    def __init__(self, task):
+        self.init(task.xml, 0)
+        self.mask = task.mask
+        
+    def match_image(self, tpl):
+        l = get_template_points(self.mask, tpl.mask, threshold=0.8)
+        if l:
+            h, w = tpl.mask.shape[:2]
+            return (l[0][0], l[0][1], l[0][0]+w, l[0][1] + h)
+    
+    def match_xml(self, tpl):
+        xml = tpl.xml.decode('utf8')
+        e = self.find_xpath_safe(xml).wait()
+        return e.bounds
+    
+    
     
     # def __getattr__(self, name):
     #     pass
