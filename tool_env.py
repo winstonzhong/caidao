@@ -35,6 +35,27 @@ def get_pre_of_list(i, l):
 def get_pre_pre_of_list(i, l):
     return l[i - 2] if i > 1 else None
 
+def split_none_numbers(line):
+    '''
+    >>> split_none_numbers('123')
+    [123]
+    >>> split_none_numbers('1,23')
+    [1, 23]
+    >>> split_none_numbers(None)
+    []
+    '''
+    if line:
+        l = filter(lambda x:x, re.split('[^\d]+', line))
+        return list(map(lambda x:int(x), l))
+    return []
+    
+
+def two_points_to_bounds(two_points):
+    '''
+    >>> two_points_to_bounds("[45,1731][1035,1956]")
+    (45, 1731, 1035, 1956)
+    '''
+    return tuple(split_none_numbers(two_points))
 
 def bounds_to_rect(bounds):
     if _is_string_like(bounds):

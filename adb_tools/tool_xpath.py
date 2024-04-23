@@ -59,13 +59,18 @@ class TaskSnapShotDevice(SnapShotDevice):
     def __init__(self, adb, task, base_dir):
         adb.switch_app()
         SnapShotDevice.__init__(self, adb)
-        task.fpath_xml = os.path.join(base_dir , f'{task.id}.xml')
-        with open(task.fpath_xml.path, 'wb') as fp:
-            fp.write(self.source.replace("'\\", '').encode('utf8'))
+        
+
         task.fpath_screenshot = os.path.join(base_dir , f'{task.id}.jpeg')
         # cv2.imwrite(task.fpath_screenshot, adb.ua2.screenshot(format='opencv'))
         self.img = adb.screen_shot()
         cv2.imwrite(task.fpath_screenshot.path, self.img)
+        
+        task.fpath_xml = os.path.join(base_dir , f'{task.id}.xml')
+        with open(task.fpath_xml.path, 'wb') as fp:
+            fp.write(self.source.replace("'\\", '').encode('utf8'))
+        
+        
         task.save()
 
 class TaskDumpedDevice(SnapShotDevice):

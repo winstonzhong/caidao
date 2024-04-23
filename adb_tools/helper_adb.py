@@ -449,8 +449,11 @@ class BaseAdb(object):
     @property
     def activity(self):
         return self.APP_INFO.get('activity')
-            
+
     def is_app_opened(self):
+        return self.APP_INFO.get('package') == self.app_info.get('package')
+            
+    def is_app_main(self):
         return self.APP_INFO == self.app_info
         # d = self.ua2.app_current()
         # return d.get('package') == self.app_name and d.get('activity') == self.activity
