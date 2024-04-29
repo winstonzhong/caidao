@@ -57,9 +57,19 @@ def two_points_to_bounds(two_points):
     '''
     return tuple(split_none_numbers(two_points))
 
+
 def bounds_to_rect(bounds):
+    '''
+    >>> bounds_to_rect('(0,0,4,4)') 
+    0 4 0 4<4, 4>
+    >>> bounds_to_rect("[45,1731][1035,1956]")
+    45 1035 1731 1956<990, 225>
+    '''
     if _is_string_like(bounds):
-        rect = eval(bounds)
+        if '[' in bounds:
+            rect = two_points_to_bounds(bounds)
+        else:
+            rect = eval(bounds)
     else:
         rect = bounds
     return Rect(rect[0],rect[2],rect[1],rect[3])

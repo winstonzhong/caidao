@@ -9,7 +9,9 @@ from PIL import Image
 import cv2
 from uiautomator2.xpath import XPath
 
-from tool_img import get_template_points
+from tool_env import bounds_to_rect
+from tool_img import get_template_points, show, pil2cv2
+from cached_property import cached_property
 
 
 class NoTemplatePopupException(Exception):
@@ -60,6 +62,7 @@ class TaskSnapShotDevice(SnapShotDevice):
         adb.switch_app()
         SnapShotDevice.__init__(self, adb)
         
+        self.task = task
 
         task.fpath_screenshot = os.path.join(base_dir , f'{task.id}.jpeg')
         # cv2.imwrite(task.fpath_screenshot, adb.ua2.screenshot(format='opencv'))
@@ -70,8 +73,26 @@ class TaskSnapShotDevice(SnapShotDevice):
         with open(task.fpath_xml.path, 'wb') as fp:
             fp.write(self.source.replace("'\\", '').encode('utf8'))
         
-        
         task.save()
+    
+    def perform_operation_of_template(self):
+        tpl = self.task.tpl_result
+        rect = self.task.rect
+        if rect is not None and tpl.op:
+            getattr(self, tpl.op)(rect)
+            self.task.status = self.task.PRODUCED_RECORD
+        else:
+            self.task.status = self.task.EMPTY_RECORD
+        self.task.save()
+            
+    def CLICK(self, rect):
+        self.adb.do_click(rect.center_x, rect.center_y)
+    
+    def DBCLICK(self, rect):
+        self.adb.do_double_click(rect.center_x, rect.center_y)
+        
+    def NONE(self, rect):
+        pass
 
 class TaskDumpedDevice(SnapShotDevice):
     def __init__(self, task):
@@ -81,6 +102,12 @@ class TaskDumpedDevice(SnapShotDevice):
     
     def screenshot(self):
         return self.img
+    
+    def crop_bounds(self, bounds):
+        return bounds_to_rect(bounds).crop_img(pil2cv2(self.img))
+    
+    def show_bounds(self, bounds):
+        show(self.crop_bounds(bounds))
     
 class TaskExecuteDevice(SnapShotDevice):
     def __init__(self, task):
