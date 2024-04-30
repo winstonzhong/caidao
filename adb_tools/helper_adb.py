@@ -257,7 +257,7 @@ class BaseAdb(object):
     # app_name = None
     # activity = None
     APP_INFO = {}
-    timeout = 20
+    timeout = 3
     INSTANCE_DICT = {}
     NAME = None
     # ICON = None

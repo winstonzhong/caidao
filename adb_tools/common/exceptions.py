@@ -9,6 +9,11 @@
 """
 
 
+class MsgError(Exception):
+    default_msg = '%s'
+    def __init__(self, msg):
+        self.msg = self.default_msg % msg
+
 class ElementNotFoundError(Exception):
 
     def __init__(self, msg, page_name=None):
@@ -24,7 +29,12 @@ class NotNeedFurtherActions(Exception):
     pass
 
 
-class SubmitFailError(Exception):
+class SubmitFailError(MsgError):
+    pass
 
-    def __init__(self, msg):
-        self.msg = msg
+class NoFriendError(MsgError):
+    default_msg = '未找到好友: %s'
+
+
+class NoGroupError(MsgError):
+    default_msg = '未找到群聊: %s'
