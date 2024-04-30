@@ -835,6 +835,29 @@ class BaseAdb(object):
             print(i, 'retrying:', x)
         raise ValueError(x)
     
+    @classmethod
+    def reconnect(cls, ip_port, encoding='utf8'):
+        process = subprocess.Popen(f'{adb_exe} connect {ip_port}', 
+                                   encoding=encoding, 
+                                   shell=True, 
+                                   stdin=subprocess.PIPE, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE
+                                   )
+        return process.communicate() 
+        
+    
+    @classmethod
+    def start_scrcpy(cls, ip_port, encoding='utf8'):
+        process = subprocess.Popen(f'scrcpy -s {ip_port} --no-audio ', 
+                                   encoding=encoding, 
+                                   shell=True, 
+                                   stdin=subprocess.PIPE, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE
+                                   )
+        return process.communicate()
+    
     def setup(self, encoding='utf8'):
         process = subprocess.Popen(f'{adb_exe} -s {self.device["id"]} tcpip {self.device["port"]}', 
                                    encoding=encoding, 
@@ -963,6 +986,10 @@ class BaseAdb(object):
     @classmethod
     def first_device(cls):
         return list(cls.get_devices_as_dict())[0]
+    
+    @classmethod
+    def from_ip_port(cls, ip_port):
+        return cls({'id':ip_port})
     
     @classmethod
     def first_device_usb(cls):
