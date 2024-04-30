@@ -964,10 +964,30 @@ class BaseAdb(object):
     def first_device(cls):
         return list(cls.get_devices_as_dict())[0]
     
+    @classmethod
+    def first_device_usb(cls):
+        for d in cls.get_devices_as_dict():
+            if not is_ipv4(d.get('id')):
+                return d
+    
+    @classmethod
+    def first_device_ip(cls):
+        for d in cls.get_devices_as_dict():
+            if is_ipv4(d.get('id')):
+                return d
     
     @classmethod
     def first_adb(cls):
         return cls(cls.first_device())
+
+    @classmethod
+    def first_adb_usb(cls):
+        return cls(cls.first_device_usb())
+
+    @classmethod
+    def first_adb_ip(cls):
+        return cls(cls.first_device_ip())
+
     
     @classmethod
     def get_dids_include_wifi(cls, did):
@@ -1100,6 +1120,9 @@ class BaseAdb(object):
     def do_click(self, x, y):
         self.execute(f'input tap {x} {y}')
         return self
+    
+    def do_double_click(self, x, y):
+        self.ua2.double_click(x, y, 0.01)
     
     def do_click_element_top_center(self, e):
         return self.do_click(e.center()[0], e.rect[1]) if e is not None else None
@@ -1262,28 +1285,44 @@ class BaseAdb(object):
     @property
     def xpath_titleview(self):
         # resource-id="com.huawei.android.launcher:id/title" class="android.widget.TextView
-        return '//android.widget.TextView[re:match(@resource-id, ".*/title")]',
+        return '//android.widget.TextView[re:match(@resource-id, ".*/title")]'
     
-    def scroll_find_app(self):
-        e = scroll_to_find(self, 
-                       xpath=self.xpath_titleview, 
-                       text=self.NAME, 
-                       fun_scroll=lambda *x:self.scroll_center_move_left(), 
-                       fun_match=is_app_wanted)
+    # def scroll_find_app(self, icon_match=False):
+    #     e = scroll_to_find(self, 
+    #                    xpath=self.xpath_titleview, 
+    #                    text=self.NAME, 
+    #                    fun_scroll=lambda *x:self.scroll_center_move_left(), 
+    #                    fun_match=is_app_wanted if icon_match else is_element_wanted,
+    #                    )
+    #
+    #     if e is None:
+    #         e = scroll_to_find(self, 
+    #                        xpath=self.xpath_titleview, 
+    #                        text=self.NAME, 
+    #                        fun_scroll=lambda *x:self.scroll_center_move_right(), 
+    #                        fun_match=is_app_wanted if icon_match else is_element_wanted,
+    #                        )
+    #     return e
+
+    def scroll_find_app(self, icon_match=False):
+        fun_scrolls = (self.scroll_center_move_right, self.scroll_center_move_left)
         
-        if e is None:
+        for fun_scroll in fun_scrolls:
             e = scroll_to_find(self, 
                            xpath=self.xpath_titleview, 
                            text=self.NAME, 
-                           fun_scroll=lambda *x:self.scroll_center_move_right(), 
-                           fun_match=is_app_wanted)
-        return e
+                           fun_scroll=lambda *x:fun_scroll(), 
+                           fun_match=is_app_wanted if icon_match else is_element_wanted,
+                           )
+            if e is not None:
+                return e
+
             
     
-    def switch_app(self):
+    def switch_app(self, icon_match=False):
         if not self.is_app_opened():
             self.switch_overview()
-            e = self.scroll_find_app()
+            e = self.scroll_find_app(icon_match)
             if e is not None:
                 e.click()
             else:

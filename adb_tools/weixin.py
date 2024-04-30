@@ -9,6 +9,7 @@ from adb_tools.common.exceptions import NoFriendError, NoGroupError
 from adb_tools.helper_adb import BaseAdb, scroll_to_find, wait_tobe_steady
 
 
+
 class WxAdb(BaseAdb):
     APP_INFO = {'package': 'com.tencent.mm', 'activity': '.ui.LauncherUI'}
     NAME = '微信'
@@ -18,7 +19,7 @@ class WxAdb(BaseAdb):
         e.click()
         self.ua2.send_keys(text, True)
         self.find_xpath_safe(f'//android.widget.TextView[@text="{text}"]').wait().click()
-
+        
     def enter_contact_page(self):
         """进入通讯录"""
         x_tab = '//android.widget.TextView[@text="通讯录"]'
