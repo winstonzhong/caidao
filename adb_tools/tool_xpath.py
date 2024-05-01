@@ -93,6 +93,9 @@ class TaskSnapShotDevice(SnapShotDevice):
     def DBCLICK(self, rect):
         self.adb.do_double_click(rect.center_x, rect.center_y)
         
+    def LONGCLICK(self, rect):
+        self.adb.do_longclick(rect.center_x, rect.center_y)
+        
     def NONE(self, rect):
         pass
 

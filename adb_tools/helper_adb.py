@@ -1006,6 +1006,14 @@ class BaseAdb(object):
         for d in cls.get_devices_as_dict():
             if is_ipv4(d.get('id')):
                 return d
+            
+    @classmethod
+    def first_device_name(cls, name):
+        return list(filter(lambda x:x.get('name') == name, cls.get_devices_as_dict()))[0]
+    
+    @classmethod
+    def first_adb_name(cls, name):
+        return cls(cls.first_device_name(name))
     
     @classmethod
     def first_adb(cls):
