@@ -64,15 +64,19 @@ def bounds_to_rect(bounds):
     0 4 0 4<4, 4>
     >>> bounds_to_rect("[45,1731][1035,1956]")
     45 1035 1731 1956<990, 225>
+    >>> bounds_to_rect(Rect(0,100,0,100))
+    0 100 0 100<100, 100>
     '''
-    if _is_string_like(bounds):
-        if '[' in bounds:
-            rect = two_points_to_bounds(bounds)
+    if not isinstance(bounds, Rect):
+        if _is_string_like(bounds):
+            if '[' in bounds:
+                rect = two_points_to_bounds(bounds)
+            else:
+                rect = eval(bounds)
         else:
-            rect = eval(bounds)
-    else:
-        rect = bounds
-    return Rect(rect[0],rect[2],rect[1],rect[3])
+            rect = bounds
+        return Rect(rect[0],rect[2],rect[1],rect[3])
+    return bounds
 
 def bounds_to_center(bounds):
     '''

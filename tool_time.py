@@ -13,6 +13,7 @@ from django.utils import timezone
 import pytz
 
 from tool_ffmpeg import to_seconds
+import pandas
 
 
 # from datetime import timedelta
@@ -218,12 +219,14 @@ def convert_chinese_datetime(line, today=None):
     datetime.datetime(2024, 5, 1, 0, 34, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
     >>> convert_chinese_datetime('凌晨1:50', today='2024-05-01')
     datetime.datetime(2024, 5, 1, 1, 50, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
+    >>> convert_chinese_datetime(numpy.nan)
+    nan
+    >>> convert_chinese_datetime(None)
     '''
-    # print(line)
-    # >>> convert_chinese_datetime('上午10:25', today='2024-02-24')
+    if pandas.isnull(line):
+        return line
     cd, name, hour, minute =  split_chinese_datetime(line)
     d = chinese_to_date(cd, today)
-    # d = d.replace(tzinfo=TIME_ZONE_SHANGHAI)
     d = datetime.datetime(year=d.year, month=d.month, day=d.day)
     
     d = TIME_ZONE_SHANGHAI.localize(d)
@@ -243,5 +246,6 @@ def convert_chinese_datetime(line, today=None):
 
 if __name__ == '__main__':
     import doctest
+    import numpy
     print(doctest.testmod(verbose=False, report=False))
     

@@ -64,7 +64,9 @@ class TaskSnapShotDevice(SnapShotDevice):
         
         self.task = task
 
-        task.fpath_screenshot = os.path.join(base_dir , f'{task.id}.jpeg')
+        # task.fpath_screenshot = os.path.join(base_dir , f'{task.id}.jpeg')
+        task.fpath_screenshot = os.path.join(base_dir , f'{task.id}.png')
+        
         # cv2.imwrite(task.fpath_screenshot, adb.ua2.screenshot(format='opencv'))
         self.img = adb.screen_shot()
         cv2.imwrite(task.fpath_screenshot.path, self.img)
