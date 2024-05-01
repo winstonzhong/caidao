@@ -215,6 +215,10 @@ def convert_chinese_datetime(line, today=None):
     datetime.datetime(2024, 2, 23, 2, 56, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
     >>> convert_chinese_datetime('周四 10:47', today='2024-02-24')
     datetime.datetime(2024, 2, 22, 10, 47, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
+    >>> convert_chinese_datetime('凌晨12:34', today='2024-05-01')
+    datetime.datetime(2024, 5, 1, 0, 34, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
+    >>> convert_chinese_datetime('凌晨1:50', today='2024-05-01')
+    datetime.datetime(2024, 5, 1, 1, 50, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
     >>> convert_chinese_datetime(numpy.nan)
     nan
     >>> convert_chinese_datetime(None)
@@ -229,9 +233,13 @@ def convert_chinese_datetime(line, today=None):
     
     hour = int(hour)
     minute = int(minute)
+
     if name in ('晚上', '下午') and hour < 12:
         hour = (int(hour) + 12) % 24
-        
+
+    elif name == '凌晨' and hour == 12:
+        hour = 0
+
     seconds = hour *3600 + minute * 60
     return d + timedelta(seconds=seconds)
 

@@ -19,7 +19,7 @@ class WxAdb(BaseAdb):
         e.click()
         self.ua2.send_keys(text, True)
         self.find_xpath_safe(f'//android.widget.TextView[@text="{text}"]').wait().click()
-        
+
     def enter_contact_page(self):
         """进入通讯录"""
         x_tab = '//android.widget.TextView[@text="通讯录"]'
