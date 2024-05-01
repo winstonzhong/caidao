@@ -986,6 +986,10 @@ class BaseAdb(object):
     @classmethod
     def first_device(cls):
         return list(cls.get_devices_as_dict())[0]
+
+    @classmethod
+    def last_device(cls):
+        return list(cls.get_devices_as_dict())[-1]
     
     @classmethod
     def from_ip_port(cls, ip_port):
@@ -1006,6 +1010,11 @@ class BaseAdb(object):
     @classmethod
     def first_adb(cls):
         return cls(cls.first_device())
+
+
+    @classmethod
+    def last_adb(cls):
+        return cls(cls.last_device())
 
     @classmethod
     def first_adb_usb(cls):

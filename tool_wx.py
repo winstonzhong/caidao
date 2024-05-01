@@ -91,8 +91,16 @@ def is_not_equal_ignore_null(d1, d2, name):
     True
     >>> is_not_equal_ignore_null(d_up, d_false, 'from_icon_des')
     False
+    >>> is_not_equal_ignore_null({'type':1,}, {'type':2,}, 'type')
+    True
+    >>> is_not_equal_ignore_null({'type':1,}, {'type':numpy.nan,}, 'type')
+    False
+    >>> is_not_equal_ignore_null({'type':1,}, {'type':-1,}, 'type')
+    False
     '''
     if pandas.isnull(d1.get(name)) or pandas.isnull(d2.get(name)) or d1.get(name) == d2.get(name):
+        return False
+    if name == 'type' and -1 in (d1.get(name), d2.get(name)):
         return False
     return True 
 
