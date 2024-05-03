@@ -56,55 +56,7 @@ class SnapShotDevice(DummyDevice):
     
     def find_xpath_safe(self, x):
         return find_by_xpath(self, x)    
-    
-class TaskSnapShotDevice(SnapShotDevice):
-    def __init__(self, adb, task, base_dir):
-        adb.switch_app()
-        SnapShotDevice.__init__(self, adb)
-        
-        self.task = task
 
-        # task.fpath_screenshot = os.path.join(base_dir , f'{task.id}.jpeg')
-        task.fpath_screenshot = os.path.join(base_dir , f'{task.id}.png')
-        
-        # cv2.imwrite(task.fpath_screenshot, adb.ua2.screenshot(format='opencv'))
-        self.img = adb.screen_shot()
-        cv2.imwrite(task.fpath_screenshot.path, self.img)
-        
-        task.fpath_xml = os.path.join(base_dir , f'{task.id}.xml')
-        with open(task.fpath_xml.path, 'wb') as fp:
-            fp.write(self.source.replace("'\\", '').encode('utf8'))
-        
-        task.save()
-    
-    def perform_operation_of_template(self):
-        tpl = self.task.tpl_result
-        rect = self.task.rect
-        if rect is not None and tpl.op:
-            getattr(self, tpl.op)(rect)
-            self.task.status = self.task.PRODUCED_RECORD
-        else:
-            self.task.status = self.task.EMPTY_RECORD
-        self.task.save()
-            
-    def CLICK(self, rect):
-        self.adb.do_click(rect.center_x, rect.center_y)
-    
-    def DBCLICK(self, rect):
-        self.adb.do_double_click(rect.center_x, rect.center_y)
-        
-    def LONGCLICK(self, rect):
-        self.adb.do_longclick(rect.center_x, rect.center_y)
-        
-    def NONE(self, rect):
-        pass
-
-class TaskDumpedDevice(SnapShotDevice):
-    def __init__(self, task):
-        with open(task.fpath_xml.path, 'rb') as fp:
-            self.init(fp.read().decode('utf8'), 0)
-        self.img = Image.open(task.fpath_screenshot.path)
-    
     def screenshot(self):
         return self.img
     
@@ -113,6 +65,64 @@ class TaskDumpedDevice(SnapShotDevice):
     
     def show_bounds(self, bounds):
         show(self.crop_bounds(bounds))
+    
+class TaskSnapShotDevice(SnapShotDevice):
+    def __init__(self, adb, task, base_dir):
+        adb.switch_app()
+        SnapShotDevice.__init__(self, adb)
+        self.img = adb.screen_shot()
+        
+        task.key = task.get_task_key(self)
+        task_key_pre = task.pre_same_job_key
+        self.task = task
+        # print([task.key, task_key_pre])
+        
+        self.changed = task.key is None or task_key_pre is None or task_key_pre != task.key
+        
+        if self.changed:
+            task.fpath_screenshot = os.path.join(base_dir , f'{task.id}.png')
+            self.img = adb.screen_shot()
+            cv2.imwrite(task.fpath_screenshot.path, self.img)
+            
+            task.fpath_xml = os.path.join(base_dir , f'{task.id}.xml')
+            with open(task.fpath_xml.path, 'wb') as fp:
+                fp.write(self.source.replace("'\\", '').encode('utf8'))
+            task.save()
+    
+    def perform_operation_of_template(self):
+        tpl = self.task.tpl_result
+        rect = self.task.rect
+        if rect is not None and tpl.op:
+            getattr(self, tpl.op)(rect)
+        #     self.task.status = self.task.PRODUCED_RECORD
+        # else:
+        #     self.task.status = self.task.EMPTY_RECORD
+        # self.task.save()
+    
+    def CLICK(self, rect):
+        self.adb.do_click(rect.center_x, rect.center_y)
+    
+    def DBCLICK(self, rect):
+        self.adb.do_double_click(rect.center_x, rect.center_y)
+        
+    def LONGCLICK(self, rect):
+        self.adb.do_longclick(rect.center_x, rect.center_y, duration=1000)
+        
+    def CLEAR_PICTURES_WEIXIN_AND_CLICK(self, rect):
+        self.adb.clear_temp_dir(base_dir='/sdcard/Pictures/WeiXin/')
+        self.CLICK(rect)
+    
+    def NONE(self, rect):
+        pass
+    
+    
+
+class TaskDumpedDevice(SnapShotDevice):
+    def __init__(self, task):
+        with open(task.fpath_xml.path, 'rb') as fp:
+            self.init(fp.read().decode('utf8'), 0)
+        self.img = Image.open(task.fpath_screenshot.path)
+    
     
 class TaskExecuteDevice(SnapShotDevice):
     def __init__(self, task):

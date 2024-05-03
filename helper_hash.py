@@ -7,7 +7,7 @@ import datetime
 import hashlib
 import json
 
-import numpy
+
 import pandas
 
 
@@ -30,7 +30,9 @@ def get_hash_img(img):
     return hashlib.sha256(img.tobytes()).hexdigest()
 
 def get_hash_df(df):
-    return hashlib.sha256(json.dumps(df.to_dict('records'),cls=MyEncoder).encode('utf8')).hexdigest()
+    return get_hash_jsonable(df.to_dict('records'))
+    # return hashlib.sha256(json.dumps(df.to_dict('records'),cls=MyEncoder).encode('utf8')).hexdigest()
     # return hashlib.sha256(df.to_numpy().tobytes()).hexdigest() if df is not None else None
 
-
+def get_hash_jsonable(l):
+    return hashlib.sha256(json.dumps(l,cls=MyEncoder).encode('utf8')).hexdigest() if l else None

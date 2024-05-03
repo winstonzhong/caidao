@@ -580,6 +580,14 @@ class Rect(object):
     
     def to_tuple(self):
         return self.left, self.top, self.right, self.bottom
+    
+    @classmethod
+    def get_out_bounds(cls, l):
+        return cls(min(map(lambda x:x.left, l)), 
+                   max(map(lambda x:x.right, l)),
+                   min(map(lambda x:x.top, l)),
+                   max(map(lambda x:x.bottom, l)),
+                   )
         
     
 

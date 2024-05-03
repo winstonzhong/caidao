@@ -3,19 +3,20 @@ Created on 2023年11月3日
 
 @author: lenovo
 '''
-import datetime
 from datetime import timedelta
+import datetime
 import re
 from time import strptime, mktime
 
 from django.utils import timezone
-# from django.utils import timezone as datetime
+import pandas
 import pytz
 
+from tool_env import is_string
 from tool_ffmpeg import to_seconds
-import pandas
 
 
+# from django.utils import timezone as datetime
 # from datetime import timedelta
 TIME_ZONE_SHANGHAI = pytz.timezone('Asia/Shanghai')
 
@@ -223,7 +224,7 @@ def convert_chinese_datetime(line, today=None):
     nan
     >>> convert_chinese_datetime(None)
     '''
-    if pandas.isnull(line):
+    if pandas.isnull(line) or not is_string(line):
         return line
     cd, name, hour, minute =  split_chinese_datetime(line)
     d = chinese_to_date(cd, today)
@@ -242,6 +243,12 @@ def convert_chinese_datetime(line, today=None):
 
     seconds = hour *3600 + minute * 60
     return d + timedelta(seconds=seconds)
+
+
+def convert_time_utc(s):
+    if s.dt.tz is not None:
+        return s.dt.tz_convert('utc')
+    return s.dt.tz_localize(tz='utc')
 
 
 if __name__ == '__main__':
