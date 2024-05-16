@@ -6,13 +6,14 @@ Created on 2023年10月19日
 import base64
 import io
 
+from PIL import Image, ImageEnhance
+from cached_property import cached_property
 import cv2
 import numpy
+import pandas
 
 from helper_net import get_with_random_agent
 from tool_rect import Rect
-
-from PIL import Image, ImageEnhance
 
 
 def to_9_16(img):
@@ -42,9 +43,9 @@ def base642cv2(b64):
 def url2img(url):
     return bin2img(get_with_random_agent(url).content)
 
-def to_buffer(img):
+def to_buffer(img, suffix='.png'):
     if img is not None:
-        is_success, buffer = cv2.imencode(".png", img)
+        is_success, buffer = cv2.imencode(suffix, img)
         return buffer if is_success else None
 
 def img2io(img):
@@ -73,10 +74,30 @@ def bin_to_base64url(bin_buffer):
     return 'data:image/png;base64,' + base64.b64encode(bin_buffer).decode()
 
 
-def show(img):
+def show(img, max_length=900):
+    if max_length is not None:
+        img = resize_if_too_large(img, max_length)
     cv2.imshow('image', img)
     cv2.waitKey()
     cv2.destroyAllWindows()
+    
+def show_in_plt(img):
+    from matplotlib import pyplot as plt
+    from skimage.io import imshow
+    imshow(img, cmap='gray')
+    plt.show()
+    
+def to_plot_img(img):
+    from matplotlib import pyplot as plt    
+    ax = plt.imshow(img, interpolation='nearest')
+    fig = ax.get_figure()
+    canvas = fig.canvas
+    canvas.draw()
+    width, height = canvas.get_width_height()
+    image_array = numpy.frombuffer(canvas.tostring_rgb(), dtype='uint8')
+    image_array = image_array.reshape(height, width, 3)    
+    return image_array
+    
 
 def make_mask(img, rl, rh, gl, gh, bl, bh):
     return (
@@ -270,7 +291,9 @@ def put_water_mark(img, wm):
     img[top:bottom, left:right, ...] = b.astype(numpy.uint8)
     return img
 
-def get_canvas(width, height):
+def get_canvas(width=None, height=None, img=None):
+    if img is not None:
+        height, width = img.shape[:2]
     return numpy.zeros((height, width, 3), dtype=numpy.uint8)    
 
 def get_dsize(width, height, w, h):
@@ -306,6 +329,23 @@ def resize_image(img, width, height, simple_direct=False):
     
     canvas[top:bottom,left:right,...] = img
     return canvas
+
+def resize_if_too_large_with_ratio(img, max_length=720):
+    max_len = max(img.shape[:2])
+    if max_len > max_length:
+        ratio = max_length / max_len 
+        img = cv2.resize(img,dsize=None,fx=ratio,fy=ratio,interpolation=cv2.INTER_LINEAR)
+    else:
+        ratio = 1
+    return img, ratio
+
+def resize_if_too_large(img, max_length=720):
+    return resize_if_too_large_with_ratio(img, max_length)[0]
+    # max_len = max(img.shape[:2])
+    # if max_len > max_length:
+    #     ratio = max_length / max_len 
+    #     img = cv2.resize(img,dsize=None,fx=ratio,fy=ratio,interpolation=cv2.INTER_LINEAR)
+    # return img
 
 def get_template_points(img, template, threshold = 0.8):
     res = cv2.matchTemplate(img, template, cv2.TM_CCOEFF_NORMED)
@@ -419,6 +459,16 @@ def make_mask_by_contours(img, contours):
     for points in contours:
         cv2.fillConvexPoly(mask, cv2.convexHull(points), 255)
     return mask.astype(numpy.uint8)
+
+def flatten_contours(contours):
+    points = []
+    for contour in contours:
+        for point in contour:
+            points.append(point[0])
+    return numpy.array(points)
+
+def contours_to_convexHull(contours):
+    return cv2.convexHull(flatten_contours(contours))
 
 def make_mask_by_raw_shape_mask(mask_raw, low=10):
     mask = to_gray(mask_raw)
@@ -540,11 +590,152 @@ def unpack_img(b):
     img = bin2img(b[4:])
     return img, x, y    
           
-def img2edges(img):
-    img_blur = cv2.GaussianBlur(to_gray(img), (3,3), 0) 
-    edges = cv2.Canny(img_blur,80,200)
+def img2edges(img, low=80, high=200):
+    img = img if len(img.shape) == 2 else to_gray(img)
+    img_blur = cv2.GaussianBlur(img, (3,3), 0) 
+    edges = cv2.Canny(img_blur,low, high)
     return edges
     
+def contours_rect(contours, shape):
+    for contour in contours:
+        perimeter = cv2.arcLength(contour, True)
+        approx = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
+        if len(approx) == 4 and SquareRect(approx, shape).is_valid():
+            # print('approx:', approx.tolist())
+            yield contour, approx
+
+
+    
+class SquareRect(object):
+    def __init__(self, contour, shape=(1024,1024)):
+        self.contour = contour
+        perimeter = cv2.arcLength(contour, True)
+        approx = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
+        self.points = approx.reshape((-1,2))
+        self.num_points = len(self.points)
+        self.shape = shape
+    
+    @cached_property
+    def min_length(self):
+        return max(self.shape) * 0.08
+    
+    @cached_property
+    def min_area(self):
+        return self.min_length ** 2
+    
+    @cached_property
+    def area(self):
+        return cv2.contourArea(self.points)
+    
+    @cached_property
+    def num_points(self):
+        return len(self.points)
+    
+    @cached_property
+    def distance(self):
+        a = self.points
+        b = numpy.roll(a,-2)
+        return numpy.linalg.norm(a-b, axis=1)
+    
+    @cached_property
+    def intersection_angles(self):
+        a = self.points
+        b = numpy.roll(a,-2)
+        a = numpy.arctan2(b[...,1] - a[...,1], b[...,0] - a[...,0])
+        return numpy.abs((numpy.roll(a,-1) - a) * 180/ numpy.pi)
+    
+    @property
+    def df(self):
+        d = {
+                'x': pandas.Series(self.points[...,0]),
+                'y': pandas.Series(self.points[...,1]),
+                'distance': pandas.Series(self.distance),
+                'angles': pandas.Series(numpy.mod(self.intersection_angles, 90)),
+            }
+        return pandas.DataFrame(d)
+    
+    
+    def is_too_small(self):
+        return (self.distance < self.min_length).sum() > 0
+    
+    @property
+    def delta_distance(self):
+        return (self.distance - numpy.roll(self.distance, -2)) / self.distance
+    
+    def is_distance_close(self):
+        return numpy.isclose(numpy.roll(self.distance, -2),self.distance, rtol=0.18).sum() == 4
+    
+    def is_close_90(self):
+        a = numpy.isclose(self.intersection_angles, 90, atol=10) + numpy.isclose(self.intersection_angles, 270, atol=15)
+        return a.sum() == 4
+             
+    def is_valid(self):
+        # return not self.is_too_small() and self.is_distance_close() and self.is_close_90()
+        if self.num_points >= 4 and \
+            not self.is_area_too_small() and \
+            self.has_two_right_angle_at_least():
+            return True
+        return False
+    
+    def is_area_too_small(self):
+        return self.area < self.min_area     
+    
+    @cached_property
+    def right_angles(self):
+        return numpy.isclose(self.intersection_angles, 90, atol=15) + numpy.isclose(self.intersection_angles, 270, atol=15)
+    
+    @cached_property
+    def num_right_angle(self):
+        return self.right_angles.sum()
+    
+    def has_two_right_angle_at_least(self):
+        return self.num_right_angle >= 2
+    
+    @property
+    def dict(self):
+        return {'points_to_4': numpy.abs(self.num_points-4),
+                'area': self.area,
+                'right_angle_to_4':numpy.abs(self.num_right_angle - 4),
+                # 'points':self.points,
+                # 'contour':self.contour,
+                'sr':self,
+                }
+    
+    @classmethod
+    def get_contour_valid(cls, contours, shape):
+        for contour in contours:
+            s = cls(contour, shape)
+            if s.is_valid():
+                yield s
+ 
+    @classmethod
+    def get_contour_valid_all(cls, img, masks):
+        shape = img.shape[:2]
+        for mask in masks:
+            contours, _  = cv2.findContours(mask, 
+                                            cv2.RETR_EXTERNAL,
+                                            # cv2.RETR_LIST,
+                                            cv2.CHAIN_APPROX_SIMPLE, 
+                                            )
+            for sr in cls.get_contour_valid(contours, shape):
+                yield sr
+                
+    @classmethod
+    def get_contour_valid_df(cls, img, masks):
+        return pandas.DataFrame(data=map(lambda x:x.dict, 
+                                         cls.get_contour_valid_all(img, masks))
+        )
+
+    @classmethod
+    def get_contour_valid_most(cls, img, masks):
+        df = cls.get_contour_valid_df(img, masks)
+        if not df.empty:
+            df = df.sort_values(by=['right_angle_to_4','points_to_4','area'], ascending=(True, True, False))
+            sr = df.iloc[0].sr
+            print(sr.df)
+            print(sr.points.tolist())
+            return sr.contour, sr.points 
+
     
 if __name__ == '__main__':
     import doctest

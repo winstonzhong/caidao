@@ -975,7 +975,7 @@ class BaseAdb(object):
 
     @classmethod
     def get_devices_as_dict(cls):
-        return tool_devices.parse_devices(BaseAdb.get_devices()[0])
+        return list(tool_devices.parse_devices(BaseAdb.get_devices()[0]))
     
     
     @classmethod

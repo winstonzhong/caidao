@@ -588,7 +588,14 @@ class Rect(object):
                    min(map(lambda x:x.top, l)),
                    max(map(lambda x:x.bottom, l)),
                    )
-        
+    
+    @classmethod
+    def from_center(cls, center_x, center_y, len_half):
+        return cls(center_x-len_half,
+                   center_x+len_half,
+                   center_y-len_half,
+                   center_y+len_half,
+                   )
     
 
 if __name__ == "__main__":
