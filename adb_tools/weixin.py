@@ -111,7 +111,8 @@ class WxAdb(BaseAdb):
         file_type: 图片, 音频, 视频, 文档
         """
         self.push_file_to_download(fpath,
-                                  clean_temp=True,
+                                   clean_temp=True,
+                                   use_timestamp=False
                                   )
         # resource-id="com.tencent.mm:id/bjz" class="android.widget.ImageButton"
         self.find_xpath_safe('//android.widget.ImageButton[@resource-id="com.tencent.mm:id/bjz"]').wait().click()
