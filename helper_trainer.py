@@ -135,7 +135,7 @@ class NeuralNetwork(nn.Module):
     # NC = num_class
     def __init__(self, cls_model, type_id, label_list):
         super().__init__()
-        self.num_class = len(label_list)
+        self.num_label = len(label_list)
 
         self.flatten = nn.Flatten()
         self.linear_relu_stack = nn.Sequential(
@@ -143,7 +143,7 @@ class NeuralNetwork(nn.Module):
             nn.ReLU(),
             nn.Linear(512, 512),
             nn.ReLU(),
-            nn.Linear(512, self.num_class),
+            nn.Linear(512, self.num_label),
         )
 
         self.cls_model = cls_model
@@ -162,7 +162,6 @@ class NeuralNetwork(nn.Module):
     def train_loop(self):
         size = len(self.__data_loader.dataset)
         self.train()
-        print('len...', size, len(self.__data_loader))
         for batch, (X, y) in enumerate(self.__data_loader):
             pred = self(X)
             loss = self.__loss_fn(pred, y)
