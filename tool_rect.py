@@ -208,6 +208,29 @@ class Rect(object):
             return None
         return self
     
+    def change(self, width=None, height=None, shape=None, safe=True):
+        '''
+        >>> Rect(100,200,200,400).change(150, 250, (1000,900))
+        75 225 175 425<150, 250>
+        >>> Rect(100,200,200,400).change(80, 180, (1000,900))
+        110 190 210 390<80, 180>
+        >>> Rect(100,200,200,400).change(81, 181, (1000,900))
+        110 191 210 391<81, 181>
+        '''
+        h, w = shape[:2]
+        if width is not None:
+            left = (width - self.width) // 2 
+            right = (width - self.width) - left
+        else:
+            left = right =0
+        
+        if height is not None:
+            top = (height - self.height) // 2
+            bottom = (height - self.height) - top
+        else:
+            top = bottom = 0
+        return self.expand(left, right, top, bottom, w, h, safe) 
+    
     def expand_all_directions(self, shape,
                               left_ratio=0.3,
                               right_ratio=0.3,
@@ -580,7 +603,22 @@ class Rect(object):
     
     def to_tuple(self):
         return self.left, self.top, self.right, self.bottom
-        
+    
+    @classmethod
+    def get_out_bounds(cls, l):
+        return cls(min(map(lambda x:x.left, l)), 
+                   max(map(lambda x:x.right, l)),
+                   min(map(lambda x:x.top, l)),
+                   max(map(lambda x:x.bottom, l)),
+                   )
+    
+    @classmethod
+    def from_center(cls, center_x, center_y, len_half):
+        return cls(center_x-len_half,
+                   center_x+len_half,
+                   center_y-len_half,
+                   center_y+len_half,
+                   )
     
 
 if __name__ == "__main__":

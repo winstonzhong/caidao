@@ -6,8 +6,10 @@ Created on 2023年11月29日
 import itertools
 import time
 
+import cv2
 import numpy
 from paddleocr import PaddleOCR
+import pandas
 
 from tool_img import get_canvas
 from tool_rect import Rect
@@ -23,6 +25,52 @@ def detect(img):
         for line in res:
             print(line)
     return result
+
+def is_result_list(l):
+    if type(l) == list and len(l) == 2 and len(l[0]) == 4 and type(l[1]) == tuple:
+        return True
+    return False
+
+def flatten_result(l):
+    # print(l)
+    if is_result_list(l):
+        yield l
+    else:
+        for x in l:
+            for y in flatten_result(x):
+                yield y
+            
+def to_dict(l):
+    # print(l)
+    return {
+        'x0':l[0][0][0],
+        'y0':l[0][0][1],
+
+        'x1':l[0][1][0],
+        'y1':l[0][1][1],
+
+        'x2':l[0][2][0],
+        'y2':l[0][2][1],
+
+        'x3':l[0][3][0],
+        'y3':l[0][3][1],
+
+        'text': l[1][0],
+        'prob': l[1][1],
+        'area': cv2.contourArea(numpy.array(l[0]).astype(int)),
+        }    
+
+
+def get_angle_horizntal(df):
+    y = df.y1 - df.y0
+    x = df.x1 - df.x0
+    return numpy.arctan2(y, x) * 180 / numpy.pi
+
+def detect_to_df(img):
+    result = ocr.ocr(img, cls=True)
+    df = pandas.DataFrame(data=map(lambda x:to_dict(x), flatten_result(result)))
+    df['angle'] = get_angle_horizntal(df)
+    return df[['x0', 'y0', 'x1', 'y1', 'x2', 'y2', 'x3', 'y3', 'prob', 'angle', 'area','text']]
 
 def speed_test(img):
     old = time.time()
