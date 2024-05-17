@@ -16,6 +16,9 @@ from helper_net import get_with_random_agent
 from tool_rect import Rect
 
 
+def bgr2rgb(img):
+    return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
 def to_9_16(img):
     h,w = img.shape[:2]
     v = 9*h // 16
@@ -87,9 +90,9 @@ def show_in_plt(img):
     imshow(img, cmap='gray')
     plt.show()
     
-def to_plot_img(img):
+def to_plot_img(img, cmap=None):
     from matplotlib import pyplot as plt    
-    ax = plt.imshow(img, interpolation='nearest')
+    ax = plt.imshow(img, interpolation='nearest', cmap=cmap)
     fig = ax.get_figure()
     canvas = fig.canvas
     canvas.draw()
