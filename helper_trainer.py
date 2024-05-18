@@ -228,6 +228,18 @@ class NeuralNetwork(nn.Module):
         labels = pred.argmax(1).tolist()
         return labels
 
+    def do_train(self, pth_fpath):
+        correct = loss = 0
+        for t in range(epochs):
+            print(f"Epoch {t+1}\n-------------------------------")
+            self.train_loop()
+            correct, loss = self.test_loop()
+        print("Done!")
+        torch.save(self.state_dict(), pth_fpath)
+        print("Saved!")
+        self.update_train_result(pth_fpath)
+        return correct, loss
+
 
 # class NumberNeuralNetwork(NeuralNetwork):
 #     NC = len(DecimalNumber.TYPE_DN)
@@ -293,18 +305,18 @@ def train(cls_model):
     print("Saved!")
 
 
-def train_new(cls_model, type_id, label_list, fpath):
-    nn = NeuralNetwork(cls_model, type_id, label_list)
-    correct = loss = 0
-    for t in range(epochs):
-        print(f"Epoch {t+1}\n-------------------------------")
-        nn.train_loop()
-        correct, loss = nn.test_loop()
-    print("Done!")
-    torch.save(nn.state_dict(), fpath)
-    print("Saved!")
-    nn.update_train_result(fpath)
-    return correct, loss
+# def train_new(cls_model, type_id, label_list, fpath):
+#     nn = NeuralNetwork(cls_model, type_id, label_list)
+#     correct = loss = 0
+#     for t in range(epochs):
+#         print(f"Epoch {t+1}\n-------------------------------")
+#         nn.train_loop()
+#         correct, loss = nn.test_loop()
+#     print("Done!")
+#     torch.save(nn.state_dict(), fpath)
+#     print("Saved!")
+#     nn.update_train_result(fpath)
+#     return correct, loss
     
 # def train_number(cls_model):
 #     model = NumberNeuralNetwork()
