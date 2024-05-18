@@ -505,6 +505,19 @@ class Rect(object):
     def is_valid_face(self):
         return self.height > self.MIN_FACE_WIDTH and self.width > self.MIN_FACE_WIDTH
     
+    def is_valid(self, min_len=5):
+        '''
+        >>> Rect(0,0,1,2).is_valid()
+        False
+        >>> Rect(0,10,1,12).is_valid()
+        True
+        >>> Rect(0,5,1,12).is_valid(min_len=5)
+        True
+        >>> Rect(0,5,1,5).is_valid(min_len=5)
+        False
+        '''
+        return self.height >= min_len and self.width >= min_len
+    
     def cut_margin(self, value):
         o = self.clone()
         o.left += value
