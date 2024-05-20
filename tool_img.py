@@ -15,6 +15,49 @@ import pandas
 from helper_net import get_with_random_agent
 from tool_rect import Rect
 
+def fast_rolling_split(img, win_height=7):
+    '''
+    >>> arr = numpy.random.choice((0,255), size=(100, 350)).astype(numpy.uint8)
+    >>> c = fast_rolling_split(arr, 7) == slow_rolling_split(arr, 7)
+    >>> numpy.any(c == 0)
+    False
+    >>> c.sum() == c.size
+    True
+    '''
+    h, window_width = img.shape[:2]
+    span = (win_height - 1) //2
+    img = add_head_tail(img, span=span)
+
+    
+    
+    strides = img.strides
+    
+    new_strides = (strides[0], strides[0], strides[1])
+    
+    shape=(h, win_height, window_width)
+
+    windows = numpy.lib.stride_tricks.as_strided(img, 
+                                             shape=shape, 
+                                             strides=new_strides)
+    
+    return windows.reshape(-1, window_width)    
+
+def slow_rolling_split(img, win_height=7):
+    h, w = img.shape[:2]
+    span = (win_height - 1) //2
+    img = add_head_tail(img, span=span)
+    l = []
+    for i in range(h):
+        l.append(img[i:i+win_height,:])
+    return numpy.stack(l).reshape(-1, w)
+
+def add_head_tail(img, span=3):
+    _, w = img.shape[:2]
+    head = tail = numpy.zeros((span, w)).astype(numpy.uint8)
+    return numpy.concatenate((head, img, tail))
+
+def rotate_90(img):
+    return img.T[...,::-1]
 
 def bgr2rgb(img):
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
