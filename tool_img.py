@@ -15,7 +15,7 @@ import pandas
 from helper_net import get_with_random_agent
 from tool_rect import Rect
 
-def fast_rolling_split(img, win_height=7):
+def fast_rolling_split(img, win_height=7, stacked=True):
     '''
     >>> arr = numpy.random.choice((0,255), size=(100, 350)).astype(numpy.uint8)
     >>> c = fast_rolling_split(arr, 7) == slow_rolling_split(arr, 7)
@@ -40,7 +40,7 @@ def fast_rolling_split(img, win_height=7):
                                              shape=shape, 
                                              strides=new_strides)
     
-    return windows.reshape(-1, window_width)    
+    return windows.reshape(-1, window_width) if stacked else windows    
 
 def slow_rolling_split(img, win_height=7):
     h, w = img.shape[:2]
