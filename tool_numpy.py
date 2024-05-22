@@ -9,7 +9,7 @@ import pandas as pd
 
 def random_array():
     choices = [1, 2, 3, 4, 5, 6, 7, 8, 9, np.nan, np.nan, np.nan, np.nan, np.nan]
-    out = np.random.choice(choices, size=(10, 10))
+    out = np.random.choice(choices, size=(100, 100))
     return out
 
 def loops_fill(arr):
@@ -136,7 +136,7 @@ def test_split2(image):
     
 
 if __name__ == "__main__":
-    # test_speed()
-    test_correct()
+    test_speed()
+    # test_correct()
 
     

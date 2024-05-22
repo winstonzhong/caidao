@@ -130,11 +130,16 @@ def show(img, max_length=900):
 def show_in_plt(img):
     from matplotlib import pyplot as plt
     from skimage.io import imshow
-    imshow(img, cmap='gray')
+    if len(img.shape) == 2:
+        imshow(img, cmap='gray')
+    else:
+        imshow(img)
     plt.show()
     
 def to_plot_img(img, cmap=None):
-    from matplotlib import pyplot as plt    
+    from matplotlib import pyplot as plt
+    plt.tight_layout()
+
     ax = plt.imshow(img, interpolation='nearest', cmap=cmap)
     fig = ax.get_figure()
     canvas = fig.canvas

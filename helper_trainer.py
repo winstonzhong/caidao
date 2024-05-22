@@ -20,6 +20,7 @@ from torchvision.transforms import ToTensor, Lambda
 import pandas as pd
 # from mj.tool_pai import ETYPES
 from helper_cmd import CmdProgress
+from cached_property import cached_property
 
 learning_rate = 1e-3
 batch_size = 64
@@ -131,7 +132,101 @@ class DbImageDatasetCommon(FileBaseImageDataset):
     def NC(self):
         return len(self.label_list)
 
-class NeuralNetwork(nn.Module):
+class BaseNet(object):
+    def train_loop(self):
+        size = len(self.data_loader.dataset)
+        self.train()
+        for batch, (X, y) in enumerate(self.data_loader):
+            pred = self(X)
+            loss = self.loss_fn(pred, y)
+
+            loss.backward()
+            self.optimizer.step()
+            self.optimizer.zero_grad()
+
+            if batch % 100 == 0:
+                loss, current = loss.item(), (batch + 1) * len(X)
+                print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+
+    def test_loop(self):
+        self.eval()
+        size = len(self.data_loader.dataset)
+        num_batches = len(self.data_loader)
+        test_loss, correct = 0, 0
+
+        with torch.no_grad():
+            for X, y in self.data_loader:
+                pred = self(X)
+                test_loss += self.loss_fn(pred, y).item()
+                correct += (pred.argmax(1) == y.argmax(1)).type(torch.float).sum().item()
+
+        test_loss /= num_batches
+        correct /= size
+        print(f"Test Error: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+        return correct, test_loss
+
+
+    # def load_model(self, pth_fpath):
+    #     self.load_state_dict(torch.load(pth_fpath))
+    #     self.eval()
+
+    def load_model(self,pth_fpath=None):
+        pth_fpath = pth_fpath if pth_fpath is not None else self.fpath_pth
+        self.load_state_dict(torch.load(pth_fpath))
+        self.eval()
+        return self
+
+
+    def get_label_name(self, label_id):
+        # print(self.label_dict)
+        return self.label_dict[label_id]
+
+
+    def update_train_result(self, pth_fpath):
+        self.load_model(pth_fpath)
+        X, ids = self.cls_model.get_X_all(type_id=self.type_id)
+        pred = self(X)
+        # l = pred.argmax(1)
+        # probs = torch.sigmoid(pred)
+        probs = torch.softmax(pred, dim=1)
+        # p, _ = probs.max(axis=1)
+        p, l = probs.max(axis=1)
+        cp = CmdProgress(len(ids))
+        objs = []
+        for i in range(len(l)):
+            o = self.cls_model.objects.get(id=ids[i])
+            o.pred_label_id = int(l[i])
+            o.pred_label_name = self.get_label_name(int(l[i]))
+            o.prob = float(p[i])
+            objs.append(o)
+            cp.update()
+        self.cls_model.objects.bulk_update(objs, ('pred_label_id', 'pred_label_name', 'prob'))
+
+    def predict(self, pth_fpath):
+        self.load_model(pth_fpath)
+        X, ids = self.cls_model.get_X_all(type_id=self.type_id)
+        pred = self(X)
+        labels = pred.argmax(1).tolist()
+        return labels
+
+    @property
+    def fpath_pth(self):
+        raise NotImplementedError
+    
+    def do_train(self, pth_fpath=None, num_epochs=epochs):
+        pth_fpath = pth_fpath if pth_fpath is not None else self.fpath_pth
+        correct = loss = 0
+        for t in range(num_epochs):
+            print(f"Epoch {t+1}/{num_epochs}\n-------------------------------")
+            self.train_loop()
+            correct, loss = self.test_loop()
+        print("Done!")
+        torch.save(self.state_dict(), pth_fpath)
+        print("Saved!")
+        self.update_train_result(pth_fpath)
+        return correct, loss
+    
+class NeuralNetwork(BaseNet, nn.Module):
     # NC = num_class
     def __init__(self, cls_model, type_id, label_list):
         super().__init__()
@@ -153,92 +248,8 @@ class NeuralNetwork(nn.Module):
         self.__loss_fn = nn.CrossEntropyLoss()
         self.__optimizer = torch.optim.SGD(self.parameters(), lr=learning_rate)
         self.__data_loader = DataLoader(DbImageDatasetCommon(cls_model, type_id, label_list), batch_size=batch_size)
+    
 
-    def forward(self, x):
-        x = self.flatten(x)
-        logits = self.linear_relu_stack(x)
-        return logits
-
-    def train_loop(self):
-        size = len(self.__data_loader.dataset)
-        self.train()
-        for batch, (X, y) in enumerate(self.__data_loader):
-            pred = self(X)
-            loss = self.__loss_fn(pred, y)
-
-            loss.backward()
-            self.__optimizer.step()
-            self.__optimizer.zero_grad()
-
-            if batch % 100 == 0:
-                loss, current = loss.item(), (batch + 1) * len(X)
-                print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-
-    def test_loop(self):
-        self.eval()
-        size = len(self.__data_loader.dataset)
-        num_batches = len(self.__data_loader)
-        test_loss, correct = 0, 0
-
-        with torch.no_grad():
-            for X, y in self.__data_loader:
-                pred = self(X)
-                test_loss += self.__loss_fn(pred, y).item()
-                correct += (pred.argmax(1) == y.argmax(1)).type(torch.float).sum().item()
-
-        test_loss /= num_batches
-        correct /= size
-        print(f"Test Error: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-        return correct, test_loss
-
-
-    def load_model(self, pth_fpath):
-        self.load_state_dict(torch.load(pth_fpath))
-        self.eval()
-
-    def get_label_name(self, label_id):
-        # print(self.label_dict)
-        return self.label_dict[label_id]
-
-
-    def update_train_result(self, pth_fpath):
-        self.load_model(pth_fpath)
-        X, ids = self.cls_model.get_X(type_id=self.type_id)
-        pred = self(X)
-        # l = pred.argmax(1)
-        # probs = torch.sigmoid(pred)
-        probs = torch.softmax(pred, dim=1)
-        # p, _ = probs.max(axis=1)
-        p, l = probs.max(axis=1)
-        cp = CmdProgress(len(ids))
-        objs = []
-        for i in range(len(l)):
-            o = self.cls_model.objects.get(id=ids[i])
-            o.pred_label_id = int(l[i])
-            o.pred_label_name = self.get_label_name(int(l[i]))
-            o.prob = float(p[i])
-            objs.append(o)
-            cp.update()
-        self.cls_model.objects.bulk_update(objs, ('pred_label_id', 'pred_label_name', 'prob'))
-
-    def predict(self, pth_fpath):
-        self.load_model(pth_fpath)
-        X, ids = self.cls_model.get_X(type_id=self.type_id)
-        pred = self(X)
-        labels = pred.argmax(1).tolist()
-        return labels
-
-    def do_train(self, pth_fpath):
-        correct = loss = 0
-        for t in range(epochs):
-            print(f"Epoch {t+1}\n-------------------------------")
-            self.train_loop()
-            correct, loss = self.test_loop()
-        print("Done!")
-        torch.save(self.state_dict(), pth_fpath)
-        print("Saved!")
-        self.update_train_result(pth_fpath)
-        return correct, loss
 
 
 # class NumberNeuralNetwork(NeuralNetwork):
