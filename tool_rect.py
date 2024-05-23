@@ -672,9 +672,11 @@ class RectImage(Rect):
                  left=None, 
                  right=None, 
                  top=None, 
-                 bottom=None, 
+                 bottom=None,
+                 offset_x=0, 
+                 offset_y=0,
                  ):
-        self._img = img
+        # self._img = img
         h, w = img.shape[:2]
         left = left if left is not None else 0 
         top = top if top is not None else 0
@@ -685,7 +687,41 @@ class RectImage(Rect):
                       right, 
                       top, 
                       bottom)
+        self.img = self.crop_img(img)
+        self.offset_x = offset_x + left
+        self.offset_y = offset_y + top
 
+    @property
+    def shape(self):
+        return self.height, self.width
+    
+    @classmethod
+    def cut_empty(cls, img):
+        a = numpy.any(img > 0, axis=1)
+        t = numpy.where(a == 1)[0]
+        if t.shape[0] == 0:
+            return None, None
+        return t[0], t[-1]
+    
+    @classmethod
+    def cut_empty_margin_img(cls, img, offset_x, offset_y):
+        top, bottom = cls.cut_empty(img)
+        if top is not None and bottom is not None:
+            left, right = cls.cut_empty(img.T)
+            return cls(img, 
+                       left, 
+                       right, 
+                       top, 
+                       bottom,
+                       offset_x,
+                       offset_y,
+                       )
+    
+    def cut_empty_margin(self):
+        return self.cut_empty_margin_img(self.img, 
+                                         offset_x=self.offset_x, 
+                                         offset_y=self.offset_y)
+    
     @property
     def width(self):
         '''
@@ -702,12 +738,12 @@ class RectImage(Rect):
         '''
         return abs(self.bottom - self.top) + 1
     
-    @property
-    def img(self):
-        h, w = self._img.shape[:2]
-        if h == self.height and w == self.width:
-            return self._img
-        return self.crop_img(self._img)
+    # @property
+    # def img(self):
+    #     h, w = self._img.shape[:2]
+    #     if h == self.height and w == self.width:
+    #         return self._img
+    #     return self.crop_img(self._img)
     
     @cached_property
     def mask(self):
@@ -747,11 +783,21 @@ class RectImage(Rect):
         return self.get_boundary_points(self.mask.sum(axis=0) > 0)
     
     def show(self):
-        from tool_img import show_in_plt
-        show_in_plt(self.img)
+        # show_plt_safe(*imgs, return_fig=False, h_stack=True)
+        from tool_img import show_plt_safe
+        show_plt_safe(self.img)
     
     def crop_img(self, img):
+        if self.shape == img.shape[:2]:
+            return img
         return img[self.top:self.bottom + 1, self.left:self.right+1, ...]
+    
+    def crop(self, left, right, top, bottom):
+        return RectImage(self.img,
+                         left, right, top, bottom,
+                         self.offset_x,
+                         self.offset_y,
+                         )
     
     def is_valid(self, min_len=5):
         return Rect.is_valid(self, min_len=min_len) and \
@@ -900,6 +946,13 @@ class RectImage(Rect):
             )
         b = self.predict_simple_rule(a).reshape(-1,1)
         return numpy.concatenate((a, b), axis=1)
+    
+    
+    def to_absolute(self):
+        self.move_left_top_to(self.offset_x, self.offset_y)
+        self.offset_x = 0
+        self.offset_y = 0
+        return self    
 
 
 if __name__ == "__main__":

@@ -135,6 +135,30 @@ def show_in_plt(img):
     else:
         imshow(img)
     plt.show()
+
+def show_plt_safe(*imgs, return_fig=False, h_stack=True):
+    from matplotlib import pyplot as plt
+    
+    if len(imgs) > 1:
+        shape = [1, len(imgs)]
+        
+        if not h_stack:
+            shape.reverse()
+        
+        fig, axs = plt.subplots(*shape)
+        # fig.suptitle('Images')
+        
+        for i, img in enumerate(imgs):
+            axs[i].imshow(img, cmap='gray')
+    else:
+        fig, axs = plt.subplots()
+        axs.imshow(imgs[0], cmap='gray')
+    
+    if not return_fig:
+        plt.show()
+    else:
+        return fig
+    
     
 def to_plot_img(img, cmap=None):
     from matplotlib import pyplot as plt
@@ -148,7 +172,15 @@ def to_plot_img(img, cmap=None):
     image_array = numpy.frombuffer(canvas.tostring_rgb(), dtype='uint8')
     image_array = image_array.reshape(height, width, 3)    
     return image_array
-    
+
+def to_plot_img_safe(*imgs, h_stack=True):
+    fig = show_plt_safe(*imgs, return_fig=True, h_stack=h_stack)
+    canvas = fig.canvas
+    canvas.draw()
+    width, height = canvas.get_width_height()
+    image_array = numpy.frombuffer(canvas.tostring_rgb(), dtype='uint8')
+    image_array = image_array.reshape(height, width, 3)    
+    return image_array
 
 def make_mask(img, rl, rh, gl, gh, bl, bh):
     return (
@@ -487,12 +519,15 @@ def cut_empty_margin(mask_invert):
     return cut_core(mask_invert, axis=0, v=0, vtype=1)[0]
 
 
-def get_exteral_rect(mask):
+def get_exteral_rect(mask, with_img=False):
     mask, top, bottom = cut_core(mask, axis=1, v=0, vtype=1)
     if top is not None and bottom is not None:
-        _, left, right = cut_core(mask, axis=0, v=0, vtype=1)
+        img, left, right = cut_core(mask, axis=0, v=0, vtype=1)
         if left is not None and right is not None:
-            return Rect(left, right, top, bottom)
+            rect = Rect(left, right, top, bottom)
+            if not with_img:
+                return rect
+            return rect, img
 
 
 def split_image_into_4(img):
