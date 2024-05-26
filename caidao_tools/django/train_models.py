@@ -8,15 +8,14 @@ import hashlib
 
 import cv2
 from django.db import models
-from django.db.models.aggregates import Sum
+from django.db.models.aggregates import Sum, Count
 from django.utils.functional import cached_property
 import numpy
 import torch
 
-from helper_trainer import resize, NeuralNetwork
 from caidao_tools.django.abstract import BaseModel
-
-
+from helper_trainer import resize, NeuralNetwork
+from tool_img import bin2img
 
 
 class BaseTrain(BaseModel):
@@ -29,12 +28,61 @@ class BaseTrain(BaseModel):
     
     class Meta:
         abstract = True
+
+    
+    @classmethod
+    def get_curent_batch_number(cls):
+        obj = cls.objects.filter().order_by('batch_number').last()
+        return obj.batch_number if obj is not None else 0 
         
     @classmethod
-    def get_total_training_num(cls):
-        q = cls.objects.filter(training=1)
-        return q.aggregate(Sum('weight')).get('weight__sum')
+    def get_next_batch_number(cls):
+        obj = cls.objects.filter().order_by('batch_number').last()
+        return obj.batch_number + 1 if obj is not None else 0
 
+
+    @property
+    def label_id(self):
+        return self.label
+
+    @classmethod
+    def ge_nn_model(cls):
+        if not hasattr(cls, '_nn_model'):
+            print('loading model...')
+            cls._nn_model = cls.get_nn().load_model()
+        return cls._nn_model
+
+    @classmethod
+    def get_training_distribution(cls):
+        q = cls.objects.filter(training=1)
+        return q.values('label').annotate(count=Count('label'))
+
+    @classmethod
+    def get_max_training_label_num(cls):
+        l = list(cls.get_training_distribution())
+        a = map(lambda x:x.get('count'), l)
+        return  max(a), len(l)
+
+    
+    @classmethod
+    def get_total_training_num(cls):
+        m, n = cls.get_max_training_label_num()
+        return m * n
+
+
+    @classmethod
+    def get_training_records_num(cls, label, num):
+        i = 0
+        l = list(cls.objects.filter(training=1, label=label))
+        while i < num:
+            for x in l:
+                if i < num:
+                    yield x
+                    i += 1
+                else:
+                    break
+
+        
     @classmethod
     def get_training_records(cls, *a, **k):
         for x in cls.objects.filter(training=1):
@@ -62,10 +110,15 @@ class BaseTrain(BaseModel):
     def src_base64(self):
         return 'data:image/png;base64,' + self.base64
     
-    @property
+    # @property
+    # def img(self):
+    #     img = numpy.frombuffer(self.bin, numpy.uint8)
+    #     return cv2.imdecode(img, cv2.IMREAD_ANYCOLOR)
+
+    @cached_property
     def img(self):
-        img = numpy.frombuffer(self.bin, numpy.uint8)
-        return cv2.imdecode(img, cv2.IMREAD_ANYCOLOR)
+        return bin2img(self.bin)
+
     
     @property
     def tensor(self):

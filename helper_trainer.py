@@ -134,9 +134,9 @@ class DbImageDatasetCommon(FileBaseImageDataset):
 
 class BaseNet(object):
     def train_loop(self):
-        size = len(self.data_loader.dataset)
+        size = len(self.train_loader.dataset)
         self.train()
-        for batch, (X, y) in enumerate(self.data_loader):
+        for batch, (X, y) in enumerate(self.train_loader):
             pred = self(X)
             loss = self.loss_fn(pred, y)
 
@@ -150,12 +150,12 @@ class BaseNet(object):
 
     def test_loop(self):
         self.eval()
-        size = len(self.data_loader.dataset)
-        num_batches = len(self.data_loader)
+        size = len(self.test_loader.dataset)
+        num_batches = len(self.test_loader)
         test_loss, correct = 0, 0
 
         with torch.no_grad():
-            for X, y in self.data_loader:
+            for X, y in self.test_loader:
                 pred = self(X)
                 test_loss += self.loss_fn(pred, y).item()
                 correct += (pred.argmax(1) == y.argmax(1)).type(torch.float).sum().item()

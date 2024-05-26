@@ -136,7 +136,11 @@ def show_in_plt(img):
         imshow(img)
     plt.show()
 
-def show_plt_safe(*imgs, return_fig=False, h_stack=True):
+def show_plt_safe(*imgs, 
+                  return_fig=False, 
+                  h_stack=True,
+                  cfg={},
+                  ):
     from matplotlib import pyplot as plt
     
     if len(imgs) > 1:
@@ -149,7 +153,15 @@ def show_plt_safe(*imgs, return_fig=False, h_stack=True):
         # fig.suptitle('Images')
         
         for i, img in enumerate(imgs):
-            axs[i].imshow(img, cmap='gray')
+            rect = cfg.get(i, None)
+            if rect is not None:
+                # h, w = img.shape[:2]
+                axs[i].set_xlim(rect.left, rect.right)
+                axs[i].set_ylim(rect.bottom, rect.top)
+                # print(rect)
+                axs[i].imshow(img, cmap='gray', extent=(rect.left, rect.right,rect.bottom, rect.top))
+            else:
+                axs[i].imshow(img, cmap='gray')
     else:
         fig, axs = plt.subplots()
         axs.imshow(imgs[0], cmap='gray')
@@ -173,8 +185,8 @@ def to_plot_img(img, cmap=None):
     image_array = image_array.reshape(height, width, 3)    
     return image_array
 
-def to_plot_img_safe(*imgs, h_stack=True):
-    fig = show_plt_safe(*imgs, return_fig=True, h_stack=h_stack)
+def to_plot_img_safe(*imgs, h_stack=True,cfg = {}):
+    fig = show_plt_safe(*imgs, return_fig=True, h_stack=h_stack, cfg=cfg)
     canvas = fig.canvas
     canvas.draw()
     width, height = canvas.get_width_height()

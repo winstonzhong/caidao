@@ -4,8 +4,19 @@ Created on 2024年5月19日
 @author: lenovo
 '''
 
+import io
+
 import numpy as np
 import pandas as pd
+
+
+def bin2array(b):
+    return np.load(io.BytesIO(b))['arr_0']
+                
+def array2bin(a):
+    buffer = io.BytesIO()
+    np.savez_compressed(buffer,a)
+    return buffer.getvalue()
 
 def random_array():
     choices = [1, 2, 3, 4, 5, 6, 7, 8, 9, np.nan, np.nan, np.nan, np.nan, np.nan]
