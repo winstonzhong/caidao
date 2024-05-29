@@ -15,6 +15,49 @@ import pandas
 from helper_net import get_with_random_agent
 from tool_rect import Rect
 
+def fast_rolling_split(img, win_height=7, stacked=True):
+    '''
+    >>> arr = numpy.random.choice((0,255), size=(100, 350)).astype(numpy.uint8)
+    >>> c = fast_rolling_split(arr, 7) == slow_rolling_split(arr, 7)
+    >>> numpy.any(c == 0)
+    False
+    >>> c.sum() == c.size
+    True
+    '''
+    h, window_width = img.shape[:2]
+    span = (win_height - 1) //2
+    img = add_head_tail(img, span=span)
+
+    
+    
+    strides = img.strides
+    
+    new_strides = (strides[0], strides[0], strides[1])
+    
+    shape=(h, win_height, window_width)
+
+    windows = numpy.lib.stride_tricks.as_strided(img, 
+                                             shape=shape, 
+                                             strides=new_strides)
+    
+    return windows.reshape(-1, window_width) if stacked else windows    
+
+def slow_rolling_split(img, win_height=7):
+    h, w = img.shape[:2]
+    span = (win_height - 1) //2
+    img = add_head_tail(img, span=span)
+    l = []
+    for i in range(h):
+        l.append(img[i:i+win_height,:])
+    return numpy.stack(l).reshape(-1, w)
+
+def add_head_tail(img, span=3):
+    _, w = img.shape[:2]
+    head = tail = numpy.zeros((span, w)).astype(numpy.uint8)
+    return numpy.concatenate((head, img, tail))
+
+def rotate_90(img):
+    return img.T[...,::-1]
 
 def bgr2rgb(img):
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -87,11 +130,52 @@ def show(img, max_length=900):
 def show_in_plt(img):
     from matplotlib import pyplot as plt
     from skimage.io import imshow
-    imshow(img, cmap='gray')
+    if len(img.shape) == 2:
+        imshow(img, cmap='gray')
+    else:
+        imshow(img)
     plt.show()
+
+def show_plt_safe(*imgs, 
+                  return_fig=False, 
+                  h_stack=True,
+                  cfg={},
+                  ):
+    from matplotlib import pyplot as plt
+    
+    if len(imgs) > 1:
+        shape = [1, len(imgs)]
+        
+        if not h_stack:
+            shape.reverse()
+        
+        fig, axs = plt.subplots(*shape)
+        # fig.suptitle('Images')
+        
+        for i, img in enumerate(imgs):
+            rect = cfg.get(i, None)
+            if rect is not None:
+                # h, w = img.shape[:2]
+                axs[i].set_xlim(rect.left, rect.right)
+                axs[i].set_ylim(rect.bottom, rect.top)
+                # print(rect)
+                axs[i].imshow(img, cmap='gray', extent=(rect.left, rect.right,rect.bottom, rect.top))
+            else:
+                axs[i].imshow(img, cmap='gray')
+    else:
+        fig, axs = plt.subplots()
+        axs.imshow(imgs[0], cmap='gray')
+    
+    if not return_fig:
+        plt.show()
+    else:
+        return fig
+    
     
 def to_plot_img(img, cmap=None):
-    from matplotlib import pyplot as plt    
+    from matplotlib import pyplot as plt
+    plt.tight_layout()
+
     ax = plt.imshow(img, interpolation='nearest', cmap=cmap)
     fig = ax.get_figure()
     canvas = fig.canvas
@@ -100,7 +184,15 @@ def to_plot_img(img, cmap=None):
     image_array = numpy.frombuffer(canvas.tostring_rgb(), dtype='uint8')
     image_array = image_array.reshape(height, width, 3)    
     return image_array
-    
+
+def to_plot_img_safe(*imgs, h_stack=True,cfg = {}):
+    fig = show_plt_safe(*imgs, return_fig=True, h_stack=h_stack, cfg=cfg)
+    canvas = fig.canvas
+    canvas.draw()
+    width, height = canvas.get_width_height()
+    image_array = numpy.frombuffer(canvas.tostring_rgb(), dtype='uint8')
+    image_array = image_array.reshape(height, width, 3)    
+    return image_array
 
 def make_mask(img, rl, rh, gl, gh, bl, bh):
     return (
@@ -439,12 +531,15 @@ def cut_empty_margin(mask_invert):
     return cut_core(mask_invert, axis=0, v=0, vtype=1)[0]
 
 
-def get_exteral_rect(mask):
+def get_exteral_rect(mask, with_img=False):
     mask, top, bottom = cut_core(mask, axis=1, v=0, vtype=1)
     if top is not None and bottom is not None:
-        _, left, right = cut_core(mask, axis=0, v=0, vtype=1)
+        img, left, right = cut_core(mask, axis=0, v=0, vtype=1)
         if left is not None and right is not None:
-            return Rect(left, right, top, bottom)
+            rect = Rect(left, right, top, bottom)
+            if not with_img:
+                return rect
+            return rect, img
 
 
 def split_image_into_4(img):

@@ -8,6 +8,7 @@ from django.db import models
 
 from evovle.helper_store import compute, get_train_test_df, compute_group
 from helper_net import retry
+from caidao_tools.django.tool_django import get_filters
 
 
 NEW_RECORD = 0
@@ -81,6 +82,10 @@ class BaseModel(models.Model):
                 break
             yield o
             start = o.id
+    
+    @classmethod
+    def get_filters(cls, **k):
+        return get_filters(cls.get_fields(), **k)
     
     
     class Meta:

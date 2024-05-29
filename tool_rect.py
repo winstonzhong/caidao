@@ -3,14 +3,32 @@ Created on 2023年6月12日
 
 @author: lenovo
 '''
+import itertools
+
+from cached_property import cached_property
 import numpy
 import pandas
+
+from tool_numpy import numpy_fill
 
 
 LEFT_DIRECTION = -1
 RIGHT_DIRECTION = 1
 UP_DIRECTION = -1
 DOWN_DIRECTION = 1
+
+def roll_down(a, shift=1, axis=None):
+    assert shift > 0
+    a = numpy.roll(a.astype(numpy.float), shift, axis=axis)
+    a[:shift] = numpy.nan
+    return a
+
+def roll_up(a, shift=1, axis=None):
+    assert shift > 0
+    a = numpy.roll(a.astype(numpy.float), -shift, axis=axis)
+    a[-shift:] = numpy.nan
+    return a
+
 
 class Rect(object):
     SPACE_TOP_RATIO = 1.1
@@ -488,9 +506,7 @@ class Rect(object):
         return self.rect_body_virtual.to_real(shape)
     
     def crop_img(self, img):
-        bottom = self.bottom
-        right = self.right
-        return img[self.top:bottom, self.left:right, ...]
+        return img[self.top:self.bottom, self.left:self.right, ...]
     
     def draw_img(self, canvas, img):
         # tmp = canvas[self.top:self.bottom, self.left:self.right, ...]
@@ -504,6 +520,19 @@ class Rect(object):
     
     def is_valid_face(self):
         return self.height > self.MIN_FACE_WIDTH and self.width > self.MIN_FACE_WIDTH
+    
+    def is_valid(self, min_len=5):
+        '''
+        >>> Rect(0,0,1,2).is_valid()
+        False
+        >>> Rect(0,10,1,12).is_valid()
+        True
+        >>> Rect(0,5,1,12).is_valid(min_len=5)
+        True
+        >>> Rect(0,5,1,5).is_valid(min_len=5)
+        False
+        '''
+        return self.height >= min_len and self.width >= min_len
     
     def cut_margin(self, value):
         o = self.clone()
@@ -604,6 +633,9 @@ class Rect(object):
     def to_tuple(self):
         return self.left, self.top, self.right, self.bottom
     
+    def to_lrtb(self):
+        return self.left, self.right, self.top, self.bottom
+    
     @classmethod
     def get_out_bounds(cls, l):
         return cls(min(map(lambda x:x.left, l)), 
@@ -620,6 +652,311 @@ class Rect(object):
                    center_y+len_half,
                    )
     
+class RectImage(Rect):
+    DIRECTION_H = 0
+    DIRECTION_V = 1
+    COLUMNS = ('上','中','下',
+               '上均','中均','下均',
+               '上长','中长','下长',
+               '方向','训练','标签',
+               '结果')
+
+    X_LEN = 9
+    I_LASTX = X_LEN - 1 
+    I_DIR = I_LASTX + 1
+    I_TRAINING = I_LASTX + 2
+    I_LABEL = I_LASTX + 3
+    I_RESULT = I_LASTX + 4
+    TOTAL_LEN = len(COLUMNS)
+
+    
+    def __init__(self, 
+                 img,
+                 left=None, 
+                 right=None, 
+                 top=None, 
+                 bottom=None,
+                 offset_x=0, 
+                 offset_y=0,
+                 ):
+        # self._img = img
+        h, w = img.shape[:2]
+        left = left if left is not None else 0 
+        top = top if top is not None else 0
+        right = right if right is not None else w - 1
+        bottom = bottom if bottom is not None else h - 1
+        Rect.__init__(self, 
+                      left, 
+                      right, 
+                      top, 
+                      bottom)
+        self.img = self.crop_img(img)
+        self.offset_x = offset_x + left
+        self.offset_y = offset_y + top
+
+    @property
+    def shape(self):
+        return self.height, self.width
+    
+    @classmethod
+    def cut_empty(cls, img):
+        a = numpy.any(img > 0, axis=1)
+        t = numpy.where(a == 1)[0]
+        if t.shape[0] == 0:
+            return None, None
+        return t[0], t[-1]
+    
+    @classmethod
+    def cut_empty_margin_img(cls, img, offset_x, offset_y):
+        top, bottom = cls.cut_empty(img)
+        if top is not None and bottom is not None:
+            left, right = cls.cut_empty(img.T)
+            return cls(img, 
+                       left, 
+                       right, 
+                       top, 
+                       bottom,
+                       offset_x,
+                       offset_y,
+                       )
+    
+    def cut_empty_margin(self):
+        return self.cut_empty_margin_img(self.img, 
+                                         offset_x=self.offset_x, 
+                                         offset_y=self.offset_y)
+    
+    @property
+    def width(self):
+        '''
+        >>> RectImage(numpy.zeros(1000).reshape(100,-1)).width
+        10
+        '''
+        return abs(self.right - self.left) + 1
+    
+    @property
+    def height(self):
+        '''
+        >>> RectImage(numpy.zeros(1000).reshape(100,-1)).height
+        100
+        '''
+        return abs(self.bottom - self.top) + 1
+    
+    # @property
+    # def img(self):
+    #     h, w = self._img.shape[:2]
+    #     if h == self.height and w == self.width:
+    #         return self._img
+    #     return self.crop_img(self._img)
+    
+    @cached_property
+    def mask(self):
+        return self.img > 0
+
+    def get_boundary_points(self, y):
+        return numpy.argwhere(((y - roll_up(y)) == -1) | (((y - roll_down(y)) == -1)))
+
+    def get_split_points(self, a, max_length):
+        a = numpy.concatenate(([0],a.flatten(),[max_length-1]))
+        return list(zip(a, roll_up(a)))[:-1]
+
+    def split(self):
+        img = self.img
+        
+        for left, right in self.v_split_points:
+            for top, bottom in self.h_split_points:
+                rect = RectImage(img, left, right, top, bottom)
+                if rect.is_valid(min_len=5):
+                    yield rect
+
+
+    @property
+    def h_split_points(self):
+        return self.get_split_points(self.h_0_1_or_1_0, self.height) 
+
+    @property
+    def v_split_points(self):
+        return self.get_split_points(self.v_0_1_or_1_0, self.width)
+    
+    @property
+    def h_0_1_or_1_0(self):
+        return self.get_boundary_points(self.mask.sum(axis=1) > 0)
+
+    @property
+    def v_0_1_or_1_0(self):
+        return self.get_boundary_points(self.mask.sum(axis=0) > 0)
+    
+    def show(self):
+        # show_plt_safe(*imgs, return_fig=False, h_stack=True)
+        from tool_img import show_plt_safe
+        show_plt_safe(self.img)
+    
+    def crop_img(self, img):
+        if self.shape == img.shape[:2]:
+            return img
+        return img[self.top:self.bottom + 1, self.left:self.right+1, ...]
+    
+    def crop(self, left, right, top, bottom):
+        return RectImage(self.img,
+                         left, right, top, bottom,
+                         self.offset_x,
+                         self.offset_y,
+                         )
+    
+    def is_valid(self, min_len=5):
+        return Rect.is_valid(self, min_len=min_len) and \
+            numpy.any(self.img > 0)
+
+
+    def get_nonzero_count(self, axis):
+        s = self.mask.sum(axis=axis)
+        return numpy.nan_to_num(roll_down(s), 0),s,numpy.nan_to_num(roll_up(s), 0)
+    
+    @property
+    def X_nonzero_count_h(self):
+        return self.get_nonzero_count(axis=1)
+    
+    @property
+    def X_nonzero_count_v(self):
+        return self.get_nonzero_count(axis=0)
+
+    @property
+    def nonzero_index_fillabck(self):
+        a = self.mask.flatten()
+        return numpy.where(a > 0 , 
+                           numpy.arange(a.size), 
+                           numpy.nan).reshape(self.mask.shape)
+    
+    @property
+    def matrix(self):
+        mask = self.mask
+        idx = numpy.where(mask == 0,numpy.arange(mask.shape[1]),numpy.nan)
+        idx = numpy_fill(idx)
+        return idx
+    
+    @cached_property
+    def df_nonzero_index_fillabck(self):
+        return pandas.DataFrame(self.nonzero_index_fillabck)
+
+    
+    def get_default_len(self, axis):
+        return self.height if axis == 1 else self.width
+
+
+    # def get_blank_line_segment(self, axis):
+    #     df = self.df_nonzero_index_fillabck
+    #     if axis == 0:
+    #         df = df.floordiv(self.width)
+    #     return df.fillna(method='ffill', axis=axis).diff(axis=axis)
+    #
+    # @cached_property
+    # def df_nonzero_index_fillabck_blank_segment_length_v(self):
+    #     return self.get_blank_line_segment(axis=0)
+    #
+    # @cached_property
+    # def df_nonzero_index_fillabck_blank_segment_length_h(self):
+    #     return self.get_blank_line_segment(axis=1)
+        
+    
+    def get_mean_line_segment(self, axis):
+        default_len = self.get_default_len(axis)
+        df = self.df_nonzero_index_fillabck
+        if axis == 0:
+            df = df.floordiv(self.width)
+        tmp = df.fillna(method='ffill', axis=axis).diff(axis=axis)
+        # return tmp
+        s = tmp.replace(0, numpy.nan).mean(axis=axis)
+        s = numpy.nan_to_num(s, nan=default_len)
+        return numpy.nan_to_num(roll_down(s), nan=default_len), s, numpy.nan_to_num(roll_up(s),nan=default_len)
+
+    def get_line_segment(self, axis):
+        default_len = self.get_default_len(axis)
+        df = self.df_nonzero_index_fillabck
+        if axis == 0:
+            df = df.floordiv(self.width)
+        tmp = df.fillna(method='ffill', axis=axis).diff(axis=axis)
+        # return tmp
+        # s = tmp.replace(0, numpy.nan)
+        s_max = numpy.nan_to_num(tmp.max(axis=axis),nan=default_len) 
+        s_mean = numpy.nan_to_num(tmp.replace(0, numpy.nan).mean(axis=axis),nan=default_len) 
+        # s = tmp.replace(0, numpy.nan).mean(axis=axis)
+        # s = numpy.nan_to_num(s, nan=default_len)
+        return numpy.nan_to_num(roll_down(s_mean), nan=default_len), \
+               s_mean, \
+               numpy.nan_to_num(roll_up(s_mean),nan=default_len), \
+               numpy.nan_to_num(roll_down(s_max), nan=default_len), \
+               s_max, \
+               numpy.nan_to_num(roll_up(s_max),nan=default_len)
+
+        
+    @property
+    def X_line_segment_h(self):
+        return self.get_line_segment(axis=1)
+    
+    @property
+    def X_line_segment_v(self):
+        return self.get_line_segment(axis=0)
+
+    
+    @property
+    def X_h(self):
+        return numpy.stack(list(itertools.chain(self.X_nonzero_count_h, 
+                                           self.X_line_segment_h,
+                                           )), 
+                           axis=1)
+    
+    @property
+    def X_v(self):
+        return numpy.stack(list(itertools.chain(self.X_nonzero_count_v, 
+                                           self.X_line_segment_v
+                                           )), 
+                           axis=1)
+    
+
+    @property
+    def X_h_normalized(self):
+        return self.X_h / self.height
+
+    @property
+    def X_v_normalized(self):
+        return self.X_v / self.width
+
+    def to_xyz(self, a, direction):
+        return numpy.concatenate(
+            (a,
+             numpy.repeat(direction,a.shape[0]).reshape(-1,1),
+             numpy.zeros(a.shape[0]).reshape(-1,1), 
+             ),
+            axis=1,
+        )
+    
+
+    def predict_simple_rule(self, X):
+        return numpy.where((X[...,0] == 0
+                            ) & (
+                                X[...,1] == 0) & (
+                                    X[...,2] == 0),
+                                0,
+                                1,
+                                )
+    
+    @property
+    def Xyz(self):
+        a = numpy.concatenate(
+                (self.to_xyz(self.X_h_normalized, direction=self.DIRECTION_H),
+                 self.to_xyz(self.X_v_normalized, direction=self.DIRECTION_V),
+                 ),
+                axis=0,
+            )
+        b = self.predict_simple_rule(a).reshape(-1,1)
+        return numpy.concatenate((a, b), axis=1)
+    
+    
+    def to_absolute(self):
+        self.move_left_top_to(self.offset_x, self.offset_y)
+        self.offset_x = 0
+        self.offset_y = 0
+        return self    
+
 
 if __name__ == "__main__":
     import doctest
