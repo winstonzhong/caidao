@@ -3,6 +3,7 @@ Created on 2022年7月24日
 
 @author: lenovo
 '''
+import os
 from django.contrib import admin
 from django.utils.safestring import mark_safe
 from tool_file import get_suffix
@@ -54,3 +55,9 @@ class BaseAdmin(admin.ModelAdmin):
         if "delete_selected" in actions:
             del actions["delete_selected"]
         return actions
+
+    class Media:
+        js = []
+        rel_js_path = 'static/js/htmx.min.js'
+        if os.path.lexists(rel_js_path):
+            js.append(f'/{rel_js_path}')
