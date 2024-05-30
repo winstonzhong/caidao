@@ -14,6 +14,7 @@ import numpy
 import torch
 
 from caidao_tools.django.abstract import BaseModel
+from helper_cmd import CmdProgress
 from helper_trainer import resize, NeuralNetwork
 from tool_img import bin2img
 
@@ -148,14 +149,43 @@ class BaseTrain(BaseModel):
     
     @classmethod
     def get_X_all(cls, *a, **k):
+        print('loading all X...')
         q = cls.objects.filter(**cls.get_filters(**k))
         ids = []
         X = []
+        cp = CmdProgress(q.count())
         for x in q:
             ids.append(x.id)
             X.append(x.tensor_transformed)
+            cp.update()
             # X = [x.tensor_transformed for x in q]
         return torch.stack(X).type(torch.float), ids
+
+
+    @classmethod
+    def get_nn(cls):
+        raise NotImplementedError
+
+    @classmethod
+    def test_all(cls):
+        m = cls.get_model()
+        X, ids = cls.get_X_all()
+        pred = m(X)
+        probs = torch.softmax(pred, dim=1)
+        # p, _ = probs.max(axis=1)
+        p, l = probs.max(axis=1)
+        cp = CmdProgress(len(ids))
+        objs = []
+        print('testing...')
+        for i in range(len(l)):
+            o = cls.objects.get(id=ids[i])
+            o.pred_label_id = int(l[i])
+            o.pred_label_name = m.get_label_name(int(l[i]))
+            o.prob = float(p[i])
+            objs.append(o)
+            cp.update()
+        cls.objects.bulk_update(objs, ('pred_label_id', 'pred_label_name', 'prob'))
+
     
     @classmethod
     def get_key(cls, img):
@@ -164,9 +194,9 @@ class BaseTrain(BaseModel):
     @classmethod
     def get_model(cls):
         if not hasattr(cls, '_model'):
-            print('loading number model...')
-            m = NeuralNetwork(len(cls.TYPE_DN))
-            m.load_state_dict(torch.load(f'{cls.__name__.lower()}.pth'))
+            print(f'loading {cls} model...')
+            m = cls.get_nn()
+            m.load_state_dict(torch.load(cls.get_fpath_pth()))
             m.eval()
             cls._model = m
         return cls._model
