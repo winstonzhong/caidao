@@ -386,10 +386,13 @@ def put_water_mark(img, wm):
     img[top:bottom, left:right, ...] = b.astype(numpy.uint8)
     return img
 
-def get_canvas(width=None, height=None, img=None):
+def get_canvas(width=None, height=None, img=None, mono=False):
     if img is not None:
-        height, width = img.shape[:2]
-    return numpy.zeros((height, width, 3), dtype=numpy.uint8)    
+        # height, width = img.shape[:2]
+        return numpy.zeros(img.shape, dtype=numpy.uint8)
+    if not mono:
+        return numpy.zeros((height, width, 3), dtype=numpy.uint8)    
+    return numpy.zeros((height, width), dtype=numpy.uint8)
 
 def get_dsize(width, height, w, h):
     # r = min(h / height, w / width)
@@ -833,6 +836,63 @@ class SquareRect(object):
             print(sr.df)
             print(sr.points.tolist())
             return sr.contour, sr.points 
+
+class FracContours(object):
+    def __init__(self, contours, w, h, max_len=40):
+        l = list(map(lambda x:cv2.boundingRect(x), contours))
+        a = numpy.stack(l)
+        a = a[(a[:,2] < max_len) & (a[:,3] < max_len)]
+        lt = a[:,0:2]
+        rb = lt + a[:,2:] 
+        b = numpy.concatenate((lt,rb[:,0:1], lt[:,1:2], rb, lt[:,0:1], rb[:,1:2]), axis=1)
+        c = b.reshape(-1,4,2)
+        self.canvas = get_canvas(w, h, mono=True)
+        cv2.drawContours(self.canvas, c, -1, 255, 1)
+        
+    @classmethod
+    def compute(cls, d):
+        max_width = 250
+        max_height = 100
+        
+        l = list(map(lambda x:cv2.boundingRect(x), d.get('contours')))
+        a = numpy.stack(l)
+        b = numpy.concatenate((a,numpy.full((1,4), numpy.nan)))
+        
+        b = b[d.get('h')]
+        
+        a_lt = a[:,0:2]
+        a_rb = a_lt + a[:, 2:]
+        
+        b_lt = b[:,0:2]
+        b_rb = b_lt + b[:, 2:]
+        
+        delta_lt = a_lt - b_lt
+        delta_rb = b_rb - a_rb
+        
+        h = numpy.min(numpy.concatenate((delta_lt, delta_rb), axis=1), axis=1)
+        
+        a = a[(a[:,2] < max_width) & (
+                a[:,3] < max_height) & (
+                    h > 30 )
+              ]
+        # return a
+        return cls.draw_canvas(a, d.get('W'), d.get('H'))
+    
+    @classmethod
+    def draw_canvas(cls, a, w, h):
+        lt = a[:,0:2]
+        rb = lt + a[:,2:] 
+        b = numpy.concatenate((lt,rb[:,0:1], lt[:,1:2], rb, lt[:,0:1], rb[:,1:2]), axis=1)
+        c = b.reshape(-1,4,2)
+        canvas = get_canvas(w, h, mono=True)
+        cv2.drawContours(canvas, c, -1, 255, 1)
+        return canvas
+        
+        # return delta_lt, delta_rb 
+        
+        
+    
+    
 
     
 if __name__ == '__main__':

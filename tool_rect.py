@@ -19,13 +19,13 @@ DOWN_DIRECTION = 1
 
 def roll_down(a, shift=1, axis=None):
     assert shift > 0
-    a = numpy.roll(a.astype(numpy.float), shift, axis=axis)
+    a = numpy.roll(a.astype(float), shift, axis=axis)
     a[:shift] = numpy.nan
     return a
 
 def roll_up(a, shift=1, axis=None):
     assert shift > 0
-    a = numpy.roll(a.astype(numpy.float), -shift, axis=axis)
+    a = numpy.roll(a.astype(float), -shift, axis=axis)
     a[-shift:] = numpy.nan
     return a
 
@@ -752,8 +752,100 @@ class RectImage(Rect):
     def mask(self):
         return self.img > 0
 
-    def get_boundary_points(self, y):
+    @classmethod
+    def get_boundary_points(cls, y):
         return numpy.argwhere(((y - roll_up(y)) == -1) | (((y - roll_down(y)) == -1)))
+    
+    @classmethod
+    def add_head_tail(cls, a, n):
+        if 0 not in a:
+            a = numpy.concatenate(([0], a))
+        if n - 1 not in a:
+            a = numpy.concatenate((a, [n - 1]))
+        return a
+    
+    @classmethod
+    def get_boundary_points_zeros(cls, y, min_len=3, debug=False):
+        '''
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,1,0,0,0,0,1,1,1]), debug=0)
+        [(0, 5), (8, 11)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([0,0,0,1,1,1,1,1,0,0,0,0,1,1,1,0]), debug=0)
+        [(2, 8), (11, 15)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([0,0,0,1,1,1,1,1,0,0,0,0,1,1,1,1]), debug=0)
+        [(2, 8), (11, 15)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([0,0,0,1,1,1,1,1,0,0,1,1,1,1,1,1]), debug=0)
+        [(2, 15)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,1,0,0,1,1,1]), debug=0)
+        [(0, 9)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,1,0,0,0,1,1,1]), debug=0)
+        [(0, 5), (7, 10)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,1,0,0,0,1,1,1,0,0,0]), debug=0)
+        [(0, 5), (7, 11)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([0,0,1,1,1,1,1,0,0,0,0,1,1,1,0]), debug=0)
+        [(1, 7), (10, 14)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([0,1,1,1,1,1,0,0,0,0,1,1,1,0]), debug=0)
+        [(0, 6), (9, 13)]
+        '''
+        right = y - roll_up(y)
+        left = y - roll_down(y)
+        if debug:
+            print(right)
+            print(left)
+            
+        right = numpy.argwhere((right == -1)).flatten()
+        left = numpy.argwhere(((left) == -1)).flatten()
+        
+        if 0 in right:
+            right = right[1:]
+
+        if debug:
+            print(right)
+            print(left)
+        
+        if right[0] > left[0]:
+            right = cls.add_head_tail(right, y.shape[0])[:-1]
+            left =  cls.add_head_tail(left, y.shape[0])[1:]
+            m = min(right.shape[0], left.shape[0])
+            right = right[:m]
+            left = left[:m]
+
+        else:
+            right = cls.add_head_tail(right, y.shape[0])
+            left =  cls.add_head_tail(left, y.shape[0])
+            m = min(right.shape[0], left.shape[0])
+            right = right[:m]
+            left = left[:m]
+            s = right != left
+            right = right[s]
+            left = left[s]
+
+        if debug:
+            print(right)
+            print(left)
+
+
+        mr = right[1:]
+        ml = left[0:-1]
+
+        m = mr - ml >= min_len - 1
+        
+        if debug:
+            print(mr, m)
+            return
+        mr = mr[m]
+        ml = ml[m]
+        
+        right = numpy.concatenate((right[0:1], mr)) if mr.size else right[0:1] 
+        left = numpy.concatenate((ml, left[-1:])) if ml.size else left[-1:]
+            
+        if debug:
+            print(mr)
+            print(ml)
+            print(right)
+            print(left)
+        
+        return list(zip(right, left))
+    
 
     def get_split_points(self, a, max_length):
         a = numpy.concatenate(([0],a.flatten(),[max_length-1]))
