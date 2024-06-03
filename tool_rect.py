@@ -8,8 +8,8 @@ import itertools
 from cached_property import cached_property
 import numpy
 import pandas
+from tool_numpy import numpy_fill, file2array
 
-from tool_numpy import numpy_fill
 
 
 LEFT_DIRECTION = -1
@@ -785,7 +785,35 @@ class RectImage(Rect):
         [(1, 7), (10, 14)]
         >>> RectImage.get_boundary_points_zeros(numpy.array([0,1,1,1,1,1,0,0,0,0,1,1,1,0]), debug=0)
         [(0, 6), (9, 13)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,1,1,1,1]), debug=0)
+        [(0, 7)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,0,1,1,1,1]), debug=0)
+        [(0, 7)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,0,0,1,1,1]), debug=0)
+        [(0, 7)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,0,0,0,1,1]), debug=0)
+        [(0, 3), (5, 7)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([0] * 10), debug=0)
+        [(0, 9)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,1,0,1,1]), debug=0)
+        [(0, 7)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,0,0,1,1]), debug=0)
+        [(0, 7)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,0,0,0,1]), debug=0)
+        [(0, 4), (6, 7)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,0,0,0,1,0,0,0]), debug=0)
+        [(0, 4), (6, 8)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,0,0,0,1,0,0,0,1]), debug=0)
+        [(0, 4), (6, 8), (10, 11)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([0,0,0,0,1,1,1,1]), debug=0)
+        [(3, 7)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,0,0,0,0]), debug=0)
+        [(0, 4)]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,0,0,0,0,1]), debug=0)
+        [(0, 4), (7, 8)]
         '''
+        # RectImage.get_boundary_points_zeros(mask1.sum(axis=0) > 0, debug=1)
+        # 
         right = y - roll_up(y)
         left = y - roll_down(y)
         if debug:
@@ -801,14 +829,17 @@ class RectImage(Rect):
         if debug:
             print(right)
             print(left)
+            # return
         
-        if right[0] > left[0]:
+        # if 0 in right.shape:
+        #     pass
+        
+        if 0 not in left.shape and (0 in right.shape or right[0] > left[0]):
             right = cls.add_head_tail(right, y.shape[0])[:-1]
             left =  cls.add_head_tail(left, y.shape[0])[1:]
             m = min(right.shape[0], left.shape[0])
             right = right[:m]
             left = left[:m]
-
         else:
             right = cls.add_head_tail(right, y.shape[0])
             left =  cls.add_head_tail(left, y.shape[0])
@@ -820,6 +851,7 @@ class RectImage(Rect):
             left = left[s]
 
         if debug:
+            print('-' * 20)
             print(right)
             print(left)
 
@@ -831,7 +863,6 @@ class RectImage(Rect):
         
         if debug:
             print(mr, m)
-            return
         mr = mr[m]
         ml = ml[m]
         
@@ -839,12 +870,13 @@ class RectImage(Rect):
         left = numpy.concatenate((ml, left[-1:])) if ml.size else left[-1:]
             
         if debug:
+            print('=' * 20)
             print(mr)
             print(ml)
             print(right)
             print(left)
         
-        return list(zip(right, left))
+        return list(zip(right, left)) if 0 not in right.shape else [(0, y.shape[0]-1)]
     
 
     def get_split_points(self, a, max_length):
@@ -859,7 +891,15 @@ class RectImage(Rect):
                 rect = RectImage(img, left, right, top, bottom)
                 if rect.is_valid(min_len=5):
                     yield rect
-
+    
+    def split_zeros(self):
+        # '''
+        # >>> RectImage(img1).split_zeros()
+        # '''
+        y = self.mask.sum(axis=1) > 0
+        print(self.get_boundary_points_zeros(y))
+        x = self.mask.sum(axis=0) > 0
+        print(self.get_boundary_points_zeros(x))
 
     @property
     def h_split_points(self):
@@ -1052,5 +1092,8 @@ class RectImage(Rect):
 
 if __name__ == "__main__":
     import doctest
+    img1 = file2array('test_split_zeros.bin')
+    mask1 = img1 > 0
+    
     print(doctest.testmod(verbose=False, report=False))
     
