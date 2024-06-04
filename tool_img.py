@@ -851,8 +851,7 @@ class FracContours(object):
     
     
     @classmethod
-    def compute_mask(cls, mask):
-        max_len = 50
+    def compute_mask(cls, mask, max_len=50):
         H, W = mask.shape
         contours, h  = cv2.findContours(mask, 
                                         # cv2.RETR_EXTERNAL,
@@ -864,12 +863,12 @@ class FracContours(object):
         l = list(map(lambda x:cv2.boundingRect(x), contours))
         a = numpy.stack(l)
 
-        a = a[(a[:,2] < max_len) & (
+        b = a[(a[:,2] < max_len) & (
                 a[:,3] < max_len)
               ]
 
         
-        return cls.draw_canvas(a, W, H)
+        return cls.draw_canvas(b, W, H), a
     
     
     @classmethod

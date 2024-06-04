@@ -191,6 +191,13 @@ def is_number(x):
         pass
     return False
 
+def to_int(x):
+    try:
+        return int(x)
+    except:
+        pass
+
+
 def is_chinese(ch):
     return '\u4e00' <= ch <= '\u9fff'
 
