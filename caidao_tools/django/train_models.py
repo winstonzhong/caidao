@@ -214,7 +214,14 @@ class BaseTrain(BaseModel):
             cp.update()
             # X = [x.tensor_transformed for x in q]
         return torch.stack(X).type(torch.float), ids
-
+    
+    @classmethod
+    def get_X_by_list(cls, l):
+        # X = []
+        # for x in l:
+        #     X.append(x.tensor_transformed)
+        X = [x.tensor_transformed for x in l]
+        return torch.stack(X).type(torch.float)
 
     @classmethod
     def get_nn(cls):
@@ -247,7 +254,7 @@ class BaseTrain(BaseModel):
     
     @classmethod
     def get_model(cls):
-        if not hasattr(cls, '_model'):
+        if not hasattr(cls, '_model') or cls._model is None:
             print(f'loading {cls} model...')
             m = cls.get_nn()
             m.load_state_dict(torch.load(cls.get_fpath_pth()))

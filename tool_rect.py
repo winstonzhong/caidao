@@ -505,8 +505,18 @@ class Rect(object):
     def get_rect_body_real(self, shape):
         return self.rect_body_virtual.to_real(shape)
     
+    # def crop_img(self, img):
+    #     return img[self.top:self.bottom, self.left:self.right, ...]
+
+    @property
+    def shape(self):
+        return self.height, self.width
+
     def crop_img(self, img):
-        return img[self.top:self.bottom, self.left:self.right, ...]
+        if self.shape == img.shape[:2]:
+            return img
+        return img[self.top:self.bottom + 1, self.left:self.right+1, ...]
+
     
     def draw_img(self, canvas, img):
         # tmp = canvas[self.top:self.bottom, self.left:self.right, ...]
@@ -687,8 +697,6 @@ class RectImage(Rect):
                  right=None, 
                  top=None, 
                  bottom=None,
-                 # offset_x=0, 
-                 # offset_y=0,
                  ):
         '''
         >>> RectImage(img1,100,200,300,500) == RectImage(img1,100,200,300,500)
@@ -698,18 +706,21 @@ class RectImage(Rect):
         '''
         self.origin = img
         h, w = img.shape[:2]
-        left = left if left is not None else 0 
-        top = top if top is not None else 0
-        right = right if right is not None else w - 1
-        bottom = bottom if bottom is not None else h - 1
+        if left is None:
+            left = 0 
+            top = 0
+            right = w - 1
+            bottom = h - 1
         Rect.__init__(self, 
                       left, 
                       right, 
                       top, 
                       bottom)
-        # self.img = self.crop_img(img)
-        # self.offset_x = offset_x + left
-        # self.offset_y = offset_y + top
+
+    @classmethod
+    def from_ltwh(cls, img, left, top, width, height):
+        return cls(img, left, left+width, top, top+height) 
+
     
     def to_absolute(self, left, right, top, bottom):
         '''
@@ -724,10 +735,6 @@ class RectImage(Rect):
     @property
     def img(self):
         return self.crop_img(self.origin)
-    
-    @property
-    def shape(self):
-        return self.height, self.width
     
     @classmethod
     def cut_empty(cls, img):
