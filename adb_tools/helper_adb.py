@@ -1067,7 +1067,12 @@ class BaseAdb(object):
     @classmethod
     def my_mate40(cls):
         return cls.get_adb_by_device_name(name='mate40')
-        # return cls.get_adb_by_device_id(did='UJN0221118004154')
+
+    @classmethod
+    def my_vivo(cls):
+        for d in cls.get_devices_as_dict():
+            if d.get('device') == 'PD1616B':
+                return cls(d)
     
     @classmethod
     def lq_honorv50(cls):
