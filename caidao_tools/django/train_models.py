@@ -52,14 +52,24 @@ class BaseTrain(BaseModel):
             objs.append(obj)
             cp.update()
         cls.objects.bulk_update(objs, field_names)
-
+        
+    @classmethod
+    def get_label_ids(cls, refresh=True):
+        if refresh or not hasattr(cls, '_get_label_ids'):
+            l = cls.objects.filter().values('label').distinct()
+            l = list(map(lambda x:x.get('label'), l))
+            cls._get_label_ids = l
+        return cls._get_label_ids
 
     @classmethod
     def get_labels(cls):
-        l = cls.objects.filter().values('label').distinct()
-        l = list(map(lambda x:x.get('label'), l))
+        l = cls.get_label_ids(refresh=True)
         return tuple((x, str(x)) for x in l)
-
+        # if refresh or not hasattr(cls, '_get_labels'):
+        #     l = cls.objects.filter().values('label').distinct()
+        #     l = list(map(lambda x:x.get('label'), l))
+        #     cls._get_labels = tuple((x, str(x)) for x in l)
+        # return cls._get_labels
     
     @classmethod
     def get_curent_batch_number(cls):
