@@ -54,22 +54,20 @@ class BaseTrain(BaseModel):
         cls.objects.bulk_update(objs, field_names)
         
     @classmethod
-    def get_label_ids(cls, refresh=True):
-        if refresh or not hasattr(cls, '_get_label_ids'):
-            l = cls.objects.filter().values('label').distinct()
-            l = list(map(lambda x:x.get('label'), l))
-            cls._get_label_ids = l
-        return cls._get_label_ids
-
-    @classmethod
-    def get_labels(cls):
-        l = cls.get_label_ids(refresh=True)
-        return tuple((x, str(x)) for x in l)
-        # if refresh or not hasattr(cls, '_get_labels'):
+    def get_label_ids(cls, for_training):
+        q = cls.objects.filter() if for_training else cls.objects.exclude(pred_label_id=None) 
+        l = q.values('label').distinct()
+        return list(map(lambda x:x.get('label'), l))
+        # if refresh or not hasattr(cls, '_get_label_ids'):
         #     l = cls.objects.filter().values('label').distinct()
         #     l = list(map(lambda x:x.get('label'), l))
-        #     cls._get_labels = tuple((x, str(x)) for x in l)
-        # return cls._get_labels
+        #     cls._get_label_ids = l
+        # return cls._get_label_ids
+
+    @classmethod
+    def get_labels(cls, for_training):
+        l = cls.get_label_ids(for_training=for_training)
+        return tuple((x, str(x)) for x in l)
     
     @classmethod
     def get_curent_batch_number(cls):
@@ -263,10 +261,10 @@ class BaseTrain(BaseModel):
         return hashlib.sha256(img.tobytes()).hexdigest()
     
     @classmethod
-    def get_model(cls):
-        if not hasattr(cls, '_model') or cls._model is None:
+    def get_model(cls, refresh=False, for_training=False):
+        if not hasattr(cls, '_model') or cls._model is None or refresh:
             print(f'loading {cls} model...')
-            m = cls.get_nn()
+            m = cls.get_nn(for_training)
             m.load_state_dict(torch.load(cls.get_fpath_pth()))
             m.eval()
             cls._model = m

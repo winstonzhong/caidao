@@ -6,6 +6,7 @@ Created on 2023年7月10日
 
 import glob
 import os
+import time
 
 from cached_property import cached_property
 import cv2
@@ -210,9 +211,9 @@ class BaseNet(object):
 
 
     def update_train_result(self, pth_fpath):
-        self.load_model(pth_fpath)
+        # self.load_model(pth_fpath)
         X, ids = self.cls_model.get_X_all(type_id=self.type_id)
-        pred = self(X)
+        pred = self.load_model()(X)
         # l = pred.argmax(1)
         # probs = torch.sigmoid(pred)
         probs = torch.softmax(pred, dim=1)
@@ -250,6 +251,7 @@ class BaseNet(object):
         print("Done!")
         torch.save(self.state_dict(), pth_fpath)
         print("Saved!")
+        time.sleep(3)
         self.update_train_result(pth_fpath)
         return correct, loss
     

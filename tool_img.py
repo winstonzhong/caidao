@@ -861,14 +861,17 @@ class FracContours(object):
                                         cv2.CHAIN_APPROX_SIMPLE, 
                                         )
         l = list(map(lambda x:cv2.boundingRect(x), contours))
-        a = numpy.stack(l)
-
-        b = a[(a[:,2] < max_len) & (
-                a[:,3] < max_len)
-              ]
-
         
-        return cls.draw_canvas(b, W, H), a
+        if l:
+            a = numpy.stack(l)
+    
+            b = a[(a[:,2] < max_len) & (
+                    a[:,3] < max_len)
+                  ]
+    
+            
+            return cls.draw_canvas(b, W, H), a
+        return None, None
     
     
     @classmethod
