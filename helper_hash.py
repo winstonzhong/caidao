@@ -7,8 +7,9 @@ import datetime
 import hashlib
 import json
 
-
 import pandas
+
+from tool_env import is_number
 
 
 class MyEncoder(json.JSONEncoder):
@@ -18,11 +19,10 @@ class MyEncoder(json.JSONEncoder):
             return obj.strftime("%Y-%m-%d %H:%M:%S") if not pandas.isnull(obj) else None
         if isinstance(obj, bytes):
             return str(obj, encoding='utf-8')
-        if isinstance(obj, int):
-            return int(obj)
-        
         if isinstance(obj, float):
             return float(obj)
+        if is_number(obj):
+            return int(obj)
         else:
             return super(MyEncoder, self).default(obj)
 

@@ -653,6 +653,16 @@ class Rect(object):
                 'bottom':self.bottom,
                 }
     
+    def to_cxy_dict(self, *a):
+        d = {'x':self.center_x,
+             'y':self.center_y,
+             'w':self.width,
+             'h':self.height,
+                }
+        d.update({x:getattr(self, x) for x in a})
+        return d
+        
+    
     @classmethod
     def get_out_bounds(cls, l):
         return cls(min(map(lambda x:x.left, l)), 
