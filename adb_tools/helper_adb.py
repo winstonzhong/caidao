@@ -1012,6 +1012,11 @@ class BaseAdb(object):
         return list(filter(lambda x:x.get('name') == name, cls.get_devices_as_dict()))[0]
     
     @classmethod
+    def first_device_model(cls, name):
+        return list(filter(lambda x:x.get('model') == name, cls.get_devices_as_dict()))[0]
+    
+    
+    @classmethod
     def first_adb_name(cls, name):
         return cls(cls.first_device_name(name))
     
@@ -1070,9 +1075,7 @@ class BaseAdb(object):
 
     @classmethod
     def my_vivo(cls):
-        for d in cls.get_devices_as_dict():
-            if d.get('device') == 'PD1616B':
-                return cls(d)
+        return cls.first_adb_name('PD1616B')
     
     @classmethod
     def lq_honorv50(cls):
