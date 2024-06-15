@@ -15,6 +15,7 @@ import time
 
 import cv2
 from django.utils.functional import cached_property
+import numpy
 import uiautomator2
 from uiautomator2.xpath import XMLElement
 
@@ -23,7 +24,7 @@ from adb_tools.common.exceptions import ElementNotFoundError,\
     NotNeedFurtherActions, TplNotFoundError
 from adb_tools.tool_xpath import find_by_xpath
 from helper_net import retry
-from tool_env import is_ipv4, is_string
+from tool_env import is_ipv4, is_string, bounds_to_center
 from tool_file import get_suffix
 from tool_img import bin2img, get_template_points, pil2cv2, to_gray, mask_to_img,\
     rgb_to_mono, cut_empty_margin
@@ -1203,6 +1204,10 @@ class BaseAdb(object):
     def get_sys_center(self):
         w, h = self.get_sys_width_height()
         return w//2, h//2
+    
+    @cached_property
+    def sys_center(self):
+        return self.get_sys_center()
 
     def scroll_down(self,distance=200, duration=None, wait=None):
         w, h = self.get_sys_width_height()
@@ -1368,8 +1373,6 @@ class BaseAdb(object):
                            )
             if e is not None:
                 return e
-
-            
     
     def switch_app(self, icon_match=False):
         if not self.is_app_opened():
@@ -1379,3 +1382,35 @@ class BaseAdb(object):
                 e.click()
             else:
                 self.open_app()
+                
+    def is_close_center_horizontal(self, e):
+        return numpy.isclose(bounds_to_center(e.bounds)[0],
+                             self.sys_center[0],
+                             atol=1,)
+            
+    def choose_or_close(self, name):
+        x = f'//*[@text="{name}"]'
+        e = self.find_xpath_safe(x).wait()
+        if e is None or not self.is_close_center_horizontal(e):
+            self.scroll_center_move_up()
+        else:
+            e.click()
+            return True
+        
+    def switch_app_name(self, name, total=5):
+        info = self.app_info
+        self.switch_overview()
+        while 1:
+            time.sleep(1)
+            if self.app_info == info:
+                print('waiting overview')
+            else:
+                break
+        for i in range(total):
+            print(f'find app:{name}:', f'{i+1}/{total}')
+            if self.choose_or_close(name):
+                return
+            time.sleep(3)
+        raise ValueError
+        
+        
