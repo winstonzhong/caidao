@@ -877,7 +877,7 @@ class FracContours(object):
     def find_x(cls, mask):
         # H, W = mask.shape
         
-        min_len = 20
+        min_len = 16
         max_len = 40
         
         contours, h  = cv2.findContours(mask, 

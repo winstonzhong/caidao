@@ -661,6 +661,9 @@ class Rect(object):
                 }
         d.update({x:getattr(self, x) for x in a})
         return d
+    
+    def to_xywhlp_key(self):
+        return f'{self.center_x} {self.center_y} {self.width} {self.height} {self.pred_label_id} {self.prob:.2f}'
         
     
     @classmethod
@@ -1238,6 +1241,21 @@ class RectImage(Rect):
     #     self.offset_y = 0
     #     return self    
 
+# class RectImageLabelProb(RectImage):
+#     def __init__(self, 
+#                  img,
+#                  left=None, 
+#                  right=None, 
+#                  top=None, 
+#                  bottom=None,
+#                  label=None,
+#                  prob=None,
+#                  ):
+#         RectImage.__init__(self, img, left, right, top, bottom)
+#         self.label = label
+#         self.prob = prob
+    
+    
 
 if __name__ == "__main__":
     import doctest
