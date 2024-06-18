@@ -254,6 +254,8 @@ class NoFileDownloadedError(Exception):
 class DummyTestException(Exception):
     pass
 
+class SwitchOverviewError(Exception):
+    pass
 class BaseAdb(object):
     # app_name = None
     # activity = None
@@ -1391,26 +1393,19 @@ class BaseAdb(object):
     def choose_or_close(self, name):
         x = f'//*[@text="{name}"]'
         e = self.find_xpath_safe(x).wait()
-        if e is None or not self.is_close_center_horizontal(e):
+        if e is None:# or not self.is_close_center_horizontal(e):
             self.scroll_center_move_up()
         else:
             e.click()
             return True
         
     def switch_app_name(self, name, total=5):
-        info = self.app_info
-        self.switch_overview()
-        while 1:
-            time.sleep(1)
-            if self.app_info == info:
-                print('waiting overview')
-            else:
-                break
         for i in range(total):
+            self.switch_overview()
             print(f'find app:{name}:', f'{i+1}/{total}')
             if self.choose_or_close(name):
                 return
             time.sleep(3)
-        raise ValueError
+        raise SwitchOverviewError
         
         
