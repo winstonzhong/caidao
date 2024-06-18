@@ -29,7 +29,6 @@ def roll_up(a, shift=1, axis=None):
     a[-shift:] = numpy.nan
     return a
 
-
 class Rect(object):
     SPACE_TOP_RATIO = 1.1
     SPACE_LEFT_RATIO = 2.5
@@ -685,6 +684,15 @@ class Rect(object):
     @classmethod
     def from_ltwh(cls, left, top, width, height):
         return cls(left, left+width, top, top+height) 
+
+    @classmethod
+    def from_xywh(cls, x, y, width, height):
+        return cls(x - width//2,
+                   x + width//2,
+                   y - height//2,
+                   y + height//2, 
+                   ) 
+
     
 class RectImage(Rect):
     DIRECTION_H = 0

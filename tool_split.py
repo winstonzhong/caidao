@@ -5,8 +5,8 @@ Created on 2023年12月19日
 '''
 import numpy
 import pandas
-
 from tool_rect import Rect
+
 def find_split_points(s, all_split=False, v_min=0, span_min=None):
     '''
     >>> find_split_points((0,1,1,1,1,1,0))
