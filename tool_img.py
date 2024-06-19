@@ -85,6 +85,11 @@ def base642cv2(b64):
         # image = numpy.asarray(bytearray(self.bin), dtype="uint8")
         # return cv2.imdecode(image, cv2.IMREAD_COLOR)
 
+def to_jpeg(img):
+    _, buffer = cv2.imencode(".jpg", img)
+    io_buf = io.BytesIO(buffer)
+    decode_img = cv2.imdecode(numpy.frombuffer(io_buf.getbuffer(), numpy.uint8), -1)
+    return  decode_img  
     
 def url2img(url):
     return bin2img(get_with_random_agent(url).content)
