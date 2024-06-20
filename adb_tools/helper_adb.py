@@ -852,7 +852,7 @@ class BaseAdb(object):
     
     @classmethod
     def start_scrcpy(cls, ip_port, encoding='utf8'):
-        process = subprocess.Popen(f'scrcpy -s {ip_port} --no-audio ', 
+        process = subprocess.Popen(f'scrcpy -s {ip_port} --no-audio --always-on-top', 
                                    encoding=encoding, 
                                    shell=True, 
                                    stdin=subprocess.PIPE, 
