@@ -778,11 +778,21 @@ class RectImage(Rect):
                        offset_x,
                        offset_y,
                        )
+
+    @classmethod
+    def cut_empty_margin_lrtb(cls, img):
+        top, bottom = cls.cut_empty(img)
+        if top is not None:
+            left, right = cls.cut_empty(img.T)
+            if left is not None:
+                return left, right, top, bottom
+        return None,None,None,None
+    
     
     def cut_empty_margin(self):
-        return self.cut_empty_margin_img(self.img, 
-                                         offset_x=self.offset_x, 
-                                         offset_y=self.offset_y)
+        left, right, top, bottom = self.cut_empty_margin_lrtb(self.img)
+        if left is not None:
+            return self.crop(left, right, top, bottom)
     
     @property
     def width(self):
@@ -991,6 +1001,9 @@ class RectImage(Rect):
                     if flag_final:
                         if self.is_smaller_than(left, right, top, bottom, max_missing_width,max_missing_height):
                             yield rect
+                            # r = rect.cut_empty_margin()
+                            # if r is not None and r.width > 0 and r.height > 0:
+                            #     yield r
                     else:
                         for x in rect.split_zeros(min_gap, min_len, max_missing_width, max_missing_height):
                             yield x
@@ -1043,10 +1056,11 @@ class RectImage(Rect):
                          )
     
     def is_valid(self, min_len=5):
-        return self.is_valid_rect(self.left, self.right, self.top, self.bottom, 
+        return self.is_valid_rect(self.left, 
+                                  self.right, 
+                                  self.top, 
+                                  self.bottom, 
                                   min_len)
-        # return Rect.is_valid(self, min_len=min_len) and \
-        #     numpy.any(self.img > 0)
     
     @classmethod
     def is_at_least_large_than(cls, left, right, top, bottom, min_len):        
