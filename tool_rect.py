@@ -280,6 +280,17 @@ class Rect(object):
     @classmethod
     def from_array(cls, a):
         return cls(*cls.to_corners(a))
+    
+    @classmethod
+    def from_two_points(cls, point1, point2):
+        '''
+        >>> Rect.from_two_points({'x':0,'y':0}, {'x':10,'y':10})
+        0 10 0 10<10, 10>
+        >>> Rect.from_two_points({'x':10,'y':10}, {'x':0,'y':1})
+        0 10 1 10<10, 9>
+        '''
+        df = pandas.DataFrame((point1, point2))
+        return cls(df.x.min(), df.x.max(), df.y.min(), df.y.max())
         
     @property
     def left_top(self):
