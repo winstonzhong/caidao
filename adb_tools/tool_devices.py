@@ -11,18 +11,6 @@ ptn_device_info = re.compile('^([^\s]+)\s+[^\n]+device:([^\s]+)', re.M)
 
 
 
-# def parse_devices(txt):
-#     '''
-#     >>> list(parse_devices(txt0))
-#     []
-#     >>> list(parse_devices(txt1))
-#     [{'id': '192.168.0.115:7002', 'name': 'HWALP'}]
-#     >>> list(parse_devices(txt2))
-#     [{'id': 'D3H7N18126007114', 'name': 'HWALP'}, {'id': '192.168.0.115:7002', 'name': 'HWALP'}]
-#     '''
-#     for x in ptn_device_info.findall(txt):
-#         yield dict(zip(('id', 'name'), x))
-
 def parse_line_to_dict(line):
     '''
     >>> d = parse_line_to_dict('192.168.0.115:7002     device product:ALP-AL00 model:ALP_AL00 device:HWALP transport_id:3')
@@ -30,6 +18,9 @@ def parse_line_to_dict(line):
     '192.168.0.115:7002'
     >>> d.get('name')
     'HWALP'
+    >>> d.get('offline')
+    >>> parse_line_to_dict('192.168.0.190:7080     offline product:OCE-AN10 model:OCE_AN10 device:HWOCE-L transport_id:33').get('offline')
+    True
     '''
     l = re.split('\s+', line)
     d = {'id':l[0]
@@ -38,9 +29,12 @@ def parse_line_to_dict(line):
         tmp = re.split(':', x,maxsplit=1)
         if len(tmp) == 2:
             d[tmp[0]] = tmp[1]
+        elif tmp[0].strip() == 'offline':
+            d['offline'] = True
     
     d['name'] = d.get('device')
     d['transport_id'] = int(d.get('transport_id'))
+    
     return d
     
     
