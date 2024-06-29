@@ -877,6 +877,32 @@ class FracContours(object):
             
             return cls.draw_canvas(b, W, H), a
         return None, None
+
+
+    @classmethod
+    def compute_mask_ext(cls,mask,max_width=300,max_height = 150,c_mode=cv2.RETR_TREE):
+        
+        H, W = mask.shape
+        contours, _  = cv2.findContours(mask, 
+                                        # cv2.RETR_EXTERNAL,
+                                        # cv2.RETR_LIST,
+                                        # cv2.RETR_CCOMP,
+                                        # cv2.RETR_TREE,
+                                        c_mode,
+                                        cv2.CHAIN_APPROX_SIMPLE, 
+                                        )
+        l = list(map(lambda x:cv2.boundingRect(x), contours))
+        
+        if l:
+            a = numpy.stack(l)
+            
+            q = (a[:,2] < max_width) & (a[:,3] < max_height)
+            
+            b = [contours[int(i)] for i in numpy.where(q == True)[0]]
+            
+            return cls.draw_contours(b, W, H), a
+        return None, None
+
     
     @classmethod
     def find_x(cls, mask, min_len = 16, max_len = 40):
@@ -939,9 +965,12 @@ class FracContours(object):
         canvas = get_canvas(w, h, mono=True)
         cv2.drawContours(canvas, c, -1, 255, 1)
         return canvas
-        
-        # return delta_lt, delta_rb 
-        
+    
+    @classmethod
+    def draw_contours(cls, c, w, h):
+        canvas = get_canvas(w, h, mono=True)
+        cv2.drawContours(canvas, c, -1, 255, 1)
+        return canvas
         
     
     

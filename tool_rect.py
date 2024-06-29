@@ -1018,6 +1018,36 @@ class RectImage(Rect):
                     else:
                         for x in rect.split_zeros(min_gap, min_len, max_missing_width, max_missing_height):
                             yield x
+
+
+    def split_zeros_ext(self, 
+                    min_gap=3, 
+                    min_len=20,
+                    ):
+        y = self.mask.sum(axis=1) > 0
+        x = self.mask.sum(axis=0) > 0
+        
+        l = self.get_boundary_points_zeros(x, min_gap)
+        m = self.get_boundary_points_zeros(y, min_gap)
+        
+        
+        if len(l) == 1 and len(m) == 1:
+            flag_final = True
+        else:
+            flag_final = False
+        
+        for left, right in l:
+            for top, bottom in m:
+                if self.is_at_least_large_than(left, right, top, bottom,min_len):
+                    rect = self.crop(left, right, top, bottom)
+                    if flag_final:
+                        yield rect
+                        # r = rect.cut_empty_margin()
+                        # if r is not None and r.width > 0 and r.height > 0:
+                        #     yield r
+                    else:
+                        for x in rect.split_zeros_ext(min_gap, min_len):
+                            yield x
             
 
     @property
