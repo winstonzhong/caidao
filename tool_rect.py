@@ -893,6 +893,8 @@ class RectImage(Rect):
         [[0, 4], [7, 8]]
         >>> RectImage.get_boundary_points_zeros(numpy.array([0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1,1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,1, 0]), debug=1)
         [[0, 111]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,1,0,1,1]),min_gap=1)
+        [[0, 5], [5, 7]]
         '''
         right = y - roll_up(y)
         left = y - roll_down(y)
@@ -1041,10 +1043,9 @@ class RectImage(Rect):
                 if self.is_at_least_large_than(left, right, top, bottom,min_len):
                     rect = self.crop(left, right, top, bottom)
                     if flag_final:
-                        yield rect
-                        # r = rect.cut_empty_margin()
-                        # if r is not None and r.width > 0 and r.height > 0:
-                        #     yield r
+                        r = rect.cut_empty_margin()
+                        if r is not None and r.width > min_len and r.height > min_len:
+                            yield r
                     else:
                         for x in rect.split_zeros_ext(min_gap, min_len):
                             yield x

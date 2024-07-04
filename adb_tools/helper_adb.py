@@ -811,6 +811,7 @@ class BaseAdb(object):
                 return 
             print(i, 'trying go back:', x)
             self.go_back()
+            time.sleep(0.5)
         raise ValueError(x)
     
     def click_untill_gone(self, x, num_retry=5):
