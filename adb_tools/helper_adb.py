@@ -139,10 +139,18 @@ def scroll_to_right(adb, l, wait=1000):
     return c2[0] - c1[0]
 
 def scroll_to_bottom(adb, l, wait=1000):
-    b1 = l[-1].bounds
-    b2 = l[0].bounds
-    c1 = b1[0], b1[3] - 100
-    c2 = b2[0], b2[3]
+    if len(l) > 1:
+        b1 = l[-1].bounds
+        b2 = l[0].bounds
+        c1 = b1[0], b1[3] - 100
+        c2 = b2[0], b2[3]
+    else:
+        b1 = l[-1].bounds 
+        c1 = b1[0], b1[3]
+        c2 = b1[0], b1[1]  
+    
+    # print(c1, c2)
+    
     adb.swipe(c1, c2, wait)
     return c1[0] - c2[0]
 
