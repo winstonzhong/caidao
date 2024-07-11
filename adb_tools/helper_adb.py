@@ -22,7 +22,7 @@ from uiautomator2.xpath import XMLElement
 from adb_tools import tool_devices
 from adb_tools.common.exceptions import ElementNotFoundError,\
     NotNeedFurtherActions, TplNotFoundError
-from adb_tools.tool_xpath import find_by_xpath
+from adb_tools.tool_xpath import find_by_xpath, SteadyDevice
 from helper_net import retry
 from tool_env import is_ipv4, is_string, bounds_to_center
 from tool_file import get_suffix
@@ -448,6 +448,10 @@ class BaseAdb(object):
         self.device = device
         self.current_shot = None
         self.step_name = ''
+        
+        self.old_key = None
+        self.current_key = None
+        
     
     @property
     def app_info(self):
@@ -624,6 +628,9 @@ class BaseAdb(object):
         if force_open or not self.is_app_opened():
             self.ua2.app_start(self.app_name, activity=self.activity, stop=True)
         return self
+    
+    def open_certain_app(self, package, activity):
+        self.ua2.app_start(package, activity=activity, stop=False)
 
     def close_app(self):
         self.ua2.app_stop(self.app_name)
@@ -792,6 +799,16 @@ class BaseAdb(object):
     
     def find_xpath_safe(self, xpath):
         return find_by_xpath(self.ua2, xpath)
+
+    def find_xpath_steady(self, xpath, old_key=None):
+        sd = SteadyDevice(self, old_key)
+        rtn = sd.find_xpath_safe(xpath)
+        self.old_key = self.current_key
+        self.current_key = sd.key
+        return rtn
+    
+    def is_steady_not_changed(self):
+        return self.current_key == self.old_key
 
     def click_and_input(self, txt, page_name='', **kwargs):
         """光标移动至输入框, 并输入内容"""
@@ -1315,8 +1332,9 @@ class BaseAdb(object):
         self.swipe((x, y), (x, y+y), wait=500)
     
     def switch_overview(self):
-        if not self.is_in_overview():
-            self.ua2.keyevent('KEYCODE_APP_SWITCH')
+        self.ua2.keyevent('KEYCODE_APP_SWITCH')
+        # if not self.is_in_overview():
+        #     self.ua2.keyevent('KEYCODE_APP_SWITCH')
         
     def enter(self):
         self.ua2.keyevent("KEYCODE_ENTER")
@@ -1399,9 +1417,43 @@ class BaseAdb(object):
                              self.sys_center[0],
                              atol=1,)
             
+    
+    def find_app(self, name):
+        x = f'//*[@text="{name}"]'
+        l = self.find_xpath_steady(x).all()
+        # return l
+        return l[0] if l else None
+    
+    def switch_app_steady_scroll(self, name, fun_scroll):
+        e = self.find_app(name)
+        while 1:
+            if e is not None:
+                print('found:', e)
+                e.click()
+                return True
+            fun_scroll()
+            e = self.find_app(name)
+            if self.is_steady_not_changed():
+                break
+        return False
+    
+    def switch_app_steady(self, name):
+        self.switch_overview()
+        fun_scrolls = (self.scroll_center_move_right, )#self.scroll_center_move_left)
+        
+        for fun_scroll in fun_scrolls:
+            if self.switch_app_steady_scroll(name, fun_scroll):
+                return True
+        return False
+    
+    def switch_app_steady_open_if_not_found(self, name, ):
+        pass
+            
+    
     def choose_or_close(self, name):
         x = f'//*[@text="{name}"]'
-        e = self.find_xpath_safe(x).wait()
+        # e = self.find_xpath_safe(x).wait()
+        e = wait_tobe_steady(self, x)
         if e is None:# or not self.is_close_center_horizontal(e):
             self.scroll_center_move_up()
         else:
@@ -1414,7 +1466,7 @@ class BaseAdb(object):
             print(f'find app:{name}:', f'{i+1}/{total}')
             if self.choose_or_close(name):
                 return
-            time.sleep(3)
+            time.sleep(0.1)
         raise SwitchOverviewError
         
         

@@ -26,6 +26,9 @@ class MyEncoder(json.JSONEncoder):
         else:
             return super(MyEncoder, self).default(obj)
 
+def get_hash(txt):
+    return hashlib.sha256(txt.encode()).hexdigest()
+
 def get_hash_img(img):
     return hashlib.sha256(img.tobytes()).hexdigest()
 
