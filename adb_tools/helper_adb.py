@@ -1229,6 +1229,15 @@ class BaseAdb(object):
         w,h = self.ua2.window_size()
         return w, h
     
+    @cached_property
+    def W(self):
+        return self.get_sys_width_height()[0]
+
+    @cached_property
+    def H(self):
+        return self.get_sys_width_height()[1]
+
+    
     def get_sys_center(self):
         w, h = self.get_sys_width_height()
         return w//2, h//2

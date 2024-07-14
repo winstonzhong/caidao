@@ -25,14 +25,10 @@ class DummyWatcher(object):
         return False
 
 class DummyDevice(object):
-    def __init__(self, fpath):
-        # with open(fpath, 'r', encoding='utf8') as fp:
-        #     self.source = fp.read()
-        # self.settings = {'xpath_debug':False}
-        # self.watcher = DummyWatcher()
-        # self.wait_timeout = 0.01
+    def __init__(self, fpath, adb=None):
         with open(fpath, 'r', encoding='utf8') as fp:
             self.init(fp.read())
+        self.adb = adb
         
     
     def init(self, source, wait_timeout=0.01):
@@ -49,7 +45,10 @@ class DummyDevice(object):
         pass
     
     def click(self, *a, **k):
-        return True
+        return self.adb.ua2.click(*a, **k)
+    
+    def move_to(self, *a, **k):
+        print(a, k)
     
 class SnapShotDevice(DummyDevice):
     def __init__(self, adb):
@@ -146,12 +145,9 @@ class TaskSnapShotDevice(SnapShotDevice):
 
 class TaskDumpedDevice(SnapShotDevice):
     def __init__(self, task):
-        # with open(task.fpath_xml.path, 'rb') as fp:
-        #     self.init(fp.read().decode('utf8'), 0)
-        # self.img = Image.open(task.fpath_screenshot.path)
-
         self.init(task.xml, 0)
         self.img = cv2pil(task.img)
+        self.adb = task.job.adb
         
     
     
