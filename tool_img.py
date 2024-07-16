@@ -120,6 +120,9 @@ def bin_to_base64url(bin_buffer):
     return 'data:image/png;base64,' + base64.b64encode(bin_buffer).decode()
 
 
+def bin_to_base64(bin_buffer):
+    return base64.b64encode(bin_buffer).decode()
+
 def show(img, max_length=900):
     if max_length is not None:
         img = resize_if_too_large(img, max_length)
