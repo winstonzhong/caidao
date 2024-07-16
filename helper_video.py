@@ -34,6 +34,11 @@ class Frame(object):
         
     def show(self):
         show(self.img)
+        
+        
+    def save(self, to_dir):
+        fpath = os.path.join(to_dir, f'{self.index:05d}.png')
+        cv2.imwrite(fpath, self.img)
              
     @property
     def fpath_removed_text(self):
@@ -184,6 +189,14 @@ class Video(object):
             x.save_removed_text()
             cp.update()
         
+    def save_frames(self, to_dir):
+        if not os.path.lexists(to_dir):
+            os.makedirs(to_dir, exist_ok=True)
+        cp = CmdProgress(len(self.frames))
+        for x in self.frames:
+            x.save(to_dir)
+            cp.update()
+    
     @classmethod
     def test_in_one(cls):
         v1 = Video.from_dir(r'Z:\backup\testit\1', 1360)

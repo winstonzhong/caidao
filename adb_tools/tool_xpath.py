@@ -4,14 +4,16 @@ Created on 2023年12月21日
 @author: lenovo
 '''
 import os
+import time
 
 from PIL import Image
+from cached_property import cached_property
 import cv2
 from uiautomator2.xpath import XPath
 
+from helper_hash import get_hash
 from tool_env import bounds_to_rect
-from tool_img import get_template_points, show, pil2cv2
-from cached_property import cached_property
+from tool_img import get_template_points, show, pil2cv2, cv2pil
 
 
 class NoTemplatePopupException(Exception):
@@ -23,14 +25,10 @@ class DummyWatcher(object):
         return False
 
 class DummyDevice(object):
-    def __init__(self, fpath):
-        # with open(fpath, 'r', encoding='utf8') as fp:
-        #     self.source = fp.read()
-        # self.settings = {'xpath_debug':False}
-        # self.watcher = DummyWatcher()
-        # self.wait_timeout = 0.01
+    def __init__(self, fpath, adb=None):
         with open(fpath, 'r', encoding='utf8') as fp:
             self.init(fp.read())
+        self.adb = adb
         
     
     def init(self, source, wait_timeout=0.01):
@@ -47,7 +45,10 @@ class DummyDevice(object):
         pass
     
     def click(self, *a, **k):
-        return True
+        return self.adb.ua2.click(*a, **k)
+    
+    def move_to(self, *a, **k):
+        print(a, k)
     
 class SnapShotDevice(DummyDevice):
     def __init__(self, adb):
@@ -65,6 +66,31 @@ class SnapShotDevice(DummyDevice):
     
     def show_bounds(self, bounds):
         show(self.crop_bounds(bounds))
+
+
+class SteadyDevice(DummyDevice):
+    def __init__(self, adb, old_key = None):
+        self.adb = adb
+        max_try = 6
+        for i in range(max_try):
+            xml_dumped = adb.ua2.dump_hierarchy()
+            key = get_hash(xml_dumped)
+            if old_key != key and i < max_try - 1:
+                print(f'waiting xml tobe steady:...{i}')
+                old_key = key
+                time.sleep(0.1)
+            else:
+                self.key = key
+                self.init(xml_dumped, 0)
+                break
+        
+    
+    def find_xpath_safe(self, x):
+        return find_by_xpath(self, x)    
+
+
+    def click(self, *a, **k):
+        return self.adb.ua2.click(*a, **k)
     
 class TaskSnapShotDevice(SnapShotDevice):
     def __init__(self, adb, task, base_dir):
@@ -119,9 +145,10 @@ class TaskSnapShotDevice(SnapShotDevice):
 
 class TaskDumpedDevice(SnapShotDevice):
     def __init__(self, task):
-        with open(task.fpath_xml.path, 'rb') as fp:
-            self.init(fp.read().decode('utf8'), 0)
-        self.img = Image.open(task.fpath_screenshot.path)
+        self.init(task.xml, 0)
+        self.img = cv2pil(task.img)
+        self.adb = task.job.adb
+        
     
     
 class TaskExecuteDevice(SnapShotDevice):

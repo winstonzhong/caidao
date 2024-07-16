@@ -18,6 +18,14 @@ def array2bin(a):
     np.savez_compressed(buffer,a)
     return buffer.getvalue()
 
+def array2file(a, fpath):
+    with open(fpath, 'wb') as fp:
+        fp.write(array2bin(a))
+        
+def file2array(fpath):
+    with open(fpath, 'rb') as fp:
+        return bin2array(fp.read())
+
 def random_array():
     choices = [1, 2, 3, 4, 5, 6, 7, 8, 9, np.nan, np.nan, np.nan, np.nan, np.nan]
     out = np.random.choice(choices, size=(100, 100))

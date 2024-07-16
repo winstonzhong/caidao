@@ -6,15 +6,16 @@ Created on 2024 Mar 4
 import base64
 import hashlib
 
-import cv2
 from django.db import models
 from django.db.models.aggregates import Sum, Count
+from django.db.models.query_utils import Q
 from django.utils.functional import cached_property
 import numpy
 import torch
+from torchvision import transforms
 
 from caidao_tools.django.abstract import BaseModel
-from helper_trainer import resize, NeuralNetwork
+from helper_cmd import CmdProgress
 from tool_img import bin2img
 
 
@@ -29,6 +30,44 @@ class BaseTrain(BaseModel):
     class Meta:
         abstract = True
 
+    @classmethod
+    def get_next_label(cls):
+        obj = cls.objects.filter().order_by('label').last()
+        return obj.label + 1 if obj is not None else 1
+
+    @classmethod
+    def get_fpath_pth(cls):
+        return cls.fpath_pth
+
+
+    @classmethod
+    def batch_update(cls, l):
+        objs = []
+        cp = CmdProgress(len(l))
+        field_names = [x for x in l[0].keys() if x !='id']
+        for d in l:
+            obj = cls.objects.get(id=d.get('id'))
+            for name in field_names:
+                setattr(obj, name, d.get(name))
+            objs.append(obj)
+            cp.update()
+        cls.objects.bulk_update(objs, field_names)
+        
+    @classmethod
+    def get_label_ids(cls, for_training):
+        q = cls.objects.filter() if for_training else cls.objects.exclude(pred_label_id=None) 
+        l = q.values('label').distinct()
+        return list(map(lambda x:x.get('label'), l))
+        # if refresh or not hasattr(cls, '_get_label_ids'):
+        #     l = cls.objects.filter().values('label').distinct()
+        #     l = list(map(lambda x:x.get('label'), l))
+        #     cls._get_label_ids = l
+        # return cls._get_label_ids
+
+    @classmethod
+    def get_labels(cls, for_training):
+        l = cls.get_label_ids(for_training=for_training)
+        return tuple((x, str(x)) for x in l)
     
     @classmethod
     def get_curent_batch_number(cls):
@@ -85,13 +124,37 @@ class BaseTrain(BaseModel):
         
     @classmethod
     def get_training_records(cls, *a, **k):
-        for x in cls.objects.filter(training=1):
+        for x in cls.objects.filter(Q(training=1) | Q(label__gt=0)):
             for _ in range(x.weight):
                 yield x
 
     @classmethod
+    def get_testing_records(cls, *a, **k):
+        for x in cls.objects.filter(Q(training=0) | Q(label__gt=0)):
+            for _ in range(x.weight_test):
+                yield x
+
+    @classmethod
+    def get_learning_rate(cls):
+        return 1e-3
+    
+    @classmethod
+    def get_batch_size(cls):
+        return 64
+    
+    @classmethod
+    def get_input_shape(cls):
+        return (64, 64)
+    
+    @classmethod
     def get_resizer(cls):
-        return resize
+        if cls.resizer is None:
+            cls.resizer = transforms.Resize(cls.get_input_shape(),antialias=True) 
+        return cls.resizer
+
+    # @classmethod
+    # def get_resizer(cls):
+    #     return resize
     
     @classmethod
     def transform(cls, x):
@@ -148,25 +211,61 @@ class BaseTrain(BaseModel):
     
     @classmethod
     def get_X_all(cls, *a, **k):
+        print('loading all X...')
         q = cls.objects.filter(**cls.get_filters(**k))
         ids = []
         X = []
+        cp = CmdProgress(q.count())
         for x in q:
             ids.append(x.id)
             X.append(x.tensor_transformed)
+            cp.update()
             # X = [x.tensor_transformed for x in q]
         return torch.stack(X).type(torch.float), ids
+    
+    @classmethod
+    def get_X_by_list(cls, l):
+        # X = []
+        # for x in l:
+        #     X.append(x.tensor_transformed)
+        X = [x.tensor_transformed for x in l]
+        return torch.stack(X).type(torch.float)
+
+    @classmethod
+    def get_nn(cls):
+        raise NotImplementedError
+
+    @classmethod
+    def test_all(cls):
+        m = cls.get_model()
+        X, ids = cls.get_X_all()
+        pred = m(X)
+        probs = torch.softmax(pred, dim=1)
+        # p, _ = probs.max(axis=1)
+        p, l = probs.max(axis=1)
+        cp = CmdProgress(len(ids))
+        objs = []
+        print('testing...')
+        for i in range(len(l)):
+            o = cls.objects.get(id=ids[i])
+            o.pred_label_id = int(l[i])
+            o.pred_label_name = m.get_label_name(int(l[i]))
+            o.prob = float(p[i])
+            objs.append(o)
+            cp.update()
+        cls.objects.bulk_update(objs, ('pred_label_id', 'pred_label_name', 'prob'))
+
     
     @classmethod
     def get_key(cls, img):
         return hashlib.sha256(img.tobytes()).hexdigest()
     
     @classmethod
-    def get_model(cls):
-        if not hasattr(cls, '_model'):
-            print('loading number model...')
-            m = NeuralNetwork(len(cls.TYPE_DN))
-            m.load_state_dict(torch.load(f'{cls.__name__.lower()}.pth'))
+    def get_model(cls, refresh=False, for_training=False):
+        if not hasattr(cls, '_model') or cls._model is None or refresh:
+            print(f'loading {cls} model...')
+            m = cls.get_nn(for_training)
+            m.load_state_dict(torch.load(cls.get_fpath_pth()))
             m.eval()
             cls._model = m
         return cls._model
@@ -188,6 +287,9 @@ class BaseTrain(BaseModel):
     
     def predict(self):
         return self.predict_X(self.X)
+    
+    def predict_probs(self):
+        return torch.softmax(self.model(self.X), dim=1)
     
     @property
     def model(self):

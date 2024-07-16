@@ -173,6 +173,30 @@ def smart_range(start, end):
     s = numpy.sign(end - start)
     return range(start, end+s, s)
 
+def float_range(start, stop, step=1.0):
+    '''
+    >>> list(float_range(1,4.0,0.5))
+    [1, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+    >>> list(float_range(1,4.1,0.5))
+    [1, 1.5, 2.0, 2.5, 3.0, 3.5, 4.1]
+    >>> list(float_range(1,4.4,0.5))
+    [1, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.4]
+    >>> list(float_range(1,1.1,0.5))
+    [1, 1.1]
+    '''
+    current = start
+    while 1:
+        yield current
+        current += step
+        if numpy.isclose(current, stop, atol=step/2):
+            yield stop
+            break
+        if current >= stop:
+            yield stop
+            break
+    
+
+
 def smart_range_safe(start, end):
     try:
         return smart_range(start, end)
@@ -190,6 +214,13 @@ def is_number(x):
     except:
         pass
     return False
+
+def to_int(x):
+    try:
+        return int(x)
+    except:
+        pass
+
 
 def is_chinese(ch):
     return '\u4e00' <= ch <= '\u9fff'

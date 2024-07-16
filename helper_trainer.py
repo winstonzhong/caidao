@@ -6,8 +6,11 @@ Created on 2023年7月10日
 
 import glob
 import os
+import time
 
+from cached_property import cached_property
 import cv2
+import pandas
 from torch import nn
 import torch
 from torch.utils.data import DataLoader
@@ -16,12 +19,11 @@ from torchvision import transforms
 from torchvision.io import read_image
 from torchvision.transforms import ToTensor, Lambda
 
-
-import pandas as pd
-# from mj.tool_pai import ETYPES
 from helper_cmd import CmdProgress
-from cached_property import cached_property
+import pandas as pd
 
+
+# from mj.tool_pai import ETYPES
 learning_rate = 1e-3
 batch_size = 64
 epochs = 30
@@ -112,12 +114,15 @@ class DbImageDataset(FileBaseImageDataset):
     def NC(self):
         return len(self.cls_model.TYPE_DN)
 
+def get_info(a):
+    a = pandas.Series(map(lambda x:x[1], a))
+    return a.describe()
 
 class DbImageDatasetCommon(FileBaseImageDataset):
     def __init__(self, cls_model, type_id, label_list):
         self.cls_model = cls_model
         self.label_list = label_list
-        self.records = list(cls_model.get_training_records(type_id))
+        # self.records = list(cls_model.get_training_records(type_id))
 
     def __len__(self):
         return len(self.records)
@@ -128,9 +133,32 @@ class DbImageDatasetCommon(FileBaseImageDataset):
         label = self.target_transform(o.label_id)
         return image, label
 
+    @cached_property
+    def records(self):
+        print('loading dataset...')
+        return list(self.cls_model.get_training_records())
+    
     @property
     def NC(self):
         return len(self.label_list)
+
+class DbImageDatasetCommonTraining(DbImageDatasetCommon):
+    def __init__(self, cls_model, label_list):
+        self.cls_model = cls_model
+        self.label_list = label_list
+    
+    @cached_property
+    def records(self):
+        print('loading training dataset...')
+        return list(self.cls_model.get_training_records())
+
+class DbImageDatasetCommonTesting(DbImageDatasetCommonTraining):
+    @cached_property
+    def records(self):
+        print('loading testing dataset...')
+        return list(self.cls_model.get_testing_records())
+
+
 
 class BaseNet(object):
     def train_loop(self):
@@ -183,9 +211,9 @@ class BaseNet(object):
 
 
     def update_train_result(self, pth_fpath):
-        self.load_model(pth_fpath)
+        # self.load_model(pth_fpath)
         X, ids = self.cls_model.get_X_all(type_id=self.type_id)
-        pred = self(X)
+        pred = self.load_model()(X)
         # l = pred.argmax(1)
         # probs = torch.sigmoid(pred)
         probs = torch.softmax(pred, dim=1)
@@ -223,6 +251,7 @@ class BaseNet(object):
         print("Done!")
         torch.save(self.state_dict(), pth_fpath)
         print("Saved!")
+        time.sleep(3)
         self.update_train_result(pth_fpath)
         return correct, loss
     

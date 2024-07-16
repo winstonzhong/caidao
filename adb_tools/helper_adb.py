@@ -15,15 +15,16 @@ import time
 
 import cv2
 from django.utils.functional import cached_property
+import numpy
 import uiautomator2
 from uiautomator2.xpath import XMLElement
 
 from adb_tools import tool_devices
 from adb_tools.common.exceptions import ElementNotFoundError,\
     NotNeedFurtherActions, TplNotFoundError
-from adb_tools.tool_xpath import find_by_xpath
+from adb_tools.tool_xpath import find_by_xpath, SteadyDevice
 from helper_net import retry
-from tool_env import is_ipv4, is_string
+from tool_env import is_ipv4, is_string, bounds_to_center
 from tool_file import get_suffix
 from tool_img import bin2img, get_template_points, pil2cv2, to_gray, mask_to_img,\
     rgb_to_mono, cut_empty_margin
@@ -138,10 +139,18 @@ def scroll_to_right(adb, l, wait=1000):
     return c2[0] - c1[0]
 
 def scroll_to_bottom(adb, l, wait=1000):
-    b1 = l[-1].bounds
-    b2 = l[0].bounds
-    c1 = b1[0], b1[3] - 100
-    c2 = b2[0], b2[3]
+    if len(l) > 1:
+        b1 = l[-1].bounds
+        b2 = l[0].bounds
+        c1 = b1[0], b1[3] - 100
+        c2 = b2[0], b2[3]
+    else:
+        b1 = l[-1].bounds 
+        c1 = b1[0], b1[3]
+        c2 = b1[0], b1[1]  
+    
+    # print(c1, c2)
+    
     adb.swipe(c1, c2, wait)
     return c1[0] - c2[0]
 
@@ -253,6 +262,8 @@ class NoFileDownloadedError(Exception):
 class DummyTestException(Exception):
     pass
 
+class SwitchOverviewError(Exception):
+    pass
 class BaseAdb(object):
     # app_name = None
     # activity = None
@@ -437,6 +448,10 @@ class BaseAdb(object):
         self.device = device
         self.current_shot = None
         self.step_name = ''
+        
+        self.old_key = None
+        self.current_key = None
+        
     
     @property
     def app_info(self):
@@ -613,6 +628,9 @@ class BaseAdb(object):
         if force_open or not self.is_app_opened():
             self.ua2.app_start(self.app_name, activity=self.activity, stop=True)
         return self
+    
+    def open_certain_app(self, package, activity):
+        self.ua2.app_start(package, activity=activity, stop=False)
 
     def close_app(self):
         self.ua2.app_stop(self.app_name)
@@ -782,6 +800,16 @@ class BaseAdb(object):
     def find_xpath_safe(self, xpath):
         return find_by_xpath(self.ua2, xpath)
 
+    def find_xpath_steady(self, xpath, old_key=None):
+        sd = SteadyDevice(self, old_key)
+        rtn = sd.find_xpath_safe(xpath)
+        self.old_key = self.current_key
+        self.current_key = sd.key
+        return rtn
+    
+    def is_steady_not_changed(self):
+        return self.current_key == self.old_key
+
     def click_and_input(self, txt, page_name='', **kwargs):
         """光标移动至输入框, 并输入内容"""
         try:
@@ -808,6 +836,7 @@ class BaseAdb(object):
                 return 
             print(i, 'trying go back:', x)
             self.go_back()
+            time.sleep(0.5)
         raise ValueError(x)
     
     def click_untill_gone(self, x, num_retry=5):
@@ -849,7 +878,7 @@ class BaseAdb(object):
     
     @classmethod
     def start_scrcpy(cls, ip_port, encoding='utf8'):
-        process = subprocess.Popen(f'scrcpy -s {ip_port} --no-audio ', 
+        process = subprocess.Popen(f'scrcpy -s {ip_port} --no-audio --always-on-top', 
                                    encoding=encoding, 
                                    shell=True, 
                                    stdin=subprocess.PIPE, 
@@ -1012,6 +1041,11 @@ class BaseAdb(object):
         return list(filter(lambda x:x.get('name') == name, cls.get_devices_as_dict()))[0]
     
     @classmethod
+    def first_device_model(cls, name):
+        return list(filter(lambda x:x.get('model') == name, cls.get_devices_as_dict()))[0]
+    
+    
+    @classmethod
     def first_adb_name(cls, name):
         return cls(cls.first_device_name(name))
     
@@ -1067,7 +1101,10 @@ class BaseAdb(object):
     @classmethod
     def my_mate40(cls):
         return cls.get_adb_by_device_name(name='mate40')
-        # return cls.get_adb_by_device_id(did='UJN0221118004154')
+
+    @classmethod
+    def my_vivo(cls):
+        return cls.first_adb_name('PD1616B')
     
     @classmethod
     def lq_honorv50(cls):
@@ -1192,9 +1229,22 @@ class BaseAdb(object):
         w,h = self.ua2.window_size()
         return w, h
     
+    @cached_property
+    def W(self):
+        return self.get_sys_width_height()[0]
+
+    @cached_property
+    def H(self):
+        return self.get_sys_width_height()[1]
+
+    
     def get_sys_center(self):
         w, h = self.get_sys_width_height()
         return w//2, h//2
+    
+    @cached_property
+    def sys_center(self):
+        return self.get_sys_center()
 
     def scroll_down(self,distance=200, duration=None, wait=None):
         w, h = self.get_sys_width_height()
@@ -1291,8 +1341,9 @@ class BaseAdb(object):
         self.swipe((x, y), (x, y+y), wait=500)
     
     def switch_overview(self):
-        if not self.is_in_overview():
-            self.ua2.keyevent('KEYCODE_APP_SWITCH')
+        self.ua2.keyevent('KEYCODE_APP_SWITCH')
+        # if not self.is_in_overview():
+        #     self.ua2.keyevent('KEYCODE_APP_SWITCH')
         
     def enter(self):
         self.ua2.keyevent("KEYCODE_ENTER")
@@ -1360,8 +1411,6 @@ class BaseAdb(object):
                            )
             if e is not None:
                 return e
-
-            
     
     def switch_app(self, icon_match=False):
         if not self.is_app_opened():
@@ -1371,3 +1420,62 @@ class BaseAdb(object):
                 e.click()
             else:
                 self.open_app()
+                
+    def is_close_center_horizontal(self, e):
+        return numpy.isclose(bounds_to_center(e.bounds)[0],
+                             self.sys_center[0],
+                             atol=1,)
+            
+    
+    def find_app(self, name):
+        x = f'//*[@text="{name}"]'
+        l = self.find_xpath_steady(x).all()
+        # return l
+        return l[0] if l else None
+    
+    def switch_app_steady_scroll(self, name, fun_scroll):
+        e = self.find_app(name)
+        while 1:
+            if e is not None:
+                print('found:', e)
+                e.click()
+                return True
+            fun_scroll()
+            e = self.find_app(name)
+            if self.is_steady_not_changed():
+                break
+        return False
+    
+    def switch_app_steady(self, name):
+        self.switch_overview()
+        fun_scrolls = (self.scroll_center_move_right, )#self.scroll_center_move_left)
+        
+        for fun_scroll in fun_scrolls:
+            if self.switch_app_steady_scroll(name, fun_scroll):
+                return True
+        return False
+    
+    def switch_app_steady_open_if_not_found(self, name, ):
+        pass
+            
+    
+    def choose_or_close(self, name):
+        x = f'//*[@text="{name}"]'
+        # e = self.find_xpath_safe(x).wait()
+        e = wait_tobe_steady(self, x)
+        if e is None:# or not self.is_close_center_horizontal(e):
+            self.scroll_center_move_up()
+        else:
+            e.click()
+            return True
+        
+    def switch_app_name(self, name, total=5):
+        for i in range(total):
+            self.switch_overview()
+            print(f'find app:{name}:', f'{i+1}/{total}')
+            if self.choose_or_close(name):
+                return
+            time.sleep(0.1)
+        raise SwitchOverviewError
+        
+        

@@ -8,8 +8,8 @@ import itertools
 from cached_property import cached_property
 import numpy
 import pandas
+from tool_numpy import numpy_fill, file2array
 
-from tool_numpy import numpy_fill
 
 
 LEFT_DIRECTION = -1
@@ -19,16 +19,15 @@ DOWN_DIRECTION = 1
 
 def roll_down(a, shift=1, axis=None):
     assert shift > 0
-    a = numpy.roll(a.astype(numpy.float), shift, axis=axis)
+    a = numpy.roll(a.astype(float), shift, axis=axis)
     a[:shift] = numpy.nan
     return a
 
 def roll_up(a, shift=1, axis=None):
     assert shift > 0
-    a = numpy.roll(a.astype(numpy.float), -shift, axis=axis)
+    a = numpy.roll(a.astype(float), -shift, axis=axis)
     a[-shift:] = numpy.nan
     return a
-
 
 class Rect(object):
     SPACE_TOP_RATIO = 1.1
@@ -281,6 +280,17 @@ class Rect(object):
     @classmethod
     def from_array(cls, a):
         return cls(*cls.to_corners(a))
+    
+    @classmethod
+    def from_two_points(cls, point1, point2):
+        '''
+        >>> Rect.from_two_points({'x':0,'y':0}, {'x':10,'y':10})
+        0 10 0 10<10, 10>
+        >>> Rect.from_two_points({'x':10,'y':10}, {'x':0,'y':1})
+        0 10 1 10<10, 9>
+        '''
+        df = pandas.DataFrame((point1, point2))
+        return cls(df.x.min(), df.x.max(), df.y.min(), df.y.max())
         
     @property
     def left_top(self):
@@ -505,8 +515,18 @@ class Rect(object):
     def get_rect_body_real(self, shape):
         return self.rect_body_virtual.to_real(shape)
     
+    # def crop_img(self, img):
+    #     return img[self.top:self.bottom, self.left:self.right, ...]
+
+    @property
+    def shape(self):
+        return self.height, self.width
+
     def crop_img(self, img):
-        return img[self.top:self.bottom, self.left:self.right, ...]
+        if self.shape == img.shape[:2]:
+            return img
+        return img[self.top:self.bottom + 1, self.left:self.right+1, ...]
+
     
     def draw_img(self, canvas, img):
         # tmp = canvas[self.top:self.bottom, self.left:self.right, ...]
@@ -636,6 +656,26 @@ class Rect(object):
     def to_lrtb(self):
         return self.left, self.right, self.top, self.bottom
     
+    def to_lrtb_dict(self):
+        return {'left':self.left,
+                'right':self.right,
+                'top':self.top,
+                'bottom':self.bottom,
+                }
+    
+    def to_cxy_dict(self, *a):
+        d = {'x':self.center_x,
+             'y':self.center_y,
+             'w':self.width,
+             'h':self.height,
+                }
+        d.update({x:getattr(self, x) for x in a})
+        return d
+    
+    def to_xywhlp_key(self):
+        return f'{self.center_x} {self.center_y} {self.width} {self.height} {self.pred_label_id} {self.prob:.2f}'
+        
+    
     @classmethod
     def get_out_bounds(cls, l):
         return cls(min(map(lambda x:x.left, l)), 
@@ -651,6 +691,19 @@ class Rect(object):
                    center_y-len_half,
                    center_y+len_half,
                    )
+
+    @classmethod
+    def from_ltwh(cls, left, top, width, height):
+        return cls(left, left+width, top, top+height) 
+
+    @classmethod
+    def from_xywh(cls, x, y, width, height):
+        return cls(x - width//2,
+                   x + width//2,
+                   y - height//2,
+                   y + height//2, 
+                   ) 
+
     
 class RectImage(Rect):
     DIRECTION_H = 0
@@ -676,27 +729,44 @@ class RectImage(Rect):
                  right=None, 
                  top=None, 
                  bottom=None,
-                 offset_x=0, 
-                 offset_y=0,
                  ):
-        # self._img = img
+        '''
+        >>> RectImage(img1,100,200,300,500) == RectImage(img1,100,200,300,500)
+        True
+        >>> RectImage(img1,100,200,300,500) == RectImage(img1,100,200,300,501)
+        False
+        '''
+        self.origin = img
         h, w = img.shape[:2]
-        left = left if left is not None else 0 
-        top = top if top is not None else 0
-        right = right if right is not None else w - 1
-        bottom = bottom if bottom is not None else h - 1
+        if left is None:
+            left = 0 
+            top = 0
+            right = w - 1
+            bottom = h - 1
         Rect.__init__(self, 
                       left, 
                       right, 
                       top, 
                       bottom)
-        self.img = self.crop_img(img)
-        self.offset_x = offset_x + left
-        self.offset_y = offset_y + top
 
+    @classmethod
+    def from_ltwh(cls, img, left, top, width, height):
+        return cls(img, left, left+width, top, top+height) 
+
+    
+    def to_absolute(self, left, right, top, bottom):
+        '''
+        >>> RectImage(img1).width == img1.shape[1]
+        True
+        >>> ri=RectImage(img1,100,200,300,500)
+        >>> ri.to_absolute(0,10,0,20)
+        (100, 110, 300, 320)
+        '''
+        return left + self.left, right + self.left, top + self.top, bottom + self.top
+    
     @property
-    def shape(self):
-        return self.height, self.width
+    def img(self):
+        return self.crop_img(self.origin)
     
     @classmethod
     def cut_empty(cls, img):
@@ -719,11 +789,21 @@ class RectImage(Rect):
                        offset_x,
                        offset_y,
                        )
+
+    @classmethod
+    def cut_empty_margin_lrtb(cls, img):
+        top, bottom = cls.cut_empty(img)
+        if top is not None:
+            left, right = cls.cut_empty(img.T)
+            if left is not None:
+                return left, right, top, bottom
+        return None,None,None,None
+    
     
     def cut_empty_margin(self):
-        return self.cut_empty_margin_img(self.img, 
-                                         offset_x=self.offset_x, 
-                                         offset_y=self.offset_y)
+        left, right, top, bottom = self.cut_empty_margin_lrtb(self.img)
+        if left is not None:
+            return self.crop(left, right, top, bottom)
     
     @property
     def width(self):
@@ -752,8 +832,150 @@ class RectImage(Rect):
     def mask(self):
         return self.img > 0
 
-    def get_boundary_points(self, y):
+    @classmethod
+    def get_boundary_points(cls, y):
         return numpy.argwhere(((y - roll_up(y)) == -1) | (((y - roll_down(y)) == -1)))
+    
+    @classmethod
+    def add_head_tail(cls, a, n):
+        if 0 not in a:
+            a = numpy.concatenate(([0], a))
+        if n - 1 not in a:
+            a = numpy.concatenate((a, [n - 1]))
+        return a
+    
+    @classmethod
+    def get_boundary_points_zeros(cls, y, min_gap=3, debug=False):
+        '''
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,1,0,0,0,0,1,1,1]), debug=0)
+        [[0, 5], [8, 11]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([0,0,0,1,1,1,1,1,0,0,0,0,1,1,1,0]), debug=0)
+        [[2, 8], [11, 15]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([0,0,0,1,1,1,1,1,0,0,0,0,1,1,1,1]), debug=0)
+        [[2, 8], [11, 15]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([0,0,0,1,1,1,1,1,0,0,1,1,1,1,1,1]), debug=0)
+        [[2, 15]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,1,0,0,1,1,1]), debug=0)
+        [[0, 9]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,1,0,0,0,1,1,1]), debug=0)
+        [[0, 5], [7, 10]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,1,0,0,0,1,1,1,0,0,0]), debug=0)
+        [[0, 5], [7, 11]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([0,0,1,1,1,1,1,0,0,0,0,1,1,1,0]), debug=0)
+        [[0, 7], [10, 14]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([0,1,1,1,1,1,0,0,0,0,1,1,1,0]), debug=0)
+        [[0, 6], [9, 13]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,1,1,1,1]), debug=0)
+        [[0, 7]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,0,1,1,1,1]), debug=0)
+        [[0, 7]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,0,0,1,1,1]), debug=0)
+        [[0, 7]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,0,0,0,1,1]), debug=0)
+        [[0, 3], [5, 7]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([0] * 10), debug=0)
+        []
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,1,0,1,1]), debug=0)
+        [[0, 7]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,0,0,1,1]), debug=0)
+        [[0, 7]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,0,0,0,1]), debug=0)
+        [[0, 4], [6, 7]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,0,0,0,1,0,0,0]), debug=0)
+        [[0, 4], [6, 8]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,0,0,0,1,0,0,0,1]), debug=0)
+        [[0, 4], [6, 8], [10, 11]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([0,0,0,0,1,1,1,1]), debug=0)
+        [[3, 7]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,0,0,0,0]), debug=0)
+        [[0, 4]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,0,0,0,0,1]), debug=0)
+        [[0, 4], [7, 8]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1,1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,1, 0]), debug=1)
+        [[0, 111]]
+        >>> RectImage.get_boundary_points_zeros(numpy.array([1,1,1,1,1,0,1,1]),min_gap=1)
+        [[0, 5], [5, 7]]
+        '''
+        right = y - roll_up(y)
+        left = y - roll_down(y)
+        
+            
+        right = numpy.argwhere((right == -1) | ((numpy.isnan(right))  & (y == 0))).flatten()
+        left = numpy.argwhere(((left) == -1) | ((numpy.isnan(left))  & (y == 0))).flatten()
+        
+        
+        s = right - left
+        
+        a = numpy.concatenate((left.reshape(-1,1), right.reshape(-1,1)), axis=1)
+        
+        # print(a, s, right, left)
+        
+        a = a[ s >= min_gap - 1] if 0 not in s.shape else a
+        
+        a = numpy.concatenate(([0],a.flatten(),[y.shape[0]-1]))
+         
+        a = a.reshape(-1,2)
+        
+        a = a[a[:,0] != a[:,1]]
+        
+        return a.tolist()
+        
+        
+        # if 0 in right:
+        #     right = right[1:]
+        #
+        # if debug:
+        #     print(right)
+        #     print(left)
+        #     # return
+        #
+        # # if 0 in right.shape:
+        # #     pass
+        #
+        # if 0 not in left.shape and (0 in right.shape or right[0] > left[0]):
+        #     right = cls.add_head_tail(right, y.shape[0])[:-1]
+        #     left =  cls.add_head_tail(left, y.shape[0])[1:]
+        #     m = min(right.shape[0], left.shape[0])
+        #     right = right[:m]
+        #     left = left[:m]
+        # else:
+        #     right = cls.add_head_tail(right, y.shape[0])
+        #     left =  cls.add_head_tail(left, y.shape[0])
+        #     m = min(right.shape[0], left.shape[0])
+        #     right = right[:m]
+        #     left = left[:m]
+        #     s = right != left
+        #     right = right[s]
+        #     left = left[s]
+        #
+        # if debug:
+        #     print('-' * 20)
+        #     print(right)
+        #     print(left)
+        #
+        #
+        # mr = right[1:]
+        # ml = left[0:-1]
+        #
+        # m = mr - ml >= min_len - 1
+        #
+        # if debug:
+        #     print(mr, m)
+        # mr = mr[m]
+        # ml = ml[m]
+        #
+        # right = numpy.concatenate((right[0:1], mr)) if mr.size else right[0:1] 
+        # left = numpy.concatenate((ml, left[-1:])) if ml.size else left[-1:]
+        #
+        # if debug:
+        #     print('=' * 20)
+        #     print(mr)
+        #     print(ml)
+        #     print(right)
+        #     print(left)
+        #
+        # return list(zip(right, left)) if 0 not in right.shape else [(0, y.shape[0]-1)]
+    
 
     def get_split_points(self, a, max_length):
         a = numpy.concatenate(([0],a.flatten(),[max_length-1]))
@@ -761,13 +983,73 @@ class RectImage(Rect):
 
     def split(self):
         img = self.img
-        
         for left, right in self.v_split_points:
             for top, bottom in self.h_split_points:
                 rect = RectImage(img, left, right, top, bottom)
                 if rect.is_valid(min_len=5):
                     yield rect
+    
+    def split_zeros(self, 
+                    min_gap=3, 
+                    min_len=20,
+                    max_missing_width=300,
+                    max_missing_height=150,
+                    ):
+        y = self.mask.sum(axis=1) > 0
+        x = self.mask.sum(axis=0) > 0
+        
+        l = self.get_boundary_points_zeros(x, min_gap)
+        m = self.get_boundary_points_zeros(y, min_gap)
+        
+        
+        if len(l) == 1 and len(m) == 1:
+            flag_final = True
+        else:
+            flag_final = False
+        
+        for left, right in l:
+            for top, bottom in m:
+                if self.is_at_least_large_than(left, right, top, bottom,min_len):
+                    rect = self.crop(left, right, top, bottom)
+                    if flag_final:
+                        if self.is_smaller_than(left, right, top, bottom, max_missing_width,max_missing_height):
+                            yield rect
+                            # r = rect.cut_empty_margin()
+                            # if r is not None and r.width > 0 and r.height > 0:
+                            #     yield r
+                    else:
+                        for x in rect.split_zeros(min_gap, min_len, max_missing_width, max_missing_height):
+                            yield x
 
+
+    def split_zeros_ext(self, 
+                    min_gap=3, 
+                    min_len=20,
+                    ):
+        y = self.mask.sum(axis=1) > 0
+        x = self.mask.sum(axis=0) > 0
+        
+        l = self.get_boundary_points_zeros(x, min_gap)
+        m = self.get_boundary_points_zeros(y, min_gap)
+        
+        
+        if len(l) == 1 and len(m) == 1:
+            flag_final = True
+        else:
+            flag_final = False
+        
+        for left, right in l:
+            for top, bottom in m:
+                if self.is_at_least_large_than(left, right, top, bottom,min_len):
+                    rect = self.crop(left, right, top, bottom)
+                    if flag_final:
+                        r = rect.cut_empty_margin()
+                        if r is not None and r.width > min_len and r.height > min_len:
+                            yield r
+                    else:
+                        for x in rect.split_zeros_ext(min_gap, min_len):
+                            yield x
+            
 
     @property
     def h_split_points(self):
@@ -795,16 +1077,82 @@ class RectImage(Rect):
             return img
         return img[self.top:self.bottom + 1, self.left:self.right+1, ...]
     
+    # def crop(self, left, right, top, bottom):
+    #     return RectImage(self.img,
+    #                      left, right, top, bottom,
+    #                      self.offset_x,
+    #                      self.offset_y,
+    #                      )
+
     def crop(self, left, right, top, bottom):
-        return RectImage(self.img,
-                         left, right, top, bottom,
-                         self.offset_x,
-                         self.offset_y,
+        '''
+        >>> ri1 = RectImage(img1)
+        >>> ri2 = ri1.crop(100,120,200,230)
+        >>> ri2
+        100 120 200 230<21, 31>
+        >>> ri2.crop(10,16,10,18)
+        110 116 210 218<7, 9>
+        '''
+        return RectImage(self.origin,
+                         *self.to_absolute(left, right, top, bottom),
                          )
     
     def is_valid(self, min_len=5):
-        return Rect.is_valid(self, min_len=min_len) and \
-            numpy.any(self.img > 0)
+        return self.is_valid_rect(self.left, 
+                                  self.right, 
+                                  self.top, 
+                                  self.bottom, 
+                                  min_len)
+    
+    @classmethod
+    def is_at_least_large_than(cls, left, right, top, bottom, min_len):        
+        width = right - left
+        height = bottom - top
+        return width >= min_len and \
+            height >= min_len
+            
+    @classmethod
+    def is_smaller_than(cls, left, right, top, bottom, 
+                        max_missing_width,
+                        max_missing_height
+                        ):
+        width = right - left
+        height = bottom - top
+        return width < max_missing_width and \
+            height < max_missing_height
+    
+    @classmethod
+    def is_valid_rect(cls, left, right, top, bottom, 
+                      min_len,
+                      max_missing_width=300,
+                      max_missing_height=150,
+                      ):
+        '''
+        >>> RectImage.is_valid_rect(0,10,0,5,10)
+        False
+        >>> RectImage.is_valid_rect(0,10,0,5,5)
+        True
+        >>> RectImage.is_valid_rect(0,10,0,5,6)
+        False
+        >>> RectImage.is_valid_rect(0,10,0,5,16)
+        False
+        >>> RectImage.is_valid_rect(0,301,0,5,5)
+        False
+        >>> RectImage.is_valid_rect(0,30,0,5,5)
+        True
+        >>> RectImage.is_valid_rect(0,30,0,145,5)
+        True
+        >>> RectImage.is_valid_rect(0,30,0,150,5)
+        False
+        '''
+        width = right - left
+        height = bottom - top
+        return width >= min_len and \
+            height >= min_len and \
+            width < max_missing_width and \
+            height < max_missing_height
+            
+        
 
 
     def get_nonzero_count(self, axis):
@@ -951,14 +1299,31 @@ class RectImage(Rect):
         return numpy.concatenate((a, b), axis=1)
     
     
-    def to_absolute(self):
-        self.move_left_top_to(self.offset_x, self.offset_y)
-        self.offset_x = 0
-        self.offset_y = 0
-        return self    
+    # def to_absolute(self):
+    #     self.move_left_top_to(self.offset_x, self.offset_y)
+    #     self.offset_x = 0
+    #     self.offset_y = 0
+    #     return self    
 
+# class RectImageLabelProb(RectImage):
+#     def __init__(self, 
+#                  img,
+#                  left=None, 
+#                  right=None, 
+#                  top=None, 
+#                  bottom=None,
+#                  label=None,
+#                  prob=None,
+#                  ):
+#         RectImage.__init__(self, img, left, right, top, bottom)
+#         self.label = label
+#         self.prob = prob
+    
+    
 
 if __name__ == "__main__":
     import doctest
+    img1 = file2array('test_split_zeros.bin')
+    mask1 = img1 > 0
     print(doctest.testmod(verbose=False, report=False))
     
