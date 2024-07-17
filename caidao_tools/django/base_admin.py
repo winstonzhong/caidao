@@ -58,6 +58,10 @@ class BaseAdmin(admin.ModelAdmin):
 
     class Media:
         js = []
+
+        # 示例: {'all': ['xxx']}
+        css = {}
+
         rel_js_path = 'static/js/htmx.min.js'
         if os.path.lexists(rel_js_path):
             js.append(f'/{rel_js_path}')
