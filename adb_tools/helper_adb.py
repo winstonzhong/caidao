@@ -484,12 +484,19 @@ class BaseAdb(object):
             l = r.output.splitlines()
             return int(re.split('\s+', l[1])[4]) if len(l) > 1 else None
         
-    def pull_lastest_file(self, to_dir=TMP_DIR, base_dir='/sdcard/DCIM/Camera'):
+    def pull_lastest_file(self, 
+                          to_dir=TMP_DIR, 
+                          base_dir='/sdcard/DCIM/Camera',
+                          fpath = None,
+                          ):
         src = self.get_latest_file(base_dir)
         if src:
-            if not os.path.lexists(to_dir):
-                os.makedirs(to_dir, exist_ok=True)
-            dst = dst=os.path.join(to_dir, os.path.basename(src))
+            if fpath is None:
+                if not os.path.lexists(to_dir):
+                    os.makedirs(to_dir, exist_ok=True)
+                dst = dst=os.path.join(to_dir, os.path.basename(src))
+            else:
+                dst = fpath
             self.ua2.pull(src, dst)
             print(dst)
             return dst
@@ -629,8 +636,8 @@ class BaseAdb(object):
             self.ua2.app_start(self.app_name, activity=self.activity, stop=True)
         return self
     
-    def open_certain_app(self, package, activity):
-        self.ua2.app_start(package, activity=activity, stop=False)
+    def open_certain_app(self, package, activity, stop=False):
+        self.ua2.app_start(package, activity=activity, stop=stop)
 
     def close_app(self):
         self.ua2.app_stop(self.app_name)

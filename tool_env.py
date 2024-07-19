@@ -234,6 +234,7 @@ def replace_stupid(s):
     '''
     s =  s.replace('客服', '客fu服').replace('微信','微x信').replace('加入', '夹入').replace('Keychron','凯克龙')
     s = s.replace('mPower','')
+    s = s.replace('交流','交x流')
     return s
     
 
