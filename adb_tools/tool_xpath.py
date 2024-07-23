@@ -25,9 +25,11 @@ class DummyWatcher(object):
         return False
 
 class DummyDevice(object):
-    def __init__(self, fpath, adb=None):
-        with open(fpath, 'r', encoding='utf8') as fp:
-            self.init(fp.read())
+    def __init__(self, fpath=None, adb=None, xml=None):
+        if xml is None:
+            with open(fpath, 'r', encoding='utf8') as fp:
+                xml = fp.read()
+        self.init(xml)
         self.adb = adb
         
     
@@ -49,6 +51,9 @@ class DummyDevice(object):
     
     def move_to(self, *a, **k):
         print(a, k)
+
+    def find_xpath_safe(self, x):
+        return find_by_xpath(self, x)    
     
 class SnapShotDevice(DummyDevice):
     def __init__(self, adb):
