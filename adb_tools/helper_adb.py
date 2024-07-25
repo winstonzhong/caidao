@@ -884,15 +884,15 @@ class BaseAdb(object):
         
     
     @classmethod
-    def start_scrcpy(cls, ip_port, encoding='utf8'):
+    def start_scrcpy(cls, ip_port, encoding='utf8', shell=True, return_directly=False):
         process = subprocess.Popen(f'scrcpy -s {ip_port} --no-audio --always-on-top', 
                                    encoding=encoding, 
-                                   shell=True, 
+                                   shell=shell, 
                                    stdin=subprocess.PIPE, 
                                    stdout=subprocess.PIPE, 
                                    stderr=subprocess.PIPE
                                    )
-        return process.communicate()
+        return process.communicate() if not return_directly else None
     
     def setup(self, encoding='utf8'):
         process = subprocess.Popen(f'{adb_exe} -s {self.device["id"]} tcpip {self.device["port"]}', 
