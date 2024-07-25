@@ -1067,7 +1067,8 @@ class BaseAdb(object):
 
     @classmethod
     def first_adb_usb(cls):
-        return cls(cls.first_device_usb())
+        d = cls.first_device_usb()
+        return cls(d) if d else None
 
     @classmethod
     def first_adb_ip(cls):

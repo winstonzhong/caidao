@@ -656,6 +656,12 @@ class Rect(object):
     def to_lrtb(self):
         return self.left, self.right, self.top, self.bottom
     
+    def to_bounds(self):
+        return self.left, self.top, self.right, self.bottom
+
+    def to_ltrb(self):
+        return self.to_bounds()
+    
     def to_lrtb_dict(self):
         return {'left':self.left,
                 'right':self.right,
@@ -694,7 +700,13 @@ class Rect(object):
 
     @classmethod
     def from_ltwh(cls, left, top, width, height):
-        return cls(left, left+width, top, top+height) 
+        return cls(left, left+width, top, top+height)
+    
+
+    @classmethod
+    def from_ltrb(cls, left, top, right, bottom):
+        return cls(left, right, top, bottom)
+     
 
     @classmethod
     def from_xywh(cls, x, y, width, height):
@@ -703,6 +715,9 @@ class Rect(object):
                    y - height//2,
                    y + height//2, 
                    ) 
+        
+    def offset(self, px, py):
+        return self.left + int(self.width * px), self.top + int(self.height * py)
 
     
 class RectImage(Rect):
