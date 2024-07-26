@@ -4,12 +4,14 @@ Created on 2023年6月12日
 @author: lenovo
 '''
 import itertools
+import re
 
 from cached_property import cached_property
 import numpy
+from numpy.lib._iotools import _is_string_like
 import pandas
-from tool_numpy import numpy_fill, file2array
 
+from tool_numpy import numpy_fill, file2array
 
 
 LEFT_DIRECTION = -1
@@ -36,6 +38,8 @@ class Rect(object):
     FACE_DENSITY = 0.04
     
     MIN_FACE_WIDTH = 40
+    
+    ptn_bounds = re.compile('[\d\.]+')
 
     @classmethod
     def get_exact_division_size(cls, w, h):
@@ -720,7 +724,24 @@ class Rect(object):
         return self.left + int(self.width * px), self.top + int(self.height * py)
     
     
-    
+    @classmethod
+    def from_lrtb(cls, lrtb):
+        '''
+        >>> Rect.from_lrtb((1,2,3,4))
+        1 2 3 4<1, 1>
+        >>> Rect.from_lrtb('(1,2,3,4)')
+        1 2 3 4<1, 1>
+        >>> Rect.from_lrtb('[1,2,3,4]')
+        1 2 3 4<1, 1>
+        >>> Rect.from_lrtb('[1, 2, 3, 4]')
+        1 2 3 4<1, 1>
+        '''
+        if not _is_string_like(lrtb):
+            return cls(*lrtb)
+        else:
+            l = cls.ptn_bounds.findall(lrtb)
+            assert len(l) == 4
+            return cls(*[int(x) for x in l])
 
     
 class RectImage(Rect):
