@@ -883,6 +883,9 @@ class BaseAdb(object):
         return process.communicate() 
         
     
+    def connect(self):
+        return self.reconnect(self.ip_port)
+    
     @classmethod
     def start_scrcpy(cls, ip_port, encoding='utf8', shell=True, return_directly=False):
         process = subprocess.Popen(f'scrcpy -s {ip_port} --no-audio --always-on-top', 

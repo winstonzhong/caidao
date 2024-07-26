@@ -718,6 +718,9 @@ class Rect(object):
         
     def offset(self, px, py):
         return self.left + int(self.width * px), self.top + int(self.height * py)
+    
+    
+    
 
     
 class RectImage(Rect):
@@ -1312,27 +1315,6 @@ class RectImage(Rect):
             )
         b = self.predict_simple_rule(a).reshape(-1,1)
         return numpy.concatenate((a, b), axis=1)
-    
-    
-    # def to_absolute(self):
-    #     self.move_left_top_to(self.offset_x, self.offset_y)
-    #     self.offset_x = 0
-    #     self.offset_y = 0
-    #     return self    
-
-# class RectImageLabelProb(RectImage):
-#     def __init__(self, 
-#                  img,
-#                  left=None, 
-#                  right=None, 
-#                  top=None, 
-#                  bottom=None,
-#                  label=None,
-#                  prob=None,
-#                  ):
-#         RectImage.__init__(self, img, left, right, top, bottom)
-#         self.label = label
-#         self.prob = prob
     
     
 
