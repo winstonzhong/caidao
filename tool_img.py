@@ -848,7 +848,8 @@ class SquareRect(object):
 
 def get_contour_array(mask):
     contours, _  = cv2.findContours(mask, 
-                                    cv2.RETR_EXTERNAL,
+                                    # cv2.RETR_EXTERNAL,
+                                    cv2.RETR_LIST,
                                     cv2.CHAIN_APPROX_SIMPLE, 
                                     )
     return numpy.stack([cv2.boundingRect(x) for x in contours])
