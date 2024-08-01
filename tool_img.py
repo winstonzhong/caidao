@@ -845,6 +845,72 @@ class SquareRect(object):
             print(sr.points.tolist())
             return sr.contour, sr.points 
 
+
+def get_contour_array(mask):
+    contours, _  = cv2.findContours(mask, 
+                                    cv2.RETR_EXTERNAL,
+                                    cv2.CHAIN_APPROX_SIMPLE, 
+                                    )
+    return numpy.stack([cv2.boundingRect(x) for x in contours])
+
+def filter_contour_array(a, max_width, max_height, min_len=10):
+    return a[(a[:,2] < max_width) & (a[:,3] < max_height) & (a[:,2] >= min_len) & (a[:,3] > min_len) ]
+
+def get_default_config_by_width_height(width, height):
+    return {
+            'max_width': width * 1.1,
+            'max_height': height * 1.1,
+            'min_len': min(width, height) / 8,
+        }
+
+def get_default_config_by_rect(rect):
+    return get_default_config_by_width_height(rect.width, rect.height)
+
+def filter_contour_array_by_rect(a, rect):
+    return filter_contour_array(a, **get_default_config_by_rect(rect))
+
+def filter_contour_array_by_wh(a, width, height):
+    return filter_contour_array(a, **get_default_config_by_width_height(width, height))
+
+def compute_group_distance(a, gap):
+    half = a[...,2:] // 2
+    center = a[...,0:2] + half
+    delta = numpy.abs(center - center[0]) - half - half[0]  
+    return a[numpy.all( delta < gap, axis=1)], a[numpy.any( delta >= gap, axis=1)]
+
+def get_bounding_rect(a):
+    return cv2.boundingRect(numpy.concatenate((a[...,:2], a[...,:2] + a[...,2:])))
+
+def get_rect_by_group(a, gap):
+    while 0 not in a.shape:
+        b, a = compute_group_distance(a, gap)
+        yield get_bounding_rect(b)
+
+def get_bounding_array_by_group(a, gap):
+    return numpy.stack(list(get_rect_by_group(a, gap))) 
+
+def get_bounding_dict_list_by_group(a, gap, x, y):
+    a = get_bounding_array_by_group(a, gap)
+    center = a[...,0:2] + a[...,2:]//2
+    distance = numpy.linalg.norm(center - (x,y), axis=1)
+
+    return [{'bounds':Rect.from_ltwh(*a[i]).to_lrtb(),
+             'distance':distance[i],
+             'w': a[i][2],
+             'h': a[i][3],
+             'center':center[i].tolist(),
+             } for i in range(a.shape[0])] 
+    
+def get_bounding_df_by_group(a, gap, x, y, task_id):
+    l = get_bounding_dict_list_by_group(a, gap, x, y)
+    for d in l:
+        b = d.pop('bounds')
+        d['img'] = f'<img src="/admin/tasks/task/img_rect_view/?id={task_id}&bounds={b}" />'
+    df = pandas.DataFrame(l)
+    df = df.sort_values(by='distance').reset_index(drop=True)
+    return df
+
+
 class FracContours(object):
     def __init__(self, contours, w, h, max_len=40):
         l = list(map(lambda x:cv2.boundingRect(x), contours))
