@@ -876,22 +876,31 @@ def filter_contour_array_by_wh(a, width, height):
 def compute_group_distance(a, gap):
     half = a[...,2:] // 2
     center = a[...,0:2] + half
-    delta = numpy.abs(center - center[0]) - half - half[0]  
+    i = numpy.product(half,axis=1).argmax()
+    delta = numpy.abs(center - center[i]) - half - half[i]  
     return a[numpy.all( delta < gap, axis=1)], a[numpy.any( delta >= gap, axis=1)]
 
 def get_bounding_rect(a):
     return cv2.boundingRect(numpy.concatenate((a[...,:2], a[...,:2] + a[...,2:])))
 
-def get_rect_by_group(a, gap):
+def get_rect_by_group(a, gap, max_width, max_height):
     while 0 not in a.shape:
         b, a = compute_group_distance(a, gap)
-        yield get_bounding_rect(b)
+        bounds = get_bounding_rect(b)
+        
+        if bounds[2] > max_width + gap or bounds[3] > max_height + gap:
+            continue
+        
+        if len(b) > 1:
+            a = numpy.concatenate((numpy.array(bounds).reshape(1,-1), a))
+        else:
+            yield get_bounding_rect(b)
 
-def get_bounding_array_by_group(a, gap):
-    return numpy.stack(list(get_rect_by_group(a, gap))) 
+def get_bounding_array_by_group(a, gap, max_width, max_height):
+    return numpy.stack(list(get_rect_by_group(a, gap, max_width, max_height))) 
 
-def get_bounding_dict_list_by_group(a, gap, x, y):
-    a = get_bounding_array_by_group(a, gap)
+def get_bounding_dict_list_by_group(a, gap, x, y, max_width, max_height):
+    a = get_bounding_array_by_group(a, gap, max_width, max_height)
     center = a[...,0:2] + a[...,2:]//2
     distance = numpy.linalg.norm(center - (x,y), axis=1)
 
@@ -902,8 +911,8 @@ def get_bounding_dict_list_by_group(a, gap, x, y):
              'center':center[i].tolist(),
              } for i in range(a.shape[0])] 
     
-def get_bounding_df_by_group(a, gap, x, y, task_id):
-    l = get_bounding_dict_list_by_group(a, gap, x, y)
+def get_bounding_df_by_group(a, gap, x, y, task_id, max_width, max_height):
+    l = get_bounding_dict_list_by_group(a, gap, x, y, max_width, max_height)
     for d in l:
         b = d.pop('bounds')
         d['img'] = f'<img src="/admin/tasks/task/img_rect_view/?id={task_id}&bounds={b}" />'
