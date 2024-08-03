@@ -911,22 +911,6 @@ def get_bounding_dict_list_by_group(a, gap, x, y, max_width, max_height):
              'center':center[i].tolist(),
              } for i in range(a.shape[0])] 
     
-def get_bounding_df_by_group(a, gap, x, y, task_id, max_width, max_height):
-    l = get_bounding_dict_list_by_group(a, gap, x, y, max_width, max_height)
-    for d in l:
-        b = d.pop('bounds')
-        d['img'] = f'''<img src="/admin/tasks/task/img_rect_view/?id={task_id}&bounds={b}" />
-        '''.replace("\n", "")
-        d['mask'] = f'''<img src="/admin/tasks/task/img_rect_view/?id={task_id}&bounds={b}&mask=1" />
-        '''.replace("\n", "")
-        d['action'] = f'''<input type=button name='' value='存原图' />
-        <input type=button name='' value='存掩码' />
-        '''.replace("\n", "")
-        
-    df = pandas.DataFrame(l)
-    df = df.sort_values(by='distance').reset_index(drop=True)
-    return df
-
 
 class FracContours(object):
     def __init__(self, contours, w, h, max_len=40):
