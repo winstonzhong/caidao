@@ -73,7 +73,18 @@ def pil2cv2(img):
     return cv2.cvtColor(numpy.asarray(img),cv2.COLOR_RGB2BGR)
 
 def cv2pil(img):
-    return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB)) 
+    return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+
+def cv2bytes(a):
+    buffer = io.BytesIO()
+    numpy.savez_compressed(buffer,
+               a, 
+    )
+    return buffer.getvalue()
+
+def bytes2cv2(b):
+    return numpy.load(io.BytesIO(b))['arr_0']
+     
 
 def bin2img(b):
     if b is not None:
@@ -101,7 +112,7 @@ def to_buffer(img, suffix='.png'):
 
 def img2io(img):
     return io.BytesIO(to_buffer(img))
-# io_buf = io.BytesIO(im_buf_arr)
+
 
 def img2base64(img):
     if img is not None:
