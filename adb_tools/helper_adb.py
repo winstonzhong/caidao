@@ -639,6 +639,9 @@ class BaseAdb(object):
     def open_certain_app(self, package, activity, stop=False):
         self.ua2.app_start(package, activity=activity, stop=stop)
 
+    def close_certain_app(self, app_name):
+        self.ua2.app_stop(app_name)
+
     def close_app(self):
         self.ua2.app_stop(self.app_name)
         return self
