@@ -84,7 +84,12 @@ def cv2bytes(a):
 
 def bytes2cv2(b):
     return numpy.load(io.BytesIO(b))['arr_0']
-     
+
+def cv2b64(a):
+    return base64.b64encode(cv2bytes(a)).decode()
+
+def b642cv2(s):
+    return bytes2cv2(base64.b64decode(s.encode('utf8')))
 
 def bin2img(b):
     if b is not None:
