@@ -18,6 +18,7 @@ class AppIncomeAbstract(AbstractModel):
     coin = models.DecimalField(verbose_name="金币数量", max_digits=10, decimal_places=2, default=0)
     balance = models.DecimalField(verbose_name="余额", max_digits=6, decimal_places=2, default=0)
     withdraw = models.DecimalField(verbose_name="提现金额", max_digits=6, decimal_places=2, default=0)
+    exchange_ratio = models.IntegerField(verbose_name="兑换比", default=0)
 
     class Meta:
         abstract = True
