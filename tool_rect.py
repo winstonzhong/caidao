@@ -708,7 +708,29 @@ class Rect(object):
     
 
     @classmethod
-    def from_ltrb(cls, left, top, right, bottom):
+    def from_ltrb(cls, *ltrb):
+        '''
+        >>> Rect.from_ltrb(*(1,2,3,4))
+        1 3 2 4<2, 2>
+        >>> Rect.from_ltrb('(1,2,3,4)')
+        1 3 2 4<2, 2>
+        >>> Rect.from_ltrb('[1,2,3,4]')
+        1 3 2 4<2, 2>
+        >>> Rect.from_ltrb('[1, 2, 3, 4]')
+        1 3 2 4<2, 2>
+        '''
+        if len(ltrb) == 4:
+            left, top, right, bottom = ltrb
+        elif len(ltrb) == 1:
+            ltrb = ltrb[0]
+            if not _is_string_like(ltrb[0]):
+                left, top, right, bottom = ltrb
+            else:
+                l = cls.ptn_bounds.findall(ltrb)
+                assert len(l) == 4
+                left, top, right, bottom = [int(x) for x in l]
+        else:
+            raise ValueError
         return cls(left, right, top, bottom)
      
 
