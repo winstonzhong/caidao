@@ -4,7 +4,10 @@ Created on 2022年8月9日
 @author: lenovo
 '''
 
-from cryptography.fernet import Fernet, InvalidToken 
+import base64
+import json
+
+from cryptography.fernet import Fernet, InvalidToken
 
 
 F = Fernet(b'x5ThDXyOi5twIV_4dmXz-efWK-sXzrc3QQeU3nsTRB0=')
@@ -46,6 +49,18 @@ def load_key(fpath_key):
         pass
     return username, groupname
 
+class JsonSecret(object):
+    def __init__(self, key):
+        self.fn = Fernet(key)
+    
+    def encrypt(self, d):
+        s = json.dumps(d)
+        return self.fn.encrypt(s.encode())
+    
+    def decrypt(self, s):
+        s = self.fn.decrypt(s.encode() if type(s) == str else s)
+        return json.loads(s.decode())    
+    
 
 if __name__ == '__main__':
     import doctest

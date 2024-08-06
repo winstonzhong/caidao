@@ -73,7 +73,23 @@ def pil2cv2(img):
     return cv2.cvtColor(numpy.asarray(img),cv2.COLOR_RGB2BGR)
 
 def cv2pil(img):
-    return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB)) 
+    return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+
+def cv2bytes(a):
+    buffer = io.BytesIO()
+    numpy.savez_compressed(buffer,
+               a, 
+    )
+    return buffer.getvalue()
+
+def bytes2cv2(b):
+    return numpy.load(io.BytesIO(b))['arr_0']
+
+def cv2b64(a):
+    return base64.b64encode(cv2bytes(a)).decode()
+
+def b642cv2(s):
+    return bytes2cv2(base64.b64decode(s.encode('utf8')))
 
 def bin2img(b):
     if b is not None:
@@ -101,7 +117,7 @@ def to_buffer(img, suffix='.png'):
 
 def img2io(img):
     return io.BytesIO(to_buffer(img))
-# io_buf = io.BytesIO(im_buf_arr)
+
 
 def img2base64(img):
     if img is not None:
@@ -844,6 +860,73 @@ class SquareRect(object):
             print(sr.df)
             print(sr.points.tolist())
             return sr.contour, sr.points 
+
+
+def get_contour_array(mask):
+    contours, _  = cv2.findContours(mask, 
+                                    # cv2.RETR_EXTERNAL,
+                                    cv2.RETR_LIST,
+                                    cv2.CHAIN_APPROX_SIMPLE, 
+                                    )
+    return numpy.stack([cv2.boundingRect(x) for x in contours])
+
+def filter_contour_array(a, max_width, max_height, min_len=10):
+    return a[(a[:,2] < max_width) & (a[:,3] < max_height) & (a[:,2] >= min_len) & (a[:,3] > min_len) ]
+
+def get_default_config_by_width_height(width, height):
+    return {
+            'max_width': width * 1.1,
+            'max_height': height * 1.1,
+            'min_len': min(width, height) / 8,
+        }
+
+def get_default_config_by_rect(rect):
+    return get_default_config_by_width_height(rect.width, rect.height)
+
+def filter_contour_array_by_rect(a, rect):
+    return filter_contour_array(a, **get_default_config_by_rect(rect))
+
+def filter_contour_array_by_wh(a, width, height):
+    return filter_contour_array(a, **get_default_config_by_width_height(width, height))
+
+def compute_group_distance(a, gap):
+    half = a[...,2:] // 2
+    center = a[...,0:2] + half
+    i = numpy.product(half,axis=1).argmax()
+    delta = numpy.abs(center - center[i]) - half - half[i]  
+    return a[numpy.all( delta < gap, axis=1)], a[numpy.any( delta >= gap, axis=1)]
+
+def get_bounding_rect(a):
+    return cv2.boundingRect(numpy.concatenate((a[...,:2], a[...,:2] + a[...,2:])))
+
+def get_rect_by_group(a, gap, max_width, max_height):
+    while 0 not in a.shape:
+        b, a = compute_group_distance(a, gap)
+        bounds = get_bounding_rect(b)
+        
+        if bounds[2] > max_width + gap or bounds[3] > max_height + gap:
+            continue
+        
+        if len(b) > 1:
+            a = numpy.concatenate((numpy.array(bounds).reshape(1,-1), a))
+        else:
+            yield get_bounding_rect(b)
+
+def get_bounding_array_by_group(a, gap, max_width, max_height):
+    return numpy.stack(list(get_rect_by_group(a, gap, max_width, max_height))) 
+
+def get_bounding_dict_list_by_group(a, gap, x, y, max_width, max_height):
+    a = get_bounding_array_by_group(a, gap, max_width, max_height)
+    center = a[...,0:2] + a[...,2:]//2
+    distance = numpy.linalg.norm(center - (x,y), axis=1)
+
+    return [{'bounds':Rect.from_ltwh(*a[i]).to_lrtb(),
+             'distance':distance[i],
+             'w': a[i][2],
+             'h': a[i][3],
+             'center':center[i].tolist(),
+             } for i in range(a.shape[0])] 
+    
 
 class FracContours(object):
     def __init__(self, contours, w, h, max_len=40):

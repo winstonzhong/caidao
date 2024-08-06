@@ -743,6 +743,22 @@ class Rect(object):
             assert len(l) == 4
             return cls(*[int(x) for x in l])
 
+
+    @classmethod
+    def cut_empty(cls, img):
+        a = numpy.any(img > 0, axis=1)
+        t = numpy.where(a == 1)[0]
+        if t.shape[0] == 0:
+            return None, None
+        return t[0], t[-1]
+    
+    @classmethod
+    def cut_empty_margin_img(cls, img):
+        top, bottom = cls.cut_empty(img)
+        if top is not None and bottom is not None:
+            left, right = cls.cut_empty(img.T)
+            return Rect(left,right, top, bottom).crop_img(img)
+
     
 class RectImage(Rect):
     DIRECTION_H = 0
@@ -807,28 +823,6 @@ class RectImage(Rect):
     def img(self):
         return self.crop_img(self.origin)
     
-    @classmethod
-    def cut_empty(cls, img):
-        a = numpy.any(img > 0, axis=1)
-        t = numpy.where(a == 1)[0]
-        if t.shape[0] == 0:
-            return None, None
-        return t[0], t[-1]
-    
-    @classmethod
-    def cut_empty_margin_img(cls, img, offset_x, offset_y):
-        top, bottom = cls.cut_empty(img)
-        if top is not None and bottom is not None:
-            left, right = cls.cut_empty(img.T)
-            return cls(img, 
-                       left, 
-                       right, 
-                       top, 
-                       bottom,
-                       offset_x,
-                       offset_y,
-                       )
-
     @classmethod
     def cut_empty_margin_lrtb(cls, img):
         top, bottom = cls.cut_empty(img)
