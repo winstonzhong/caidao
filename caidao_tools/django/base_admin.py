@@ -56,6 +56,10 @@ class BaseAdmin(admin.ModelAdmin):
             del actions["delete_selected"]
         return actions
 
+    def get_queryset(self, request):
+        self.request = request
+        return super().get_queryset(request)
+
     class Media:
         js = []
 
@@ -65,3 +69,28 @@ class BaseAdmin(admin.ModelAdmin):
         rel_js_path = 'static/js/htmx.min.js'
         if os.path.lexists(rel_js_path):
             js.append(f'/{rel_js_path}')
+
+
+class CodeBaseAdmin(BaseAdmin):
+    class Media:
+        additional_js_list = [
+            '/static/js/codemirror/lib/codemirror.js',
+            '/static/js/codemirror/addon/display/fullscreen.js',
+            '/static/js/codemirror/addon/edit/matchbrackets.js',
+            '/static/js/codemirror/addon/selection/active-line.js',
+            '/static/js/codemirror/mode/python/python.js',
+            '/static/js/utils.js',
+        ]
+        # BaseAdmin.Media.js += additional_js_list
+    
+        additional_css_dict = {
+            'all': ['/static/css/codemirror/lib/codemirror.css',
+                    '/static/css/codemirror/addon/display/fullscreen.css',
+                    '/static/css/codemirror/theme/monokai.css',
+                    '/static/css/codemirror/theme/blackboard.css',
+                    '/static/css/default.min.css',
+                    ]
+        }
+
+        js = ['/static/js/htmx.min.js', '/static/js/highlight.min.js'] + additional_js_list
+        css = additional_css_dict
