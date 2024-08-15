@@ -631,13 +631,13 @@ class BaseAdb(object):
         """
         return self.ua2.app_list()
 
-    def open_app(self, force_open=False):
+    def open_app(self, force_open=False, use_monkey=False):
         if force_open or not self.is_app_opened():
-            self.ua2.app_start(self.app_name, activity=self.activity, stop=True)
+            self.ua2.app_start(self.app_name, activity=self.activity, stop=True, use_monkey=use_monkey)
         return self
     
-    def open_certain_app(self, package, activity, stop=False):
-        self.ua2.app_start(package, activity=activity, stop=stop)
+    def open_certain_app(self, package, activity, stop=False, use_monkey=False):
+        self.ua2.app_start(package, activity=activity, stop=stop, use_monkey=use_monkey)
 
     def close_certain_app(self, app_name):
         self.ua2.app_stop(app_name)
