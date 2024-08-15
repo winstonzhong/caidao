@@ -11,7 +11,6 @@ class AppAbstract(AbstractModel):
 
 
 class AppIncomeAbstract(AbstractModel):
-
     app_id = models.IntegerField(verbose_name="应用ID", default=0)
     app_name = models.CharField(verbose_name="应用名称", max_length=20, default='')
     device = models.CharField(verbose_name="设备名称", max_length=20, default='')
