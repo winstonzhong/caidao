@@ -700,6 +700,17 @@ class BaseAdb(object):
             fp.write(self.get_page())
         if show:
             webbrowser.open(f'file:///{fpath}')
+            
+    
+    def show_element(self, element):
+        import webbrowser
+        from lxml import etree
+        fpath = BASE_DIR / 'elem.xml'
+        xml = etree.tostring(element.elem, pretty_print=True)
+        with open(fpath, 'wb') as fp:
+            fp.write(xml)
+        webbrowser.open(f'file:///{fpath}')
+    
 
     def save_error_page(self, error_dir, page_name=None):
         import traceback
