@@ -14,6 +14,7 @@ import pytz
 
 from tool_env import is_string
 from tool_ffmpeg import to_seconds
+import numpy
 
 
 # from django.utils import timezone as datetime
@@ -251,8 +252,23 @@ def convert_time_utc(s):
     return s.dt.tz_localize(tz='utc')
 
 
+def is_between(v, start, end, include_equal=True):
+    '''
+    >>> is_between(1, 1, 2)
+    True
+    >>> is_between(1, 1, 2, False)
+    False
+    >>> is_between(1, 6, 2)
+    False
+    >>> is_between(1, 6, 2, False)
+    False
+    '''
+    if include_equal:
+        return v <= max(start, end) and v >= min(start, end)
+    return v < max(start, end) and v > min(start, end)
+
+
 if __name__ == '__main__':
     import doctest
-    import numpy
     print(doctest.testmod(verbose=False, report=False))
     
