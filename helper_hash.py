@@ -26,16 +26,25 @@ class MyEncoder(json.JSONEncoder):
         else:
             return super(MyEncoder, self).default(obj)
 
+def get_hash_bytes(b):
+    return hashlib.sha256(b).hexdigest()
+
 def get_hash(txt):
-    return hashlib.sha256(txt.encode()).hexdigest()
+    return get_hash_bytes(txt.encode())
+    # return hashlib.sha256(txt.encode()).hexdigest()
 
 def get_hash_img(img):
     return hashlib.sha256(img.tobytes()).hexdigest()
 
 def get_hash_df(df):
     return get_hash_jsonable(df.to_dict('records'))
-    # return hashlib.sha256(json.dumps(df.to_dict('records'),cls=MyEncoder).encode('utf8')).hexdigest()
-    # return hashlib.sha256(df.to_numpy().tobytes()).hexdigest() if df is not None else None
+
+def get_hash_dict(d, exclude_filter=None):
+    keys = d.keys() if exclude_filter is None else filter(exclude_filter, d.keys()) 
+    keys = list(keys)
+    keys.sort()
+    txt = ' '.join([f'{k}={d.get(k)}' for k in keys])
+    return get_hash(txt)
 
 def get_hash_jsonable(l):
     return hashlib.sha256(json.dumps(l,cls=MyEncoder).encode('utf8')).hexdigest() if l else None
