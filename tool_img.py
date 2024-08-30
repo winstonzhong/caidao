@@ -91,6 +91,9 @@ def cv2b64(a):
 def b642cv2(s):
     return bytes2cv2(base64.b64decode(s.encode('utf8')))
 
+def b642bin(b64):
+    return base64.b64decode(b64)
+
 def bin2img(b):
     if b is not None:
         img = numpy.frombuffer(b, numpy.uint8)
