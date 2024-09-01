@@ -518,6 +518,13 @@ class BaseAdb(object):
             old_size = new_size
             time.sleep(1)
         raise NoFileDownloadedError
+    
+    def pull_latest_picture_weixin(self,
+                                   to_dir=TMP_DIR,
+                                   base_dir='/sdcard/Pictures/WeiXin',
+                                   max_retry=100,
+                                   ):
+        return self.pull_lastest_file_until(to_dir, base_dir, max_retry)
         
     def pull_lastest_file_to_local_tmp(self, base_dir='/sdcard/DCIM/Camera', tmp_dir=None):
         return self.pull_lastest_file(to_dir=TMP_DIR if tmp_dir is None else tmp_dir, base_dir=base_dir)
