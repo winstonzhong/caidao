@@ -359,7 +359,7 @@ class BaseAdb(object):
         return self.get_latest_file(base_dir=self.CAMERA_DIR)
     
     def pull_latest_camera_file(self, to_dir):
-        self.pull_lastest_file(to_dir, base_dir=self.CAMERA_DIR)
+        return self.pull_lastest_file(to_dir, base_dir=self.CAMERA_DIR)
         
     def fix_jy_giveup_draft(self):
         # text="放弃" resource-id="com.lemon.lv:id/tvCancelResume" class="android.widget.TextView"

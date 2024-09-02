@@ -44,6 +44,7 @@ def get_hash_dict(d, exclude_filter=None):
     keys = list(keys)
     keys.sort()
     txt = ' '.join([f'{k}={d.get(k)}' for k in keys])
+    # print(txt)
     return get_hash(txt)
 
 def get_hash_jsonable(l):
