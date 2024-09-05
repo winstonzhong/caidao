@@ -8,7 +8,7 @@ import re
 
 import numpy
 
-
+import pandas
 from tool_rect import Rect
 from numpy.lib._iotools import _is_string_like
 
@@ -423,7 +423,54 @@ def simple_encode(line, v=122):
     l = list(line)
     return ''.join(map(lambda x:chr(ord(x) ^ v), l))
 
+
+def first_or_last(list_like, i, default=None):
+    if isinstance(list_like, pandas.DataFrame):
+        return default if list_like.empty else list_like.iloc[i]
+    if list_like is not None and len(list_like) > 0:
+        return list(list_like)[i]
+    return default
+
+def first(list_like, default=None):
+    '''
+    >>> first([])
+    >>> first(None)
+    >>> first(None, 'test') == 'test'
+    True
+    >>> first([3,2,1]) == 3
+    True
+    >>> first(empty_s)
+    >>> first(demo_s) == 1
+    True
+    >>> first(empty_df)
+    >>> first(demo_df).x
+    1
+    '''
+    return first_or_last(list_like, 0, default)
+
+def last(list_like, default=None):
+    '''
+    >>> last([])
+    >>> last(None)
+    >>> last(None, 'test') == 'test'
+    True
+    >>> last([3,2,1]) == 1
+    True
+    >>> last(empty_s)
+    >>> last(demo_s) == 2
+    True
+    >>> last(empty_df)
+    >>> last(demo_df).x
+    2
+    '''
+    return first_or_last(list_like, -1, default)
+
 if __name__ == '__main__':
     import doctest
+    
+    empty_s = pandas.Series([], dtype='str')
+    demo_s = pandas.Series([1,2])
+    empty_df = pandas.DataFrame()
+    demo_df = pandas.DataFrame([{'x':1}, {'x':2}])
     mulline_text = r'人家\r\n磁带非但没被淘汰，容量还比硬盘大了123'
     print(doctest.testmod(verbose=False, report=False))
