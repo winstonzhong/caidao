@@ -1234,6 +1234,10 @@ class BaseAdb(object):
         self.execute(f'input tap {x} {y}')
         return self
     
+    def do_dbclick(self, x, y):
+        self.execute(f'input tap {x} {y}&sleep 0.1;input tap {x} {y}')
+        return self
+    
     def do_double_click(self, x, y):
         self.ua2.double_click(x, y, 0.01)
     
