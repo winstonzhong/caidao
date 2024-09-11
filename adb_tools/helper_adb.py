@@ -282,6 +282,8 @@ class BaseAdb(object):
     
     CAMERA_DIR = '/sdcard/DCIM/Camera'
     
+    PICTURES_DIR = '/sdcard/Pictures'
+    
     if not os.path.lexists(DIR_CFG):
         os.makedirs(DIR_CFG, exist_ok=True)
 
@@ -567,7 +569,17 @@ class BaseAdb(object):
         time.sleep(sleep_span)
         self.broadcast(dst)
         return dst
-        
+    
+    def push_file_to_pictures(self,
+                              src, 
+                              sleep_span=0.1, 
+                              use_timestamp=True):
+        return self.push_file_to_temp(src, 
+                                      sleep_span, 
+                                      False, 
+                                      use_timestamp, 
+                                      self.PICTURES_DIR)
+                
     def push_file_to_download(self, 
                               src, 
                               sleep_span=0.1, 
