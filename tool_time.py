@@ -105,6 +105,9 @@ def from_dashdate(line):
         return line
     return datetime.datetime.fromtimestamp(mktime(strptime(line, "%Y-%m-%d")))
 
+def to_date(line):
+    return from_dashdate(dash_date(line)).date()
+
 def get_today(today=None):
     return from_dashdate(today) if today is not None else shanghai_time_now()
 
