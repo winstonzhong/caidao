@@ -655,7 +655,12 @@ class BaseAdb(object):
             self.ua2.app_start(self.app_name, activity=self.activity, stop=True, use_monkey=use_monkey)
         return self
     
-    def open_certain_app(self, package, activity, stop=False, use_monkey=False):
+    def open_certain_app(self, 
+                         package, 
+                         activity, 
+                         stop=False, 
+                         use_monkey=False,
+                         ):
         self.ua2.app_start(package, activity=activity, stop=stop, use_monkey=use_monkey)
 
     def close_certain_app(self, app_name):
@@ -1245,10 +1250,19 @@ class BaseAdb(object):
     def do_click(self, x, y):
         self.execute(f'input tap {x} {y}')
         return self
+
+    def 特殊双击(self, x, y):
+        self.execute(f'input tap {x} {y}&sleep 0.1;input tap {x} {y}&sleep 0.01;input tap {x} {y}')
+        return self
+        # self.do_click(x, y)
+        # time.sleep(0.1)
+        # self.ua2.double_click(x, y, 0.01)
     
     def do_dbclick(self, x, y):
-        self.execute(f'input tap {x} {y}&sleep 0.1;input tap {x} {y}')
-        return self
+        return self.特殊双击(x, y)
+        # self.execute(f'input tap {x} {y}&sleep 0.1;input tap {x} {y}')
+        # return self
+    
     
     def do_double_click(self, x, y):
         self.ua2.double_click(x, y, 0.01)
