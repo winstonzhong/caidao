@@ -1107,7 +1107,7 @@ class BaseAdb(object):
     def is_offline(cls, ip_port):
         l = cls.get_devices_as_dict()
         l = list(filter(lambda x:x.get('id') == ip_port, l))
-        return l[0].get('offline')
+        return l[0].get('offline') if  l else None
     
     
     @classmethod
