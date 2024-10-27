@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import random
 import re
+from subprocess import TimeoutExpired
 import subprocess
 import time
 
@@ -20,13 +21,13 @@ import uiautomator2
 from uiautomator2.xpath import XMLElement
 
 from adb_tools import tool_devices
-from adb_tools.common.exceptions import ElementNotFoundError,\
+from adb_tools.common.exceptions import ElementNotFoundError, \
     NotNeedFurtherActions, TplNotFoundError
 from adb_tools.tool_xpath import find_by_xpath, SteadyDevice
 from helper_net import retry
 from tool_env import is_ipv4, is_string, bounds_to_center
 from tool_file import get_suffix
-from tool_img import bin2img, get_template_points, pil2cv2, to_gray, mask_to_img,\
+from tool_img import bin2img, get_template_points, pil2cv2, to_gray, mask_to_img, \
     rgb_to_mono, cut_empty_margin
 
 
@@ -910,6 +911,20 @@ class BaseAdb(object):
         raise ValueError(x)
     
     @classmethod
+    def kill_adb_server(cls, encoding='utf8'):
+        # f'{adb_exe} kill-server'
+        cmd = 'taskkill /F /IM adb.exe'
+        process = subprocess.Popen(cmd, 
+                                    # encoding=encoding, 
+                                   shell=True, 
+                                   stdin=subprocess.PIPE, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE
+                                   )
+        return process.communicate() 
+        
+    
+    @classmethod
     def reconnect(cls, ip_port, encoding='utf8'):
         process = subprocess.Popen(f'{adb_exe} connect {ip_port}', 
                                    encoding=encoding, 
@@ -933,7 +948,7 @@ class BaseAdb(object):
                                    stdout=subprocess.PIPE, 
                                    stderr=subprocess.PIPE
                                    )
-        return process.communicate() if not return_directly else None
+        return process.communicate() if not return_directly else process
     
 
     @classmethod
@@ -941,22 +956,33 @@ class BaseAdb(object):
                                 ip_port, 
                                 encoding='utf8', 
                                 ):
-        process = subprocess.Popen(f'scrcpy -s {ip_port} --no-audio --always-on-top', 
+        
+        cmd = f'scrcpy -s {ip_port} --no-audio --always-on-top'
+        
+        print(cmd)
+        process = subprocess.Popen(cmd, 
                                    encoding=encoding, 
                                     shell=True, 
                                    stdin=subprocess.PIPE, 
                                    stdout=subprocess.PIPE, 
                                    stderr=subprocess.PIPE
                                    )
+        time.sleep(3)
         while 1:
             output = process.stdout.readline()
             if output:
                 print(output)        
-            if process.poll() == 0:
+            
+            # err = process.stderr.readline()
+            # if err:
+            #     print(err)        
+
+            
+            # rtn = process.wait(1)
+            rtn = process.poll()
+            # print('....')
+            if rtn is not None:
                 break
-            else:
-                time.sleep(0.1)
-    
     
     def setup(self, encoding='utf8'):
         process = subprocess.Popen(f'{adb_exe} -s {self.device["id"]} tcpip {self.device["port"]}', 
@@ -1076,6 +1102,12 @@ class BaseAdb(object):
     @classmethod
     def get_devices_as_dict(cls):
         return list(tool_devices.parse_devices(BaseAdb.get_devices()[0]))
+    
+    @classmethod
+    def is_offline(cls, ip_port):
+        l = cls.get_devices_as_dict()
+        l = list(filter(lambda x:x.get('id') == ip_port, l))
+        return l[0].get('offline')
     
     
     @classmethod

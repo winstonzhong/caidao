@@ -115,7 +115,10 @@ class IcmpScan(object):
         s = cls.得到套接字()
         packet, ID = cls.创建数据包()
         s.sendto(packet, (ip, 0))
-        return cls.接收数据(s, ID)
+        try:
+            return cls.接收数据(s, ID)
+        except TimeoutError:
+            pass
         
 
     def start(self):
