@@ -935,6 +935,29 @@ class BaseAdb(object):
                                    )
         return process.communicate() if not return_directly else None
     
+
+    @classmethod
+    def start_and_listen_scrcpy(cls, 
+                                ip_port, 
+                                encoding='utf8', 
+                                ):
+        process = subprocess.Popen(f'scrcpy -s {ip_port} --no-audio --always-on-top', 
+                                   encoding=encoding, 
+                                    shell=True, 
+                                   stdin=subprocess.PIPE, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE
+                                   )
+        while 1:
+            output = process.stdout.readline()
+            if output:
+                print(output)        
+            if process.poll() == 0:
+                break
+            else:
+                time.sleep(0.1)
+    
+    
     def setup(self, encoding='utf8'):
         process = subprocess.Popen(f'{adb_exe} -s {self.device["id"]} tcpip {self.device["port"]}', 
                                    encoding=encoding, 
