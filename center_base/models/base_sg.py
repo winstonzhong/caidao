@@ -3,7 +3,7 @@ from caidao_tools.django.abstract import AbstractModel
 
 
 class AppAbstract(AbstractModel):
-    name = models.CharField(verbose_name="应用名称", max_length=20, default='')
+    name = models.CharField(verbose_name="应用名称", max_length=20, default='', unique=True)
     exchange_ratio = models.IntegerField(verbose_name="兑换比", default=0)
 
     class Meta:
