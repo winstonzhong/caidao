@@ -95,7 +95,7 @@ def b642bin(b64):
     return base64.b64decode(b64)
 
 def bin2img(b):
-    if b is not None:
+    if b is not None and b:
         img = numpy.frombuffer(b, numpy.uint8)
         return cv2.imdecode(img, cv2.IMREAD_ANYCOLOR)
     

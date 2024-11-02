@@ -24,7 +24,9 @@ from adb_tools import tool_devices
 from adb_tools.common.exceptions import ElementNotFoundError, \
     NotNeedFurtherActions, TplNotFoundError
 from adb_tools.tool_xpath import find_by_xpath, SteadyDevice
+import helper_icmp
 from helper_net import retry
+from tool_cmd import 得到ADB连接状态
 from tool_env import is_ipv4, is_string, bounds_to_center
 from tool_file import get_suffix
 from tool_img import bin2img, get_template_points, pil2cv2, to_gray, mask_to_img, \
@@ -265,6 +267,11 @@ class DummyTestException(Exception):
 
 class SwitchOverviewError(Exception):
     pass
+
+
+class ScreenShotEmpty(Exception):
+    pass
+
 class BaseAdb(object):
     # app_name = None
     # activity = None
@@ -455,6 +462,10 @@ class BaseAdb(object):
         self.old_key = None
         self.current_key = None
         
+    @property
+    def ip(self):
+        return self.ip_port.split(':', maxsplit=1)[0]
+    
     
     @property
     def app_info(self):
@@ -938,6 +949,56 @@ class BaseAdb(object):
     
     def connect(self):
         return self.reconnect(self.ip_port)
+
+
+    
+    def 是否离线(self):
+        return BaseAdb.is_offline(self.ip_port)
+    
+    
+    def 重连设备(self):
+        return BaseAdb.reconnect(self.ip_port)
+    
+    def 尝试重连设备(self, 最大重连次数=3):
+        for i in range(最大重连次数):
+            print('尝试重连设备:', i)
+            try:            
+                r = helper_icmp.IcmpScan.检测设备状态(self.ip)
+            except OSError:
+                r = False
+            
+            if not r:
+                print(f'没有检测到设备存活：{self.ip}, 等待3秒。。。')
+                time.sleep(3)
+                continue
+            
+            r = BaseAdb.reconnect(self.ip_port)
+            
+            print(r)
+            
+            r = 得到ADB连接状态(r)
+            
+            if r == 10061:
+                print(f'adb 连接不成功：{self.ip_port}')
+                time.sleep(1)
+                print('尝试关闭本机adb 服务')
+                print(BaseAdb.kill_adb_server())
+                time.sleep(3)
+                continue
+            elif r:
+                print(f'未知错误：{r}， 等待3秒。。。')
+                time.sleep(3)
+                continue
+            
+            if BaseAdb.is_offline(self.ip_port):
+                print(f'{self.ip_port} 离线，重启本地服务中。。。')
+                print(BaseAdb.kill_adb_server())
+                continue
+            
+            break
+
+
+
     
     @classmethod
     def start_scrcpy(cls, ip_port, encoding='utf8', shell=True, return_directly=False):
@@ -1291,6 +1352,16 @@ class BaseAdb(object):
     
     def screen_shot(self):
         return bin2img(self.execute(script=b'screencap -p', encoding=None)[0].replace(b'\r\n', b'\n'))
+    
+    def screen_shot_safe(self):
+        img = self.screen_shot()
+        if img is None:
+            self.尝试重连设备(最大重连次数=3)
+            img = self.screen_shot()
+        if img is None:
+            raise ScreenShotEmpty
+        return img
+    
     
     def save_screen_shot(self, chrop=False, img_dir=None):
         cv2.imwrite(str(img_dir / ('%d.png' % int(time.time()))), self.screen_shot(chrop=chrop))
