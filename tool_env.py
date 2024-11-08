@@ -5,12 +5,14 @@ Created on 2022年6月3日
 '''
 import platform
 import re
+import time
 
 import numpy
-
-import pandas
-from tool_rect import Rect
 from numpy.lib._iotools import _is_string_like
+import pandas
+
+from tool_rect import Rect
+import json
 
 
 OPENAI = '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'
@@ -28,6 +30,26 @@ ptn_x = re.compile('\!|？|\?|"')
 ptn_dot = re.compile('…{2,}')
 
 ptn_emoji = re.compile(u'[\U00010000-\U0010ffff]')
+
+class cached_property_for_cls:
+    def __init__(self, method):
+        self.method = method
+        self.cache = {}
+
+    def __get__(self, instance, owner):
+        if owner not in self.cache:
+            self.cache[owner] = self.method(owner)
+        return self.cache[owner]
+
+def timer_decorator(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print(f"{func.__name__} 函数运行时间：{end_time - start_time} 秒")
+        return result
+
+    return wrapper
 
 def get_pre_of_list(i, l):
     return l[i - 1] if i > 0 else None
@@ -66,16 +88,27 @@ def bounds_to_rect(bounds):
     45 1035 1731 1956<990, 225>
     >>> bounds_to_rect(Rect(0,100,0,100))
     0 100 0 100<100, 100>
+    >>> bounds_to_rect("{'left': 123, 'top': 704, 'right': 1032, 'bottom': 776}")
+    123 1032 704 776<909, 72>
+    >>> bounds_to_rect({'left': 123, 'top': 704, 'right': 1032, 'bottom': 776})
+    123 1032 704 776<909, 72>
     '''
     if not isinstance(bounds, Rect):
         if _is_string_like(bounds):
             if '[' in bounds:
                 rect = two_points_to_bounds(bounds)
+                return Rect(rect[0],rect[2],rect[1],rect[3])
+            elif bounds.strip().startswith('{'):
+                tmp = eval(bounds)
+                return Rect(**tmp)
             else:
                 rect = eval(bounds)
+                return Rect(rect[0],rect[2],rect[1],rect[3])
+        elif isinstance(bounds,dict):
+            return Rect(**bounds)
         else:
             rect = bounds
-        return Rect(rect[0],rect[2],rect[1],rect[3])
+            return Rect(rect[0],rect[2],rect[1],rect[3])
     return bounds
 
 def bounds_to_center(bounds):
@@ -207,13 +240,16 @@ def smart_range_safe(start, end):
 def is_string(x):
     return _is_string_like(x)
 
-def is_number(x):
+def is_int(x):
     try:
         int(x)
         return True
     except:
         pass
     return False
+
+def is_number(x):
+    return is_int(x)
 
 def to_int(x):
     try:

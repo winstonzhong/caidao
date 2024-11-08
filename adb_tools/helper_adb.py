@@ -294,7 +294,10 @@ class BaseAdb(object):
     
     if not os.path.lexists(DIR_CFG):
         os.makedirs(DIR_CFG, exist_ok=True)
-
+    
+    def __str__(self):
+        return self.ip_port
+    
     @classmethod
     def get_all_jobs(cls):
         v =  list(filter(lambda x:x.startswith('job_'), dir(cls)))
@@ -1530,8 +1533,9 @@ class BaseAdb(object):
     
     def switch_overview(self):
         self.ua2.keyevent('KEYCODE_APP_SWITCH')
-        # if not self.is_in_overview():
-        #     self.ua2.keyevent('KEYCODE_APP_SWITCH')
+
+    def app_switch(self):
+        self.ua2.keyevent('KEYCODE_APP_SWITCH')
         
     def enter(self):
         self.ua2.keyevent("KEYCODE_ENTER")
