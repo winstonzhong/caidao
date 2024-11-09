@@ -20,6 +20,7 @@ Created on 2023年7月23日
 #         time.sleep(WAIT_WINDOW_TIME)
 
 import ctypes
+import os
 import subprocess
 import time
 
@@ -30,6 +31,7 @@ import win32api
 import win32con
 import win32gui
 from win32process import GetWindowThreadProcessId
+import win32process
 import win32ui
 
 from tool_rect import Rect
@@ -58,6 +60,38 @@ class GetWindowError(MsgException):
     """获取窗口句柄失败"""
     default_msg = '%s'
     code = 4001
+    
+
+def get_current_cmd_pid():
+    current_pid = os.getpid()
+    current_proc = psutil.Process(current_pid)
+
+    parent_proc = current_proc.parent()
+
+    return parent_proc.pid
+
+
+def get_main_window_handle_by_pid(pid):
+    def callback(hwnd, hwnd_list):
+        if win32gui.IsWindowVisible(hwnd):
+            _, found_pid = win32process.GetWindowThreadProcessId(hwnd)
+            if found_pid == pid:
+                parent_hwnd = win32gui.GetParent(hwnd)
+                if parent_hwnd == 0:
+                    hwnd_list.append(hwnd)
+        return True
+
+    hwnd_list = []
+    win32gui.EnumWindows(callback, hwnd_list)
+
+    if hwnd_list:
+        return hwnd_list[0]
+    return None
+
+def 置顶当前命令行窗口():
+    pid = get_current_cmd_pid()
+    hwnd = get_main_window_handle_by_pid(pid)
+    SET_TOPMOST(hwnd)
     
     
 def GET_RECT(hwnd):
