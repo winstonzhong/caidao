@@ -60,7 +60,17 @@ class GetWindowError(MsgException):
     """获取窗口句柄失败"""
     default_msg = '%s'
     code = 4001
-    
+
+
+def find_process_id_by_name(process_name):
+    process_ids = []
+    for proc in psutil.process_iter():
+        try:
+            if proc.name() == process_name:
+                process_ids.append(proc.pid)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    return process_ids    
 
 def get_current_cmd_pid():
     current_pid = os.getpid()
@@ -77,21 +87,19 @@ def get_main_window_handle_by_pid(pid):
             _, found_pid = win32process.GetWindowThreadProcessId(hwnd)
             if found_pid == pid:
                 parent_hwnd = win32gui.GetParent(hwnd)
+                # print(win32gui.GetWindowText(hwnd))
                 if parent_hwnd == 0:
                     hwnd_list.append(hwnd)
         return True
 
     hwnd_list = []
     win32gui.EnumWindows(callback, hwnd_list)
-
-    if hwnd_list:
-        return hwnd_list[0]
-    return None
+    return hwnd_list
 
 def 置顶当前命令行窗口():
     pid = get_current_cmd_pid()
-    hwnd = get_main_window_handle_by_pid(pid)
-    SET_TOPMOST(hwnd)
+    hwnds = get_main_window_handle_by_pid(pid)
+    SET_TOPMOST(hwnds[0])
     
     
 def GET_RECT(hwnd):
