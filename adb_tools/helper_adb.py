@@ -31,6 +31,7 @@ from tool_env import is_ipv4, is_string, bounds_to_center
 from tool_file import get_suffix
 from tool_img import bin2img, get_template_points, pil2cv2, to_gray, mask_to_img, \
     rgb_to_mono, cut_empty_margin
+from tool_static import 得到一个不重复的文件路径, 路径到链接
 
 
 # from base_adb import tool_devices
@@ -490,16 +491,44 @@ class BaseAdb(object):
         # d = self.ua2.app_current()
         # return d.get('package') == self.app_name and d.get('activity') == self.activity
     
+    def remote_join(self, base_dir, fname):
+        return os.path.join(base_dir, fname).replace('\\', '/')
+    
+    def get_files(self, base_dir='/sdcard/DCIM/Camera', ptn='*'):
+        r = self.ua2.shell(f'ls -t {self.remote_join(base_dir, ptn)}')
+        if r.exit_code == 0 and r.output:
+            return list(map(lambda x:self.remote_join(base_dir, x), r.output.splitlines()))
+        return []
+    
+    def get_files_safe(self, base_dir='/sdcard/DCIM/Camera', ptn='*'):
+        old = None 
+        while 1:
+            new = self.get_files(base_dir, ptn)
+            if new == old:
+                return new
+            print(f'waiting dir {base_dir}:', new, old)
+            old = new
+            time.sleep(1)
+    
+    
     def get_latest_file(self, base_dir='/sdcard/DCIM/Camera'):
         r = self.ua2.shell(f'ls -t {base_dir}')
         if r.exit_code == 0 and r.output:
             return f'{base_dir}/{r.output.splitlines()[0]}'
-        
-    def get_latest_file_size(self, base_dir='/sdcard/DCIM/Camera'):
-        r = self.ua2.shell(f'ls -lt  {base_dir}')
+    
+    def get_file_size(self, remote_fpath, is_file=True):
+        r = self.ua2.shell(f'ls -lt  {remote_fpath}')
+        i = 0 if is_file else 1
         if r.exit_code == 0 and r.output:
             l = r.output.splitlines()
-            return int(re.split('\s+', l[1])[4]) if len(l) > 1 else None
+            return int(re.split('\s+', l[i])[4]) if len(l) > i else None
+            
+    def get_latest_file_size(self, base_dir='/sdcard/DCIM/Camera'):
+        return self.get_file_size(base_dir, is_file=False)
+        # r = self.ua2.shell(f'ls -lt  {base_dir}')
+        # if r.exit_code == 0 and r.output:
+        #     l = r.output.splitlines()
+        #     return int(re.split('\s+', l[i+1])[4]) if len(l) > i else None
         
     def pull_lastest_file(self, 
                           to_dir=TMP_DIR, 
@@ -518,6 +547,17 @@ class BaseAdb(object):
             print(dst)
             return dst
     
+    
+    def pull_file_safe(self, remote, local):
+        old_size = None 
+        while 1:
+            new_size = self.get_file_size(remote)
+            if new_size and new_size == old_size:
+                self.ua2.pull(remote, local)
+                return local  
+            print(f'waiting {remote}:', new_size, old_size)
+            old_size = new_size
+            time.sleep(0.01)
         
     def pull_lastest_file_until(self, 
                                 to_dir=TMP_DIR, 
@@ -551,6 +591,19 @@ class BaseAdb(object):
         self.ua2.shell(f'rm -rf {base_dir}')
         time.sleep(0.1)
         self.ua2.shell(f'mkdir {base_dir}')
+        
+    def clear_pdd_goods_dir(self):
+        self.clear_temp_dir(base_dir='/sdcard/DCIM/Pindd/goods')
+    
+    def get_pdd_goods_jpgs(self):
+        return self.get_files_safe(base_dir='/sdcard/DCIM/Pindd/goods', ptn='*.jpg')
+    
+    def pull_pdd_goods_jpgs(self):
+        rtn = []
+        for remote in self.get_pdd_goods_jpgs():
+            local = self.pull_file_safe(remote, 得到一个不重复的文件路径(remote))
+            rtn.append(路径到链接(local))
+        return rtn
     
     def copy_file_to_temp(self, fpath, sleep_span=0.1):
         src = fpath
