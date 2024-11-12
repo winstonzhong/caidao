@@ -1496,6 +1496,8 @@ class BaseAdb(object):
             self.ua2.swipe(w // 2, h // 2, w // 2, (h // 2) - distance, duration=duration)
         else:
             self.swipe((w // 2, h // 2), (w // 2, (h // 2) - distance), wait=wait)
+            
+    
         
     
     def scroll_down_untill_prompt(self, x, distance=200, retry_num=5):
@@ -1568,13 +1570,13 @@ class BaseAdb(object):
         self.ua2.touch.down(x,y).move(x+x, y)
         print(time.time() - old)
 
-    def scroll_center_move_left(self):
+    def scroll_center_move_left(self, wait=500):
         x, y = self.get_sys_center()
-        self.swipe((x, y), (0, y), wait=500)
+        self.swipe((x, y), (0, y), wait=wait)
         
-    def scroll_center_move_right(self):
+    def scroll_center_move_right(self, wait=500):
         x, y = self.get_sys_center()
-        self.swipe((x, y), (x+x, y), wait=500)
+        self.swipe((x, y), (x+x, y), wait=wait)
         
     def scroll_center_move_up(self):
         x, y = self.get_sys_center()
