@@ -11,6 +11,7 @@ def get_mp_weixin_access_token(app_id, secret):
         "appid": app_id,
         "secret": secret
     }
+    print(requests.post(url, json=data).json())
     return requests.post(url, json=data).json()['access_token']
 
 
@@ -70,10 +71,10 @@ def media_check(access_token, open_id, media_url, media_type, scene, version=2):
 
 if __name__ == '__main__':
     access_token = get_mp_weixin_access_token('wx6c94a95d736f1969', '0d97072344c896e7473cc214a207e847')
-    print(access_token)
-    open_id = 'o-THh5De90Rdk0YNg_FLvg_KR-6U'
-    media_url = 'https://api.weixin.qq.com/cgi-bin/media/get?access_token=68_zu3BUC3x4heep3BBIl2Q2cx9QfWme_qi5dphSnAFJUrqsonGHHsC7iuFAmwMncH36sFYhHYr9JNQUQj2T2gc2Ls2f-iMUtsBxkt4HdkmckXfoiVnch4hVsRt0b4BKQhAFAJSY&media_id=56WWsf5nMlh5rrys9Lt_n0V1i0TQ7wwT_xk-1bx2vogSXJNTI6cWeEEZubgK7VDj'
-    media_type = 2
-    scene = 4
-
-    media_check(access_token, open_id, media_url, media_type, scene)
+    # print(access_token)
+    # open_id = 'o-THh5De90Rdk0YNg_FLvg_KR-6U'
+    # media_url = 'https://api.weixin.qq.com/cgi-bin/media/get?access_token=68_zu3BUC3x4heep3BBIl2Q2cx9QfWme_qi5dphSnAFJUrqsonGHHsC7iuFAmwMncH36sFYhHYr9JNQUQj2T2gc2Ls2f-iMUtsBxkt4HdkmckXfoiVnch4hVsRt0b4BKQhAFAJSY&media_id=56WWsf5nMlh5rrys9Lt_n0V1i0TQ7wwT_xk-1bx2vogSXJNTI6cWeEEZubgK7VDj'
+    # media_type = 2
+    # scene = 4
+    #
+    # media_check(access_token, open_id, media_url, media_type, scene)
