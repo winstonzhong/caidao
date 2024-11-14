@@ -723,6 +723,10 @@ class BaseAdb(object):
             self.ua2.app_start(self.app_name, activity=self.activity, stop=True, use_monkey=use_monkey)
         return self
     
+    def Pdd打开url(self, url):
+        self.ua2.shell(
+            ['am', 'start', '-a', 'android.intent.action.VIEW', '-d', url, '-n', 'com.xunmeng.pinduoduo/activity.NewPageActivity'])
+    
     def open_certain_app(self, 
                          package, 
                          activity, 
@@ -1433,6 +1437,11 @@ class BaseAdb(object):
         self.execute(f'input tap {x} {y}')
         return self
 
+    def do_touch_move(self, src, dst):
+        a = self.ua2.touch.down(*src)
+        time.sleep(0.5)
+        a.move(*dst)
+
     def 特殊双击(self, x, y):
         self.execute(f'input tap {x} {y}&sleep 0.1;input tap {x} {y}&sleep 0.01;input tap {x} {y}')
         return self
@@ -1474,12 +1483,16 @@ class BaseAdb(object):
         return w, h
     
     @cached_property
+    def sys_width_height(self):
+        return self.get_sys_width_height()
+    
+    @cached_property
     def W(self):
-        return self.get_sys_width_height()[0]
+        return self.sys_width_height[0]
 
     @cached_property
     def H(self):
-        return self.get_sys_width_height()[1]
+        return self.sys_width_height[1]
 
     
     def get_sys_center(self):
@@ -1563,6 +1576,17 @@ class BaseAdb(object):
         x, y = self.get_sys_center()
         self.ua2.touch.down(x,y).move(0, y)
         print('swipe', time.time() - old)
+    
+    
+    def 触摸高度四分之三位置滑动到二分之一(self, 不安全模式=False, duration=0.5):
+        x = self.W // 2
+        src=(x, self.H * 3 // 4)
+        dst=(x, self.H//2)
+        if 不安全模式:
+            self.do_touch_move(src, dst)
+        else:
+            self.ua2.drag(src[0], src[1], dst[0], dst[1], duration=duration)
+        
         
     def touch_center_move_right(self):
         old = time.time()
