@@ -65,9 +65,8 @@ class BaseAdmin(admin.ModelAdmin):
 
         # 示例: {'all': ['xxx']}
         css = {}
-
         rel_js_path = 'static/js/htmx.min.js'
-        if os.path.lexists(rel_js_path):
+        if os.path.lexists(rel_js_path) or os.path.lexists(f'../{rel_js_path}'):
             js.append(f'/{rel_js_path}')
 
 
