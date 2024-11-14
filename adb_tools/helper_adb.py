@@ -24,11 +24,14 @@ from adb_tools import tool_devices
 from adb_tools.common.exceptions import ElementNotFoundError, \
     NotNeedFurtherActions, TplNotFoundError
 from adb_tools.tool_xpath import find_by_xpath, SteadyDevice
+import helper_icmp
 from helper_net import retry
+from tool_cmd import 得到ADB连接状态
 from tool_env import is_ipv4, is_string, bounds_to_center
 from tool_file import get_suffix
 from tool_img import bin2img, get_template_points, pil2cv2, to_gray, mask_to_img, \
     rgb_to_mono, cut_empty_margin
+from tool_static import 得到一个不重复的文件路径, 路径到链接
 
 
 # from base_adb import tool_devices
@@ -265,6 +268,11 @@ class DummyTestException(Exception):
 
 class SwitchOverviewError(Exception):
     pass
+
+
+class ScreenShotEmpty(Exception):
+    pass
+
 class BaseAdb(object):
     # app_name = None
     # activity = None
@@ -287,7 +295,10 @@ class BaseAdb(object):
     
     if not os.path.lexists(DIR_CFG):
         os.makedirs(DIR_CFG, exist_ok=True)
-
+    
+    def __str__(self):
+        return self.ip_port
+    
     @classmethod
     def get_all_jobs(cls):
         v =  list(filter(lambda x:x.startswith('job_'), dir(cls)))
@@ -455,6 +466,10 @@ class BaseAdb(object):
         self.old_key = None
         self.current_key = None
         
+    @property
+    def ip(self):
+        return self.ip_port.split(':', maxsplit=1)[0]
+    
     
     @property
     def app_info(self):
@@ -476,16 +491,44 @@ class BaseAdb(object):
         # d = self.ua2.app_current()
         # return d.get('package') == self.app_name and d.get('activity') == self.activity
     
+    def remote_join(self, base_dir, fname):
+        return os.path.join(base_dir, fname).replace('\\', '/')
+    
+    def get_files(self, base_dir='/sdcard/DCIM/Camera', ptn='*'):
+        r = self.ua2.shell(f'ls -t {self.remote_join(base_dir, ptn)}')
+        if r.exit_code == 0 and r.output:
+            return list(map(lambda x:self.remote_join(base_dir, x), r.output.splitlines()))
+        return []
+    
+    def get_files_safe(self, base_dir='/sdcard/DCIM/Camera', ptn='*'):
+        old = None 
+        while 1:
+            new = self.get_files(base_dir, ptn)
+            if new == old:
+                return new
+            print(f'waiting dir {base_dir}:', new, old)
+            old = new
+            time.sleep(1)
+    
+    
     def get_latest_file(self, base_dir='/sdcard/DCIM/Camera'):
         r = self.ua2.shell(f'ls -t {base_dir}')
         if r.exit_code == 0 and r.output:
             return f'{base_dir}/{r.output.splitlines()[0]}'
-        
-    def get_latest_file_size(self, base_dir='/sdcard/DCIM/Camera'):
-        r = self.ua2.shell(f'ls -lt  {base_dir}')
+    
+    def get_file_size(self, remote_fpath, is_file=True):
+        r = self.ua2.shell(f'ls -lt  {remote_fpath}')
+        i = 0 if is_file else 1
         if r.exit_code == 0 and r.output:
             l = r.output.splitlines()
-            return int(re.split('\s+', l[1])[4]) if len(l) > 1 else None
+            return int(re.split('\s+', l[i])[4]) if len(l) > i else None
+            
+    def get_latest_file_size(self, base_dir='/sdcard/DCIM/Camera'):
+        return self.get_file_size(base_dir, is_file=False)
+        # r = self.ua2.shell(f'ls -lt  {base_dir}')
+        # if r.exit_code == 0 and r.output:
+        #     l = r.output.splitlines()
+        #     return int(re.split('\s+', l[i+1])[4]) if len(l) > i else None
         
     def pull_lastest_file(self, 
                           to_dir=TMP_DIR, 
@@ -504,6 +547,17 @@ class BaseAdb(object):
             print(dst)
             return dst
     
+    
+    def pull_file_safe(self, remote, local):
+        old_size = None 
+        while 1:
+            new_size = self.get_file_size(remote)
+            if new_size and new_size == old_size:
+                self.ua2.pull(remote, local)
+                return local  
+            print(f'waiting {remote}:', new_size, old_size)
+            old_size = new_size
+            time.sleep(0.01)
         
     def pull_lastest_file_until(self, 
                                 to_dir=TMP_DIR, 
@@ -537,6 +591,19 @@ class BaseAdb(object):
         self.ua2.shell(f'rm -rf {base_dir}')
         time.sleep(0.1)
         self.ua2.shell(f'mkdir {base_dir}')
+        
+    def clear_pdd_goods_dir(self):
+        self.clear_temp_dir(base_dir='/sdcard/DCIM/Pindd/goods')
+    
+    def get_pdd_goods_jpgs(self):
+        return self.get_files_safe(base_dir='/sdcard/DCIM/Pindd/goods', ptn='*.jpg')
+    
+    def pull_pdd_goods_jpgs(self):
+        rtn = []
+        for remote in self.get_pdd_goods_jpgs():
+            local = self.pull_file_safe(remote, 得到一个不重复的文件路径(remote))
+            rtn.append(路径到链接(local))
+        return rtn
     
     def copy_file_to_temp(self, fpath, sleep_span=0.1):
         src = fpath
@@ -655,6 +722,10 @@ class BaseAdb(object):
         if force_open or not self.is_app_opened():
             self.ua2.app_start(self.app_name, activity=self.activity, stop=True, use_monkey=use_monkey)
         return self
+    
+    def Pdd打开url(self, url):
+        self.ua2.shell(
+            ['am', 'start', '-a', 'android.intent.action.VIEW', '-d', url, '-n', 'com.xunmeng.pinduoduo/activity.NewPageActivity'])
     
     def open_certain_app(self, 
                          package, 
@@ -938,6 +1009,56 @@ class BaseAdb(object):
     
     def connect(self):
         return self.reconnect(self.ip_port)
+
+
+    
+    def 是否离线(self):
+        return BaseAdb.is_offline(self.ip_port)
+    
+    
+    def 重连设备(self):
+        return BaseAdb.reconnect(self.ip_port)
+    
+    def 尝试重连设备(self, 最大重连次数=3):
+        for i in range(最大重连次数):
+            print('尝试重连设备:', i)
+            try:            
+                r = helper_icmp.IcmpScan.检测设备状态(self.ip)
+            except OSError:
+                r = False
+            
+            if not r:
+                print(f'没有检测到设备存活：{self.ip}, 等待3秒。。。')
+                time.sleep(3)
+                continue
+            
+            r = BaseAdb.reconnect(self.ip_port)
+            
+            print(r)
+            
+            r = 得到ADB连接状态(r)
+            
+            if r == 10061:
+                print(f'adb 连接不成功：{self.ip_port}')
+                time.sleep(1)
+                print('尝试关闭本机adb 服务')
+                print(BaseAdb.kill_adb_server())
+                time.sleep(3)
+                continue
+            elif r:
+                print(f'未知错误：{r}， 等待3秒。。。')
+                time.sleep(3)
+                continue
+            
+            if BaseAdb.is_offline(self.ip_port):
+                print(f'{self.ip_port} 离线，重启本地服务中。。。')
+                print(BaseAdb.kill_adb_server())
+                continue
+            
+            break
+
+
+
     
     @classmethod
     def start_scrcpy(cls, ip_port, encoding='utf8', shell=True, return_directly=False):
@@ -1292,6 +1413,16 @@ class BaseAdb(object):
     def screen_shot(self):
         return bin2img(self.execute(script=b'screencap -p', encoding=None)[0].replace(b'\r\n', b'\n'))
     
+    def screen_shot_safe(self):
+        img = self.screen_shot()
+        if img is None:
+            self.尝试重连设备(最大重连次数=3)
+            img = self.screen_shot()
+        if img is None:
+            raise ScreenShotEmpty
+        return img
+    
+    
     def save_screen_shot(self, chrop=False, img_dir=None):
         cv2.imwrite(str(img_dir / ('%d.png' % int(time.time()))), self.screen_shot(chrop=chrop))
     
@@ -1305,6 +1436,11 @@ class BaseAdb(object):
     def do_click(self, x, y):
         self.execute(f'input tap {x} {y}')
         return self
+
+    def do_touch_move(self, src, dst):
+        a = self.ua2.touch.down(*src)
+        time.sleep(0.5)
+        a.move(*dst)
 
     def 特殊双击(self, x, y):
         self.execute(f'input tap {x} {y}&sleep 0.1;input tap {x} {y}&sleep 0.01;input tap {x} {y}')
@@ -1347,12 +1483,16 @@ class BaseAdb(object):
         return w, h
     
     @cached_property
+    def sys_width_height(self):
+        return self.get_sys_width_height()
+    
+    @cached_property
     def W(self):
-        return self.get_sys_width_height()[0]
+        return self.sys_width_height[0]
 
     @cached_property
     def H(self):
-        return self.get_sys_width_height()[1]
+        return self.sys_width_height[1]
 
     
     def get_sys_center(self):
@@ -1369,6 +1509,8 @@ class BaseAdb(object):
             self.ua2.swipe(w // 2, h // 2, w // 2, (h // 2) - distance, duration=duration)
         else:
             self.swipe((w // 2, h // 2), (w // 2, (h // 2) - distance), wait=wait)
+            
+    
         
     
     def scroll_down_untill_prompt(self, x, distance=200, retry_num=5):
@@ -1434,6 +1576,17 @@ class BaseAdb(object):
         x, y = self.get_sys_center()
         self.ua2.touch.down(x,y).move(0, y)
         print('swipe', time.time() - old)
+    
+    
+    def 触摸高度四分之三位置滑动到二分之一(self, 不安全模式=False, duration=0.5):
+        x = self.W // 2
+        src=(x, self.H * 3 // 4)
+        dst=(x, self.H//2)
+        if 不安全模式:
+            self.do_touch_move(src, dst)
+        else:
+            self.ua2.drag(src[0], src[1], dst[0], dst[1], duration=duration)
+        
         
     def touch_center_move_right(self):
         old = time.time()
@@ -1441,13 +1594,13 @@ class BaseAdb(object):
         self.ua2.touch.down(x,y).move(x+x, y)
         print(time.time() - old)
 
-    def scroll_center_move_left(self):
+    def scroll_center_move_left(self, wait=500):
         x, y = self.get_sys_center()
-        self.swipe((x, y), (0, y), wait=500)
+        self.swipe((x, y), (0, y), wait=wait)
         
-    def scroll_center_move_right(self):
+    def scroll_center_move_right(self, wait=500):
         x, y = self.get_sys_center()
-        self.swipe((x, y), (x+x, y), wait=500)
+        self.swipe((x, y), (x+x, y), wait=wait)
         
     def scroll_center_move_up(self):
         x, y = self.get_sys_center()
@@ -1459,8 +1612,9 @@ class BaseAdb(object):
     
     def switch_overview(self):
         self.ua2.keyevent('KEYCODE_APP_SWITCH')
-        # if not self.is_in_overview():
-        #     self.ua2.keyevent('KEYCODE_APP_SWITCH')
+
+    def app_switch(self):
+        self.ua2.keyevent('KEYCODE_APP_SWITCH')
         
     def enter(self):
         self.ua2.keyevent("KEYCODE_ENTER")
