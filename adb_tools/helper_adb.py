@@ -1494,9 +1494,8 @@ class BaseAdb(object):
     def H(self):
         return self.sys_width_height[1]
 
-    
     def get_sys_center(self):
-        w, h = self.get_sys_width_height()
+        w, h = self.sys_width_height
         return w//2, h//2
     
     @cached_property
@@ -1587,7 +1586,14 @@ class BaseAdb(object):
         else:
             self.ua2.drag(src[0], src[1], dst[0], dst[1], duration=duration)
         
-        
+    
+    def 触摸高度四分之一位置水平向左滑动(self, duration=0.5):
+        x = self.W // 2
+        src=(x, self.H * 1 // 4)
+        dst=(0, self.H * 1 // 4)
+        self.ua2.drag(src[0], src[1], dst[0], dst[1], duration=duration)
+            
+    
     def touch_center_move_right(self):
         old = time.time()
         x, y = self.get_sys_center()

@@ -4,6 +4,8 @@ Created on 2024年11月13日
 @author: lenovo
 '''
 import re
+
+from helper_hash import get_hash_jsonable
 from tool_env import bounds_to_rect
 
 
@@ -57,7 +59,7 @@ def 底边过滤(v, infos):
     return infos
 
 class 多组表达式迷糊匹配器(object):
-    def __init__(self, line):
+    def __init__(self, line=None, **k):
         '''
         >>> 多组表达式迷糊匹配器('aa bb   c').l
         ['aa', 'bb', 'c']
@@ -65,14 +67,35 @@ class 多组表达式迷糊匹配器(object):
         Traceback (most recent call last):
         错误的款式表达:        
         '''
-        l = re.split('\s+', line or '')
-        l = [装配表达式(x) for x in l]
-        self.l = l
-        if len(l) <= 0 or len(l) != len(set(l)):
-            raise 错误的款式表达(self)
         self.结果 = {}
         self.上一次匹配 = None
+
+        if line is not None:
+            l = re.split('\s+', line or '')
+            l = [装配表达式(x) for x in l]
+            self.l = l
+            if len(l) <= 0 or len(l) != len(set(l)):
+                raise 错误的款式表达(self)
+        else:
+            for name, value in k.items():
+                setattr(self, name, value)
         # self.当前匹配 = None
+        
+    def to_dict(self):
+        return {
+            'l':self.l,
+            '结果': self.结果,
+            '上一次匹配':self.上一次匹配,
+            }
+
+    @classmethod
+    def from_dict(cls, d):
+        '''
+        >>> c = 多组表达式迷糊匹配器.from_dict({'l':['粉', '小号']})
+        >>> c.匹配一轮([{'text':'成熟粉'}, {'text':'成熟蓝'}, {'text':'小号 sl'}, {'text':'大号 xl'} ])
+        ('粉', {'text': '成熟粉'})
+        '''
+        return cls(**d) if d else None
     
     @property
     def 款式(self):
@@ -128,13 +151,18 @@ class 多组表达式迷糊匹配器(object):
                 raise 需要点击选择(result[1])
             self.结果[result[0]] = result[1]
         
+        # h = get_hash_jsonable(l)
+        
         是否到底 = self.上一次匹配 == l
         self.上一次匹配 = l
+        # if not self.是否已经完成():
+        #     raise 需要向下滑动
+        
         if not self.是否已经完成():
             if not 是否到底:
                 raise 需要向下滑动
             else:
-                raise 选择款式型号失败
+                raise 选择款式型号失败(self)
         
         
         
