@@ -6,13 +6,16 @@
 @Description : 微信接口
 @lists 内容概览
   - OffiAccount 微信公众号操作
-"""
-import os
-import sys
-from io import BytesIO
 
-project_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../')
-sys.path.append(project_path)
+使用说明
+"""
+import hashlib
+import os
+
+from io import BytesIO
+import sys
+# project_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../')
+# sys.path.append(project_path)
 import json
 import requests
 import logging
@@ -28,13 +31,10 @@ from wechatpy.client.api.base import BaseWeChatAPI
 from caidao_tools.mp_weixin.expire_dict import BiasExpireDict
 
 # 微信代理服务器地址
-WEIXIN_PROXY_SERVER_HOST = os.getenv('WEIXIN_PROXY_SERVER_HOST', 'http://localhost')
-WEIXIN_PROXY_SERVER_PORT = int(os.getenv('WEIXIN_PROXY_SERVER_PORT', '8004'))
-WEIXIN_PROXY_SERVER_ADDR = f'{WEIXIN_PROXY_SERVER_HOST}:{WEIXIN_PROXY_SERVER_PORT}'
-KF_ACCOUNTS_EXPIRED_TIME = 3600  # 客服信息缓存时间(单位:秒)
-APP_ID = os.getenv('APP_ID', "123")
-APP_SECRET = os.getenv('APP_SECRET', "123")
 
+
+KF_ACCOUNTS_EXPIRED_TIME = 3600  # 客服信息缓存时间(单位:秒)
+WEIXIN_PROXY_SERVER_ADDR = ''
 logger = logging.getLogger(__name__)
 kf_account_data = BiasExpireDict(expire=KF_ACCOUNTS_EXPIRED_TIME, bias=1)
 
@@ -188,7 +188,7 @@ class WeChatMessageTyping(BaseWeChatAPI):
 class OffiAccount:
     """微信公众号操作"""
 
-    def __init__(self, app_id=APP_ID, app_secret=APP_SECRET):
+    def __init__(self, app_id, app_secret):
         # WeChatClient.API_BASE_URL = 'http://47.98.218.74/cgi-bin/'
         self.client = WeChatClient(app_id, app_secret)
         self.access_token = self.client.access_token
@@ -320,13 +320,18 @@ class OffiAccount:
                         img_url
                         )
 
-# oa = OffiAccount()
+    def get_jsapi_ticket(self):
+        return self.client.jsapi.get_jsapi_ticket()
+
+    def get_jsapi_signature(self, noncestr, timestamp, url):
+        ticket = self.get_jsapi_ticket()
+        return self.client.jsapi.get_jsapi_signature(noncestr, ticket, timestamp, url)
 
 
 if __name__ == '__main__':
     # oa = OffiAccount()
 
-    oa = OffiAccount()
+    oa = OffiAccount('123', '123')
     print(oa.access_token)
     # test()
     # img_url = oa.upload_tmp_img('/mnt/d/1.png')
