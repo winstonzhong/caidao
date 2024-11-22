@@ -25,7 +25,7 @@ import time
 from requests import Request, Session
 from wechatpy import WeChatClient, WeChatClientException
 from wechatpy.client import BaseWeChatClient
-from wechatpy.client.api import WeChatMessage
+from wechatpy.client.api import WeChatMessage, WeChatMedia
 from wechatpy.client.api.base import BaseWeChatAPI
 
 
@@ -45,7 +45,7 @@ kf_account_data = BiasExpireDict(expire=KF_ACCOUNTS_EXPIRED_TIME, bias=1)
 # APP_ID_MP_WEIXIN = os.getenv('APP_ID_MP_WEIXIN', "123")
 # APP_SECRET_MP_WEIXIN = os.getenv('APP_SECRET_MP_WEIXIN', "123")
 
-def get_img_to_memory(url, fname='1.png'):
+def url_to_memory(url, fname='1.png'):
     """获取图片url, 并保存至内存中读取,
     本方法是为了构建和open方法创建的file-object对象, 用于requests函数上传文件使用, 所以需要指定一个name属性, 供requests调用时读取.
     """
@@ -124,6 +124,30 @@ class WeChatMessageTyping(BaseWeChatAPI):
         )
 
 
+class MyWeChatMedia(WeChatMedia):
+    def upload_voice_for_text(self, voice_id, media_file):
+        """
+        上传音频转文字
+        :param voice_id: 自定义voice_id
+        :param media_file:
+        :return:
+        """
+        return self._post(url="media/voice/addvoicetorecofortext",
+                          params={"format": "mp3", "voice_id": voice_id},
+                          files={"media": media_file})
+
+    def query_voice_result_for_text(self, voice_id):
+        """
+        获取语音转文字识别结果
+        :param voice_id:: 自定义voice_id
+        :return:
+        """
+        return self._post(url="media/voice/queryrecoresultfortext", params={"voice_id": voice_id})
+
+
+WeChatClient.media = MyWeChatMedia()
+
+
 class OffiAccount:
     """微信公众号操作"""
 
@@ -134,7 +158,7 @@ class OffiAccount:
 
     def get_tmp_media_data_by_url(self, url, media_type, fname):
         """根据url获取临时素材的media_id"""
-        f = get_img_to_memory(url, fname=fname)
+        f = url_to_memory(url, fname=fname)
         return self.client.media.upload(media_type, f)
 
     def get_tmp_img_media_id_by_url(self, url):
@@ -165,7 +189,7 @@ class OffiAccount:
         """
         if not fname:
             fname = url.rsplit('/')[-1]
-        f = get_img_to_memory(url, fname=fname)
+        f = url_to_memory(url, fname=fname)
         data = self.client.material.add(media_type, f, title=title, introduction=introduction)
         print(data)
         return data
@@ -466,8 +490,14 @@ class OffiAccount:
         """发布文章删除, 通过get_article方法获取"""
         return self.client.freepublish.delete(article_id)
 
+    def upload_voice_for_text(self, voice_id, url):
+        """上传音频转文字"""
+        media_file = url_to_memory(url, fname='1.mp3')
+        return self.client.media.upload_voice_for_text(voice_id, media_file)
 
-
+    def query_voice_result_for_text(self, voice_id):
+        """获取语音转文字识别结果"""
+        return self.client.media.query_voice_result_for_text(voice_id)
 
 if __name__ == '__main__':
     # oa = OffiAccount()
