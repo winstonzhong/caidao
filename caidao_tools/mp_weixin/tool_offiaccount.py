@@ -8,6 +8,7 @@
   - OffiAccount 微信公众号操作
 
 使用说明
+pip install wechatpy==2.0.0a26
 """
 import hashlib
 import os
@@ -48,6 +49,7 @@ def get_img_to_memory(url, fname='1.png'):
     """获取图片url, 并保存至内存中读取,
     本方法是为了构建和open方法创建的file-object对象, 用于requests函数上传文件使用, 所以需要指定一个name属性, 供requests调用时读取.
     """
+    # print('fname', fname)
     resp = requests.get(url)
     f = BytesIO()
     f.write(resp.content)
@@ -68,46 +70,6 @@ def request(self, method, url,
             hooks=None, stream=None, verify=None, cert=None, json=None):
     """
     复写request, 对所有request请求做拦截操作, 如url替换, 代理修改等
-    Constructs a :class:`Request <Request>`, prepares it and sends it.
-    Returns :class:`Response <Response>` object.
-
-    :param method: method for the new :class:`Request` object.
-    :param url: URL for the new :class:`Request` object.
-    :param params: (optional) Dictionary or bytes to be sent in the query
-        string for the :class:`Request`.
-    :param data: (optional) Dictionary, list of tuples, bytes, or file-like
-        object to send in the body of the :class:`Request`.
-    :param json: (optional) json to send in the body of the
-        :class:`Request`.
-    :param headers: (optional) Dictionary of HTTP Headers to send with the
-        :class:`Request`.
-    :param cookies: (optional) Dict or CookieJar object to send with the
-        :class:`Request`.
-    :param files: (optional) Dictionary of ``'filename': file-like-objects``
-        for multipart encoding upload.
-    :param auth: (optional) Auth tuple or callable to enable
-        Basic/Digest/Custom HTTP Auth.
-    :param timeout: (optional) How long to wait for the server to send
-        data before giving up, as a float, or a :ref:`(connect timeout,
-        read timeout) <timeouts>` tuple.
-    :type timeout: float or tuple
-    :param allow_redirects: (optional) Set to True by default.
-    :type allow_redirects: bool
-    :param proxies: (optional) Dictionary mapping protocol or protocol and
-        hostname to the URL of the proxy.
-    :param stream: (optional) whether to immediately download the response
-        content. Defaults to ``False``.
-    :param verify: (optional) Either a boolean, in which case it controls whether we verify
-        the server's TLS certificate, or a string, in which case it must be a path
-        to a CA bundle to use. Defaults to ``True``. When set to
-        ``False``, requests will accept any TLS certificate presented by
-        the server, and will ignore hostname mismatches and/or expired
-        certificates, which will make your application vulnerable to
-        man-in-the-middle (MitM) attacks. Setting verify to ``False``
-        may be useful during local development or testing.
-    :param cert: (optional) if String, path to ssl client cert file (.pem).
-        If Tuple, ('cert', 'key') pair.
-    :rtype: requests.Response
     """
     url = replace_url(url)
     # Create the Request.
@@ -148,41 +110,18 @@ Session.request = request
 class WeChatMessageTyping(BaseWeChatAPI):
     """客服输入状态"""
 
-    def send_typing(self, user_id):
+    def send_typing(self, open_id):
         """
         客服输入状态
 
-        :param user_id: 用户 ID 。 就是你收到的 `Message` 的 source
+        :param open_id: 用户 ID 。 就是你收到的 `Message` 的 source
         :return: 返回的 JSON 数据包
         """
-        data = {"touser": user_id, "command": "Typing"}
+        data = {"touser": open_id, "command": "Typing"}
         return self._post(
             'message/custom/typing',
             data=data
         )
-
-# class MyWeChatClient(WeChatClient):
-#     API_BASE_URL = f'http://{WEIXIN_PROXY_SERVER_ADDR}/cgi-bin/'
-#
-#     message_typing = WeChatMessageTyping()
-#
-#     def fetch_access_token(self):
-#         """
-#         获取 access token
-#         详情请参考 http://mp.weixin.qq.com/wiki/index.php?title=通用接口文档
-#
-#         :return: 返回的 JSON 数据包
-#         """
-#         access_token = self._fetch_access_token(
-#             url=f'{self.API_BASE_URL}token',
-#             params={
-#                 'grant_type': 'client_credential',
-#                 'appid': self.appid,
-#                 'secret': self.secret
-#             }
-#         )
-#         print(access_token)
-#         return access_token
 
 
 class OffiAccount:
@@ -193,36 +132,101 @@ class OffiAccount:
         self.client = WeChatClient(app_id, app_secret)
         self.access_token = self.client.access_token
 
-    def send_typing(self, user_id):
+    def get_tmp_media_data_by_url(self, url, media_type, fname):
+        """根据url获取临时素材的media_id"""
+        f = get_img_to_memory(url, fname=fname)
+        return self.client.media.upload(media_type, f)
+
+    def get_tmp_img_media_id_by_url(self, url):
+        """获取图片格式临时素材的media_id"""
+        return self.get_tmp_media_data_by_url(url, 'image', 'image.jpg')['media_id']
+
+    def get_tmp_voice_media_id_by_url(self, url):
+        """获取语音格式临时素材的media_id"""
+        return self.get_tmp_media_data_by_url(url, 'voice', 'voice.mp3')['media_id']
+
+    def get_tmp_video_media_id_by_url(self, url):
+        """获取视频格式临时素材的media_id"""
+        return self.get_tmp_media_data_by_url(url, 'video', 'video.mp4')['media_id']
+
+    def get_tmp_thumb_media_id_by_url(self, url):
+        """获取缩略图片格式临时素材的media_id"""
+        return self.get_tmp_media_data_by_url(url, 'thumb', 'thumb.jpg')['thumb_media_id']
+
+    def get_media_data_by_url(self, url, media_type, fname=None, title=None, introduction=None):
+        """
+        根据url获取永久素材的media_id
+        :param url: 文件url
+        :param media_type: 媒体文件类型，分别有图片（image）、语音（voice）、视频（video）和缩略图（thumb）
+        :param fname: 文件名
+        :param title: 视频素材标题，仅上传视频素材时需要
+        :param introduction: 视频素材简介，仅上传视频素材时需要
+        :return: 返回的 JSON 数据包
+        """
+        if not fname:
+            fname = url.rsplit('/')[-1]
+        f = get_img_to_memory(url, fname=fname)
+        data = self.client.material.add(media_type, f, title=title, introduction=introduction)
+        print(data)
+        return data
+
+    def get_img_media_data_by_url(self, url):
+        """获取图片格式永久素材的media_id"""
+        return self.get_media_data_by_url(url, 'image')
+
+    def get_voice_media_data_by_url(self, url):
+        """获取语音格式永久素材的media_id"""
+        return self.get_media_data_by_url(url, 'voice')
+
+    def get_video_media_data_by_url(self, url, title=None, introduction=None):
+        """获取视频格式永久素材的media_id"""
+        return self.get_media_data_by_url(url, 'video', title=title, introduction=introduction)['media_id']
+
+    def get_thumb_media_data_by_url(self, url):
+        """获取缩略图片格式永久素材的media_id"""
+        return self.get_media_data_by_url(url, 'thumb')
+
+    def get_thumb_media_id_by_url(self, url):
+        """获取缩略图片格式永久素材的media_id"""
+        return self.get_media_data_by_url(url, 'thumb')['media_id']
+
+    def send_typing(self, open_id):
         """客服输入状态"""
-        return self.client.message_typing.send_typing(user_id)
+        return self.client.message_typing.send_typing(open_id)
 
-    def send_article(self, user_id, title, description, url, pic_url):
-        article = {'title': title,
-                   'description': description,
-                   'url': url,
-                   'picurl': pic_url}
-        return self.client.message.send_link(user_id, article)
-
-    def reply_msg(self, user_id, reply_msg, account=None):
+    def reply_img_by_media_id(self, open_id, media_id, account=None):
         """
-        回复消息
-        :param user_id: 用户ID
-        :param reply_msg: 回复消息
-        :param account: 客服账号
-        :return:
-        """
-        return self.client.message.send_text(user_id, reply_msg, account=account)
-
-    def reply_img(self, user_id, media_id, account=None):
-        """
-        回复消息
-        :param user_id: 用户ID
+        基于media_id回复图片
+        :param open_id: 用户ID
         :param media_id: 上传服务器返回的media_id
         :param account: 客服账号
         :return:
         """
-        return self.client.message.send_image(user_id, media_id, account=account)
+        return self.client.message.send_image(open_id, media_id, account=account)
+
+    def reply_voice_by_media_id(self, open_id, media_id, account=None):
+        """
+        基于media_id回复图片
+        :param open_id: 用户ID
+        :param media_id: 上传服务器返回的media_id
+        :param account: 客服账号
+        :return:
+        """
+        return self.client.message.send_voice(open_id, media_id, account=account)
+
+    def reply_video_by_media_id(self, open_id, media_id, title=None, description=None, account=None):
+        """
+        基于media_id回复图片
+        :param open_id: 用户ID
+        :param media_id: 发送的视频的媒体ID。 可以通过 :func:`upload_media` 上传。
+        :param title: 视频消息的标题
+        :param description: 视频消息的描述
+        :param account: 可选，客服账号
+        :return: 返回的 JSON 数据包
+        """
+        return self.client.message.send_video(open_id, media_id, title=title, description=description, account=account)
+
+
 
     def get_kf_accounts(self):
         """
@@ -247,7 +251,22 @@ class OffiAccount:
                 kf_account_data[kf_id] = account
         return kf_account_data
 
+    def query_menu(self):
+        """查询菜单"""
+        return self.client.menu.get_menu_info()
+
     def create_menu(self, menu_data):
+        """创建菜单
+            {
+                'button': [{
+                        'type': 'click',
+                        'name': '测试',
+                        'key': '123'
+                    },
+                ]
+            }
+
+        """
         return self.client.menu.create(menu_data)
 
     def create_temp_qrcode_img_url(self, action_info, timeout=10, action_name='QR_STR_SCENE'):
@@ -287,10 +306,6 @@ class OffiAccount:
     def add_tmp_img(self, fpath):
         return self.client.media.upload('image', open(fpath, 'rb'))
 
-    def add_tmp_img_remote(self, url):
-        f = get_img_to_memory(url)
-        return self.client.media.upload('image', f)
-
     def get_tmp_img_url(self, media_id):
         return self.client.media.get_url(media_id)
 
@@ -304,18 +319,18 @@ class OffiAccount:
         print(ret_data)
         return ret_data['media_id']
 
-    def send_index_page(self, user_id, img_url=None):
+    def send_index_page(self, open_id, img_url=None):
         if not img_url:
             img_url = 'https://dss0.bdstatic.com/5aV1bjqh_Q23odCf/static/superman/img/logo/bd_logo1-66368c33f8.png'
-        self.send_article(user_id, '用户首页', '用户首页',
+        self.reply_page_card(open_id, '用户首页', '用户首页',
                         'https://chat-live.med-value.com/pages/user/index',
                         img_url
                         )
 
-    def send_eula_page(self, user_id, img_url=None):
+    def send_eula_page(self, open_id, img_url=None):
         if not img_url:
             img_url = 'https://img1.baidu.com/it/u=2274835460,799751483&fm=253&fmt=auto&app=138&f=JPEG?w=396&h=500'
-        self.send_article(user_id, '用户协议', '查看并同意用户协议之后小聊才能为您服务',
+        self.reply_page_card(open_id, '用户协议', '查看并同意用户协议之后小聊才能为您服务',
                         'https://chat-live.med-value.com/pages/user/eula',
                         img_url
                         )
@@ -326,6 +341,132 @@ class OffiAccount:
     def get_jsapi_signature(self, noncestr, timestamp, url):
         ticket = self.get_jsapi_ticket()
         return self.client.jsapi.get_jsapi_signature(noncestr, ticket, timestamp, url)
+
+    def reply_text(self, open_id, reply_text, account=None):
+        """
+        回复文本消息
+        :param open_id: 用户open_id
+        :param reply_text: 回复消息
+        :param account: 客服账号
+        :return:
+        """
+        return self.client.message.send_text(open_id, reply_text, account=account)
+
+    def reply_msg_menu(self, open_id, menu_list, head_content='', tail_content='', account=None):
+        """
+        回复快捷菜单消息
+        msg_menu = {
+            "head_content": "您对本次服务是否满意呢？",
+            "list": [
+                {
+                    "id": "101",
+                    "content": "满意"
+                },
+                {
+                    "id": "102",
+                    "content": "不满意"
+                },
+            ],
+            "tail_content": "欢迎再次光临"
+        }
+        :param open_id: 用户open_id;
+        :param menu_list: 菜单项; ['满意', '不满意']
+        :param head_content: 开头;
+        :param tail_content: 结尾;
+        :param account: 客服账号;
+        :return:
+        """
+        msg_menu = {
+            "head_content": head_content,
+            "list": [],
+            "tail_content": tail_content
+        }
+        for idx, menu in enumerate(menu_list):
+            menu_item = {'id': idx, 'content': menu}
+            msg_menu['list'].append(menu_item)
+        return self.client.message.send_msg_menu(open_id, msg_menu, account=account)
+
+    def reply_img(self, open_id, url, account=None):
+        """
+        回复图片消息
+        :param open_id: open_id
+        :param url: 图片url (10M，支持PNG\JPEG\JPG\GIF格式)
+        :param account: 客服账号
+        :return:
+        """
+        media_id = self.get_tmp_img_media_id_by_url(url)
+        return self.reply_img_by_media_id(open_id, media_id, account=account)
+
+    def reply_voice(self, open_id, url, account=None):
+        """
+        回复语音消息
+        :param open_id: open_id
+        :param url: 文件url (2M，播放长度不超过60s，支持AMR\MP3格式)
+        :param account: 客服账号
+        :return:
+        """
+        media_id = self.get_tmp_voice_media_id_by_url(url)
+        print('media_id', media_id)
+        return self.reply_voice_by_media_id(open_id, media_id, account=account)
+
+    def reply_video(self, open_id, url, title=None, description=None, account=None):
+        """
+        回复视频消息
+        :param open_id: open_id
+        :param title: 视频消息的标题
+        :param url: 文件url (10MB，支持MP4格式)
+        :param description: 视频消息的描述
+        :param account: 可选，客服账号
+        :return:
+        """
+        media_id = self.get_tmp_video_media_id_by_url(url)
+        return self.reply_video_by_media_id(open_id, media_id, title=title, description=description, account=account)
+
+    def reply_page_card(self, open_id, title, description, url, pic_url):
+        """发送页面卡片消息"""
+        article = {'title': title,
+                   'description': description,
+                   'url': url,
+                   'picurl': pic_url}
+        return self.client.message.send_link(open_id, article)
+
+    def add_draft_article(self, thumb_url, article):
+        """添加文章到草稿箱
+        article = {
+            "title":'测试',
+            "author":'张三',
+            "digest":'这是摘要',
+            "content":'这是内容',
+            "content_source_url":'https://chat-live.j1.sale/product?id=7',
+            "thumb_media_id":'',
+            "need_open_comment":1,
+            "only_fans_can_comment":1,
+        }
+        """
+        thumb_media_id = self.get_thumb_media_id_by_url(thumb_url)
+        article['thumb_media_id'] = thumb_media_id
+        return self.client.draft.add([article])
+
+    def del_draft_article(self, media_id):
+        """删除草稿箱文章"""
+        return self.client.draft.delete(media_id)
+
+    def publish_article(self, media_id):
+        """草稿箱文章发布"""
+        return self.client.freepublish.submit(media_id)
+
+    def get_article(self, publish_id):
+        """
+        获取文章信息
+        发布状态(publish_status)，0:成功, 1:发布中，2:原创失败, 3: 常规失败, 4:平台审核不通过, 5:成功后用户删除所有文章, 6: 成功后系统封禁所有文章
+        """
+        return self.client.freepublish.get(publish_id)
+
+    def del_article(self, article_id):
+        """发布文章删除, 通过get_article方法获取"""
+        return self.client.freepublish.delete(article_id)
+
+
 
 
 if __name__ == '__main__':
@@ -346,9 +487,9 @@ if __name__ == '__main__':
 
     # url = oa.get_tmp_img_url('l_Avysz1YLAa4t5EZjAIYGA0KWaqFkqz8FTCsPoFEB7AN-ohEVslOBxrF7z7dUrI')
     # print(url)
-    oa.send_article('orRSd56HefLUut_ia-xwXGlmCH68', '鱼跃(yuwell)血糖仪580 家用医用款 语音免调码低痛采血 糖尿病血糖测试仪（50片血糖试纸+50支采血针）', '查看详情', 'https://chat-live.j1.sale/product?id=8', 'https://file.j1.sale/api/file/2024-09-12/84286a4e-70d9-11ef-9f41-0242ac120002.png')
+    oa.reply_page_card('orRSd56HefLUut_ia-xwXGlmCH68', '鱼跃(yuwell)血糖仪580 家用医用款 语音免调码低痛采血 糖尿病血糖测试仪（50片血糖试纸+50支采血针）', '查看详情', 'https://chat-live.j1.sale/product?id=8', 'https://file.j1.sale/api/file/2024-09-12/84286a4e-70d9-11ef-9f41-0242ac120002.png')
     # oa.reply_img('orRSd56HefLUut_ia-xwXGlmCH68', 'Ru5HW9LTcmgRCixmZ3_CdenSfac1JtXS1LoxWMVEViYDVx3ScpuHMrV3fGgOGvh9')
-    # x = oa.add_tmp_img_remote('https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png')
+    # x = oa.get_tmp_img_media_id_by_url('https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png')
     # x = oa.get_tmp_img_url('rEAssefTyr8MuDPtyugp5dr7Urew2P7u25pGK9M4Z-2Uo3FfVKkOguogIWHXLci7')
     # print(x)
     # print(x)
@@ -437,7 +578,7 @@ if __name__ == '__main__':
     ]
 }
 
-    # oa.reply_msg('orRSd56HefLUut_ia-xwXGlmCH68', '22222')
+    # oa.reply_text('orRSd56HefLUut_ia-xwXGlmCH68', '22222')
     # x = oa.create_menu(menu_data)
     # print(x)
     # while 1:
