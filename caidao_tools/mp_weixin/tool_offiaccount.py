@@ -284,9 +284,14 @@ class OffiAccount:
             {
                 'button': [{
                         'type': 'click',
-                        'name': '测试',
-                        'key': '123'
+                        'name': '今日资讯',
+                        'key': 'daily_news'
                     },
+                    {
+                        'type': 'click',
+                        'name': '常见问题',
+                        'key': 'faq'
+                    }
                 ]
             }
 
