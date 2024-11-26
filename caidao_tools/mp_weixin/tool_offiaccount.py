@@ -153,9 +153,22 @@ class OffiAccount:
 
     def __init__(self, app_id, app_secret):
         # WeChatClient.API_BASE_URL = 'http://47.98.218.74/cgi-bin/'
-        self.client = WeChatClient(app_id, app_secret)
-        self.access_token = self.client.access_token
-
+        self.app_id = app_id
+        self.app_secret = app_secret
+        self._client = None
+        # self.access_token = self.client.access_token
+    
+    @property
+    def expired(self):
+        expires_at = self._client.expires_at
+        return expires_at - time.time() <= 200 if expires_at is not None else False
+    
+    @property
+    def client(self):
+        if self._client is None or self.expired:
+            self._client = WeChatClient(self.app_id, self.app_secret) 
+        return self._client
+    
     def get_tmp_media_data_by_url(self, url, media_type, fname):
         """根据url获取临时素材的media_id"""
         f = url_to_memory(url, fname=fname)

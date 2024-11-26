@@ -243,6 +243,30 @@ def smart_range_safe(start, end):
 def is_string(x):
     return _is_string_like(x)
 
+def is_float(x):
+    '''
+    >>> is_float(None)
+    False
+    >>> is_float(0)
+    False
+    >>> is_float(1.0)
+    True
+    >>> is_float('.11')
+    True
+    >>> is_float('.11.')
+    False
+    >>> is_float('0')
+    False
+    >>> is_float('0.1')
+    True
+    '''
+    try:
+        float(x)
+        return '.' in str(x)
+    except:
+        pass
+    return False
+
 def is_int(x):
     try:
         int(x)
@@ -546,6 +570,16 @@ def 抽离数字(txt):
     '''
     return ptn_not_number.sub('',txt).strip() if txt else None
 
+def 文字截断(txt, 最大长度=20, 截断替代='...'):
+    '''
+    >>> 文字截断('aaa')
+    'aaa'
+    >>> 文字截断('123456', 6)
+    '123456'
+    >>> 文字截断('1234567', 6)
+    '123456...'
+    '''
+    return f'''{txt[:最大长度]}{'' if len(txt[最大长度:]) == 0 else 截断替代}'''
 
 if __name__ == '__main__':
     import doctest
