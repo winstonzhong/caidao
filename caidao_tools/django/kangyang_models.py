@@ -68,3 +68,8 @@ class AbstractMsg(models.Model):
 
     class Meta:
         abstract = True
+        
+        indexes = [
+            models.Index(fields=['status',]),
+        ]
+        

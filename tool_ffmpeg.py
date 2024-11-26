@@ -6,7 +6,6 @@ Created on 2023年12月27日
 import os
 import re
 import subprocess
-import ffmpy
 from tool_env import is_number
 from tool_file import change_suffix
 
@@ -144,6 +143,7 @@ def opus2wav(fpath, fpath_wav=None):
 
 
 def amr2mp3(input_path, output_path):
+    import ffmpy
     ff = ffmpy.FFmpeg(inputs={input_path: None}, outputs={output_path: None})
     ff.run()
 
