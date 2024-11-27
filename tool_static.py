@@ -27,13 +27,17 @@ def 得到后缀(fpath=''):
     'jpg'
     >>> 得到后缀('ccc.aaa.jpg')
     'jpg'
+    >>> 得到后缀('.amr')
+    'amr'
     '''
     l = fpath.rsplit('.', maxsplit=1)
     return '' if len(l) < 2 else l[-1]
 
 def 得到一个不重复的文件路径(fpath=''):
     time.sleep(0.01)
-    return f'{os.path.join(当前路径(), str(time.time()))}.{得到后缀(fpath)}'
+    后缀 = 得到后缀(fpath)
+    后缀 = f'.{后缀}' if 后缀 else ''
+    return f'{os.path.join(当前路径(), str(time.time()))}{后缀}'
     
 def 路径到链接(fpath):
     '''
@@ -41,6 +45,20 @@ def 路径到链接(fpath):
     'https://file.j1.sale/api/file/test/x.jpg'
     '''
     return fpath.lower().replace('\\', '/').replace(BASE_DIR_56T, BASE_URL_56T)
+
+def 存储文件(content, suffix):
+    fpath = 得到一个不重复的文件路径(f'.{suffix}')
+    with open(fpath, 'wb') as fp:
+        fp.write(content)
+    return 路径到链接(fpath)
+
+def 链接到路径(url):
+    '''
+    >>> 链接到路径('https://file.j1.sale/api/file/2024-11-26/1732629182.2386892.amr')
+    'v:/file/2024-11-26/1732629182.2386892.amr'
+    '''
+    assert url.startswith(BASE_URL_56T)
+    return url.replace(BASE_URL_56T,BASE_DIR_56T)
 
 if __name__ == '__main__':
     import doctest
