@@ -516,6 +516,15 @@ class OffiAccount:
     def query_voice_result_for_text(self, voice_id):
         """获取语音转文字识别结果"""
         return self.client.media.query_voice_result_for_text(voice_id)
+    
+    def 同步识别语音MP3(self, url):
+        voice_id = f'{time.time()}'
+        rtn = self.upload_voice_for_text(voice_id, url)
+        assert rtn.get('errcode') == 0, rtn
+        while 1:
+            rtn = self.query_voice_result_for_text(voice_id)
+            assert rtn.get('is_end'), rtn
+            return rtn.get('result')
 
 if __name__ == '__main__':
     # oa = OffiAccount()

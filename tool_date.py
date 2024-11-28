@@ -9,7 +9,7 @@ import time
 
 import numpy
 import pytz
-from tushare.stock.cons import _code_to_symbol
+
 
 
 TIME_ZONE_SHANGHAI = pytz.timezone('Asia/Shanghai')
@@ -86,6 +86,7 @@ def ticker_to_code(code):
     >>> ticker_to_code(1)
     'sz000001'
     '''
+    from tushare.stock.cons import _code_to_symbol
     return _code_to_symbol(full_ticker(code))
 
 def full_ticker(code):

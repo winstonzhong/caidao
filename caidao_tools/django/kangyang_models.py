@@ -65,8 +65,10 @@ class AbstractMsg(models.Model):
     )
 
     STATUS_INIT = 0
+    STATUS_SYNCED = 200
     STATUS = (
         (STATUS_INIT, '初始化'),
+        (STATUS_SYNCED, '已同步'),
     )
     user_id = models.PositiveIntegerField(verbose_name="用户ID")
     type = models.SmallIntegerField(verbose_name="消息类型", choices=TYPES, default=0)
