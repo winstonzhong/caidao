@@ -148,6 +148,7 @@ class MyWeChatMedia(WeChatMedia):
 WeChatClient.media = MyWeChatMedia()
 
 
+
 class OffiAccount:
     """微信公众号操作"""
 
@@ -295,17 +296,26 @@ class OffiAccount:
     def create_menu(self, menu_data):
         """创建菜单
             {
-                'button': [{
-                        'type': 'click',
-                        'name': '今日资讯',
-                        'key': 'daily_news'
-                    },
-                    {
-                        'type': 'click',
-                        'name': '常见问题',
-                        'key': 'faq'
-                    }
-                ]
+                "button": [{
+                    "type": "click",
+                    "name": "今日资讯",
+                    "key": "daily_news"
+                }, {
+                    "name": "菜单",
+                    "sub_button": [{
+                        "type": "click",
+                        "name": "常见问题",
+                        "key": "faq"
+                    }, {
+                        "type": "view",
+                        "name": "我的健康档案",
+                        "url": "https://chat-live.j1.sale/h5"
+                    }, {
+                        "type": "view",
+                        "name": "购买建档服务",
+                        "url": "https://chat-live.j1.sale/product?id=1"
+                    }]
+                }]
             }
 
         """

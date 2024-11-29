@@ -20,7 +20,7 @@ class AbstractUser(models.Model):
     )
     name = models.CharField(max_length=50, verbose_name='用户名称', default='')
     open_id = models.CharField(max_length=50, verbose_name='微信Open ID', blank=True, null=True, unique=True)
-    head_img = models.TextField(verbose_name='用户头像', blank=True, null=True)
+    head_img = models.FileField(verbose_name='用户头像', storage=MyStorage, null=True, blank=True)
     gender = models.SmallIntegerField(verbose_name='性别', choices=GENDER_CHOICE, blank=True, null=True)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
@@ -213,7 +213,7 @@ class AbstractPatient(models.Model):
         (3, "离异")
     )
 
-    uuid = models.CharField(max_length=32, verbose_name="患者唯一id", db_index=True, unique=True)
+    # uuid = models.CharField(max_length=32, verbose_name="患者唯一id", db_index=True, unique=True)
     name = models.CharField(max_length=15, verbose_name='患者姓名', null=True)
     name_pinyin = models.CharField(max_length=128, verbose_name='患者姓名拼音', db_index=True, blank=True, null=True)
     pinyin_target = models.CharField(max_length=5, verbose_name='姓名首字母标记', db_index=True, blank=True, null=True)
@@ -253,15 +253,15 @@ class AbstractPatient(models.Model):
 
 
 class AbstractMedicalHistory(models.Model):
-    CREATOR_TYPE_SYS = 0  # 系统
+    CREATOR_TYPE_DOCTOR = 0  # 医生
     CREATOR_TYPE_PATIENT = 1  # 患者
-    # CREATOR_TYPE_DOCTOR = 2  # 医生
-    # CREATE_TYPE_PATIENT_SYNC = 3  # 患者一键同步
+    CREATOR_TYPE_SYS = 2  # 系统
+    CREATE_TYPE_PATIENT_SYNC = 3  # 患者一键同步
     CREATOR_TYPE = (
         (CREATOR_TYPE_SYS, "系统自动生成"),
         (CREATOR_TYPE_PATIENT, "患者"),
-        # (CREATOR_TYPE_DOCTOR, "医生"),
-        # (CREATE_TYPE_PATIENT_SYNC, "患者一键同步")
+        (CREATOR_TYPE_DOCTOR, "医生"),
+        (CREATE_TYPE_PATIENT_SYNC, "患者一键同步")
     )
 
     CATE_NORMAL = 0
@@ -296,14 +296,28 @@ class AbstractMedicalHistory(models.Model):
     class Meta:
         abstract = True
         indexes = []
-        verbose_name = verbose_name_plural = '患者病历表'
+        verbose_name = verbose_name_plural = '健康小结'
 
+
+class AbstractMedicalHistoryReport(models.Model):
+    patient_id = models.PositiveIntegerField(verbose_name='患者ID', blank=True, null=True)
+    medical_history_id = models.PositiveIntegerField(verbose_name='健康小结ID', blank=True, null=True)
+    report_file = models.FileField(verbose_name='文件地址', storage=MyStorage, null=True, blank=True)
+    data = models.TextField(verbose_name='识别结果', null=True, blank=True)
+    is_deleted = models.BooleanField(default=False, help_text='是否删除')
+    update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
+    create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
+
+    class Meta:
+        abstract = True
+        indexes = []
+        verbose_name = verbose_name_plural = '报告识别'
 
 
 class AbstractMedicalHistoryAttachment(models.Model):
     patient_id = models.PositiveIntegerField(verbose_name='患者ID', blank=True, null=True)
-    medical_history_id = models.PositiveIntegerField(verbose_name='患者ID', blank=True, null=True)
-    Attach_file = models.FileField(verbose_name='文件地址', storage=MyStorage, null=True, blank=True)
+    medical_history_id = models.PositiveIntegerField(verbose_name='健康小结ID', blank=True, null=True)
+    attach_file = models.FileField(verbose_name='文件地址', storage=MyStorage, null=True, blank=True)
     is_deleted = models.BooleanField(default=False, help_text='是否删除')
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
