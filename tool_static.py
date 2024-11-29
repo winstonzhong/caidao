@@ -33,6 +33,17 @@ def 得到后缀(fpath=''):
     l = fpath.rsplit('.', maxsplit=1)
     return '' if len(l) < 2 else l[-1]
 
+def 得到一个固定文件路径(相对路径):
+    '''
+    >>> 得到一个固定文件路径('aaa/bbb')
+    'v:/file/aaa/bbb'
+    >>> 得到一个固定文件路径('/aaa/bbb')
+    'v:/file/aaa/bbb'
+    '''
+    相对路径 = 相对路径.replace('\\','/')
+    相对路径 = 相对路径[1:] if 相对路径.startswith('/') else 相对路径
+    return os.path.join(BASE_DIR_56T,相对路径).replace('\\','/')
+
 def 得到一个不重复的文件路径(fpath=''):
     time.sleep(0.01)
     后缀 = 得到后缀(fpath)
@@ -46,11 +57,11 @@ def 路径到链接(fpath):
     '''
     return fpath.lower().replace('\\', '/').replace(BASE_DIR_56T, BASE_URL_56T)
 
-def 存储文件(content, suffix):
+def 存储文件(content, suffix, 返回路径=False):
     fpath = 得到一个不重复的文件路径(f'.{suffix}')
     with open(fpath, 'wb') as fp:
         fp.write(content)
-    return 路径到链接(fpath)
+    return 路径到链接(fpath) if not 返回路径 else fpath
 
 def 链接到路径(url):
     '''
