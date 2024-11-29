@@ -107,7 +107,7 @@ def request(self, method, url,
 Session.request = request
 
 
-class WeChatMessageTyping(BaseWeChatAPI):
+class WeChatMessageTyping(WeChatMessage):
     """客服输入状态"""
 
     def send_typing(self, open_id):
@@ -146,6 +146,8 @@ class MyWeChatMedia(WeChatMedia):
 
 
 WeChatClient.media = MyWeChatMedia()
+
+WeChatClient.message = WeChatMessageTyping()
 
 
 
@@ -230,7 +232,7 @@ class OffiAccount:
 
     def send_typing(self, open_id):
         """客服输入状态"""
-        return self.client.message_typing.send_typing(open_id)
+        return self.client.message.send_typing(open_id)
 
     def reply_img_by_media_id(self, open_id, media_id, account=None):
         """
