@@ -369,9 +369,11 @@ class OffiAccount:
         return img_url
 
     def upload_material(self, fpath, file_type='image'):
-        ret_data = self.client.material.add(file_type, open(fpath, 'rb'))
-        print(ret_data)
-        return ret_data['media_id']
+        with open(fpath, 'rb') as fp:
+            ret_data = self.client.material.add(file_type, fp)
+            return ret_data 
+            # print(ret_data)
+            # return ret_data['media_id']
 
     def send_index_page(self, open_id, img_url=None):
         if not img_url:

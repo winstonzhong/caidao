@@ -31,7 +31,10 @@ class AbstractUser(models.Model):
 
     class Meta:
         abstract = True
-        indexes = []
+        indexes = [
+            models.Index(fields=['open_id']),
+        ]
+
 
     def __str__(self):
         return '[{self.open_id}]{self.name}'.format(self=self)
