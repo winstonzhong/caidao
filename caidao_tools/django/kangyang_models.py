@@ -214,6 +214,7 @@ class AbstractPatient(models.Model):
     )
 
     # uuid = models.CharField(max_length=32, verbose_name="患者唯一id", db_index=True, unique=True)
+    head_img = models.FileField(verbose_name='用户头像', storage=MyStorage, null=True, blank=True)
     name = models.CharField(max_length=15, verbose_name='患者姓名', null=True)
     name_pinyin = models.CharField(max_length=128, verbose_name='患者姓名拼音', db_index=True, blank=True, null=True)
     pinyin_target = models.CharField(max_length=5, verbose_name='姓名首字母标记', db_index=True, blank=True, null=True)

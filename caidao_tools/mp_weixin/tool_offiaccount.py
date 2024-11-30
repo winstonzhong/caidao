@@ -316,7 +316,12 @@ class OffiAccount:
                         "type": "view",
                         "name": "购买建档服务",
                         "url": "https://chat-live.j1.sale/product?id=1"
-                    }]
+                    }, {
+                        "type": "view",
+                        "name": "绑定邮箱",
+                        "url": "https://chat-live.j1.sale/accountbind"
+                    }
+                    ]
                 }]
             }
 
