@@ -7,6 +7,7 @@ import os
 import time
 
 from tool_date import today
+from helper_net import rget
 
 
 BASE_URL_56T = 'https://file.j1.sale/api/file'
@@ -62,6 +63,9 @@ def 存储文件(content, suffix, 返回路径=False):
     with open(fpath, 'wb') as fp:
         fp.write(content)
     return 路径到链接(fpath) if not 返回路径 else fpath
+
+def 存储链接到文件(url, suffix, 返回路径=False):
+    return 存储文件(rget(url).content, suffix, 返回路径)
 
 def 链接到路径(url):
     '''
