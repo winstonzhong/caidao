@@ -198,6 +198,28 @@ class AbstractOrderDetail(models.Model):
 
 
 class AbstractPatient(models.Model):
+    """
+    json字段示例:
+
+        past_medical_history 既往史
+        - 示例: [{"type": "疾病", "name": "肺炎","time": "2024-01-01 12:00:00"}]
+        - json字段说明:
+            type: 类型; 包含(疾病, 手术, 外伤, 输血)
+            name: 名称
+            time: 时间
+
+        vaccination_history 预防接种史
+        - 示例: [{"name": "狂犬疫苗xxx","time": "2024-01-01 12:00:00"}]
+        - json字段说明:
+            name: 接种名称
+            time: 时间
+
+        vaccination_history 家族史
+        - 示例: [{"relation": "父亲", "name": "高血压"}]
+        - json字段说明:
+            relation: 关系 (父亲, 母亲, 兄弟姐妹, 子女)
+            name: 疾病名称
+    """
     AUDIT_STATUS = (
         (0, '初始创建'),
         (1, '已获取用户基本信息'),
@@ -239,14 +261,16 @@ class AbstractPatient(models.Model):
     active = models.BooleanField(default=True, help_text='隐式删除', verbose_name="激活/禁用")
     address = models.CharField(max_length=255, verbose_name="地址", null=True, blank=True)
 
-    allergy_history = models.CharField(max_length=2000, verbose_name='过敏史简介', null=True, blank=True)
-    past_medical_history = models.CharField(max_length=2000, verbose_name='既往病史简介', null=True, blank=True)
-    contagion = models.CharField(max_length=2000, verbose_name='传染病', null=True, blank=True)  # 肺结核, 肝炎, 其他
-    exposure_history = models.CharField(max_length=2000, verbose_name='暴露史', null=True, blank=True)  # 化学品, 毒物, 射线
-    family_medical_history = models.CharField(max_length=2000, verbose_name='家族史', null=True, blank=True)  # 父亲, 母亲,
-    genetic_disease_history = models.CharField(max_length=2000, verbose_name='遗传病史', null=True, blank=True)
-    disability = models.CharField(max_length=2000, verbose_name='残疾情况', null=True,
-                                  blank=True)  # 视力残疾, 听力残疾, 语言残疾, 肢体残疾, 智力残疾, 精神残疾, 其他残疾
+    allergy_history = models.TextField(verbose_name='过敏史', null=True, blank=True)  # 逗号风格的过敏情况
+    priority_disease = models.TextField(verbose_name='慢病/重点疾病', null=True, blank=True)  # 逗号分隔的疾病名称
+    past_medical_history = models.TextField(verbose_name='既往病史简介', null=True, blank=True)  # json字符串
+    contagion = models.TextField(verbose_name='传染病', null=True, blank=True)  # 逗号分隔的疾病名称: 肺结核, 肝炎, 其他
+    exposure_history = models.TextField(verbose_name='暴露史', null=True, blank=True)  # 逗号分隔的名称: 化学品, 毒物, 射线
+    family_medical_history = models.TextField(verbose_name='家族史', null=True, blank=True)  # json字符串
+    genetic_disease_history = models.TextField(verbose_name='遗传病史', null=True, blank=True)  # 逗号分隔的字符串
+    disability = models.TextField(verbose_name='残疾情况', null=True,
+                                  blank=True)  # 逗号分隔的字符串: 类型 - 视力残疾, 听力残疾, 语言残疾, 肢体残疾, 智力残疾, 精神残疾, 其他残疾
+    vaccination_history = models.TextField(verbose_name='预防接种史', null=True, blank=True)  # json字符串
     wx_user_id = models.PositiveIntegerField(verbose_name='微信用户ID', blank=True, null=True)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
@@ -429,7 +453,7 @@ class AbstractBloodGlucose(models.Model):
     )
     DRUG_USE_CHOICES = (
         (0, '用药前'),
-        (0, '用药后'),
+        (1, '用药后'),
     )
     patient_id = models.PositiveIntegerField(verbose_name='患者ID', blank=True, null=True)
     value = models.DecimalField(verbose_name="血糖", help_text="单位: mmol/L", max_digits=6, decimal_places=2, default=0)
