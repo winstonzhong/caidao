@@ -318,8 +318,7 @@ class AbstractPatient(models.Model):
     blood_type = models.SmallIntegerField(choices=BLOOD_TYPES, verbose_name='血型', default=0)
     rh_blood_type = models.SmallIntegerField(choices=RH_BLOOD_TYPES, verbose_name='RH血型', default=0)
 
-
-
+    open_id = models.CharField(max_length=50, verbose_name='微信Open ID', blank=True, null=True, unique=True)
     wx_user_id = models.PositiveIntegerField(verbose_name='微信用户ID', blank=True, null=True)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
