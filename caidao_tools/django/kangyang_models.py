@@ -201,7 +201,7 @@ class AbstractPatient(models.Model):
     """
     json字段说明:
         priority_disease 慢病/重点疾病
-            - 示例: [{"name": "xxx"}]
+            - 示例: [{"name": "xxx", "raw_data":"text..."}]
             - json字段说明:
                 name: 名称
 
@@ -283,11 +283,11 @@ class AbstractPatient(models.Model):
 
     # uuid = models.CharField(max_length=32, verbose_name="患者唯一id", db_index=True, unique=True)
     head_img = models.FileField(verbose_name='用户头像', storage=MyStorage, null=True, blank=True)
-    name = models.CharField(max_length=15, verbose_name='患者姓名', null=True)
+    name = models.CharField(max_length=15, verbose_name='患者[姓名]', null=True)
     name_pinyin = models.CharField(max_length=128, verbose_name='患者姓名拼音', db_index=True, blank=True, null=True)
     pinyin_target = models.CharField(max_length=5, verbose_name='姓名首字母标记', db_index=True, blank=True, null=True)
-    gender = models.SmallIntegerField(choices=USER_GENDER, verbose_name='用户性别', default=0)
-    height = models.SmallIntegerField(verbose_name="身高", help_text="单位：cm", blank=True, null=True)
+    gender = models.SmallIntegerField(choices=USER_GENDER, verbose_name='用户[性别]', default=0)
+    height = models.SmallIntegerField(verbose_name="[身高]", help_text="单位：cm", blank=True, null=True)
     weight = models.DecimalField(verbose_name="体重", help_text="单位：kg", max_digits=6, decimal_places=2, blank=True,
                                  null=True)
     marriage = models.SmallIntegerField(verbose_name="婚姻状况", choices=MARRIAGE, default=0)
