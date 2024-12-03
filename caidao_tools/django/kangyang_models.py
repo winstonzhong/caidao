@@ -201,50 +201,54 @@ class AbstractPatient(models.Model):
     """
     json字段说明:
         priority_disease 慢病/重点疾病
+<<<<<<< HEAD
+            - 示例: {"data":[{"name": "xxx"}]}
+=======
             - 示例: [{"name": "xxx", "raw_data":"text..."}]
+>>>>>>> 418117ce589977b2ae2fb3096e0d008dfd04d0e2
             - json字段说明:
                 name: 名称
 
         allergy_history 过敏史
-            - 示例: [{"name": "xxx"}]
+            - 示例: {"data":[{"name": "xxx"}]}
             - json字段说明:
                 name: 名称
 
         contagion 传染病
-            - 示例: [{"name": "xxx"}]
+            - 示例: {"data":[{"name": "xxx"}]}
             - json字段说明:
                 name: 名称
                 
         exposure_history 暴露史
-            - 示例: [{"name": "xxx"}]
+            - 示例: {"data":[{"name": "xxx"}]}
             - json字段说明:
                 name: 名称
                 
         genetic_disease_history 遗传病史
-            - 示例: [{"name": "xxx"}]
+            - 示例: {"data":[{"name": "xxx"}]}
             - json字段说明:
                 name: 名称
                 
         disability 残疾情况
-            - 示例: [{"name": "xxx"}]
+            - 示例: {"data":[{"name": "xxx"}]}
             - json字段说明:
                 name: 名称
          
         past_medical_history 既往史
-            - 示例: [{"type": "疾病", "name": "肺炎","time": "2024-01-01 12:00:00"}]
+            - 示例: {"data":[{"type": "疾病", "name": "肺炎","time": "2024-01-01 12:00:00"}], "raw_data":""}
             - json字段说明:
                 type: 类型; 包含(疾病, 手术, 外伤, 输血)
                 name: 名称
                 time: 时间
 
         vaccination_history 预防接种史
-            - 示例: [{"name": "狂犬疫苗xxx","time": "2024-01-01 12:00:00"}]
+            - 示例: {"data":[{"name": "狂犬疫苗xxx","time": "2024-01-01 12:00:00"}], "raw_data":""}
             - json字段说明:
                 name: 接种名称
                 time: 时间
 
         family_medical_history 家族史
-            - 示例: [{"relation": "父亲", "name_list": ["高血压"]}]
+            - 示例: {"data":[{"relation": "父亲", "name_list": ["高血压"]}], "raw_data":""}
             - json字段说明:
                 relation: 关系 (父亲, 母亲, 兄弟姐妹, 子女)
                 name: 疾病名称
@@ -279,6 +283,13 @@ class AbstractPatient(models.Model):
         (0, "不详"),
         (1, "RH 阴性"),
         (2, "RH 阳性"),
+    )
+
+    MATERNAL_RISK_LEVELS = (
+        (0, "低风险"),
+        (1, "一般风险"),
+        (2, "较高风险"),
+        (2, "高风险"),
     )
 
     # uuid = models.CharField(max_length=32, verbose_name="患者唯一id", db_index=True, unique=True)
@@ -317,6 +328,8 @@ class AbstractPatient(models.Model):
 
     blood_type = models.SmallIntegerField(choices=BLOOD_TYPES, verbose_name='血型', default=0)
     rh_blood_type = models.SmallIntegerField(choices=RH_BLOOD_TYPES, verbose_name='RH血型', default=0)
+
+    maternal_risk_level = models.SmallIntegerField(choices=MATERNAL_RISK_LEVELS, verbose_name='孕产妇风险等级', default=0)
 
     open_id = models.CharField(max_length=50, verbose_name='微信Open ID', blank=True, null=True, unique=True)
     wx_user_id = models.PositiveIntegerField(verbose_name='微信用户ID', blank=True, null=True)
