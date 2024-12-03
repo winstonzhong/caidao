@@ -201,11 +201,8 @@ class AbstractPatient(models.Model):
     """
     json字段说明:
         priority_disease 慢病/重点疾病
-<<<<<<< HEAD
-            - 示例: {"data":[{"name": "xxx"}]}
-=======
             - 示例: [{"name": "xxx", "raw_data":"text..."}]
->>>>>>> 418117ce589977b2ae2fb3096e0d008dfd04d0e2
+
             - json字段说明:
                 name: 名称
 
