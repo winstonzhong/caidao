@@ -199,26 +199,55 @@ class AbstractOrderDetail(models.Model):
 
 class AbstractPatient(models.Model):
     """
-    json字段示例:
+    json字段说明:
+        priority_disease 慢病/重点疾病
+            - 示例: [{"name": "xxx"}]
+            - json字段说明:
+                name: 名称
 
+        allergy_history 过敏史
+            - 示例: [{"name": "xxx"}]
+            - json字段说明:
+                name: 名称
+
+        contagion 传染病
+            - 示例: [{"name": "xxx"}]
+            - json字段说明:
+                name: 名称
+                
+        exposure_history 暴露史
+            - 示例: [{"name": "xxx"}]
+            - json字段说明:
+                name: 名称
+                
+        genetic_disease_history 遗传病史
+            - 示例: [{"name": "xxx"}]
+            - json字段说明:
+                name: 名称
+                
+        disability 残疾情况
+            - 示例: [{"name": "xxx"}]
+            - json字段说明:
+                name: 名称
+         
         past_medical_history 既往史
-        - 示例: [{"type": "疾病", "name": "肺炎","time": "2024-01-01 12:00:00"}]
-        - json字段说明:
-            type: 类型; 包含(疾病, 手术, 外伤, 输血)
-            name: 名称
-            time: 时间
+            - 示例: [{"type": "疾病", "name": "肺炎","time": "2024-01-01 12:00:00"}]
+            - json字段说明:
+                type: 类型; 包含(疾病, 手术, 外伤, 输血)
+                name: 名称
+                time: 时间
 
         vaccination_history 预防接种史
-        - 示例: [{"name": "狂犬疫苗xxx","time": "2024-01-01 12:00:00"}]
-        - json字段说明:
-            name: 接种名称
-            time: 时间
+            - 示例: [{"name": "狂犬疫苗xxx","time": "2024-01-01 12:00:00"}]
+            - json字段说明:
+                name: 接种名称
+                time: 时间
 
-        vaccination_history 家族史
-        - 示例: [{"relation": "父亲", "name": "高血压"}]
-        - json字段说明:
-            relation: 关系 (父亲, 母亲, 兄弟姐妹, 子女)
-            name: 疾病名称
+        family_medical_history 家族史
+            - 示例: [{"relation": "父亲", "name_list": ["高血压"]}]
+            - json字段说明:
+                relation: 关系 (父亲, 母亲, 兄弟姐妹, 子女)
+                name: 疾病名称
     """
     AUDIT_STATUS = (
         (0, '初始创建'),
@@ -232,10 +261,24 @@ class AbstractPatient(models.Model):
         (2, '女性')
     )
     MARRIAGE = (
-        (0, "未填写"),
+        (0, "不详"),
         (1, "未婚"),
         (2, "已婚"),
         (3, "离异")
+    )
+
+    BLOOD_TYPES = (
+        (0, "不详"),
+        (1, "A"),
+        (2, "B"),
+        (3, "O"),
+        (4, "AB"),
+    )
+
+    RH_BLOOD_TYPES = (
+        (0, "不详"),
+        (1, "RH 阴性"),
+        (2, "RH 阳性"),
     )
 
     # uuid = models.CharField(max_length=32, verbose_name="患者唯一id", db_index=True, unique=True)
@@ -261,7 +304,7 @@ class AbstractPatient(models.Model):
     active = models.BooleanField(default=True, help_text='隐式删除', verbose_name="激活/禁用")
     address = models.CharField(max_length=255, verbose_name="地址", null=True, blank=True)
 
-    allergy_history = models.TextField(verbose_name='过敏史', null=True, blank=True)  # 逗号风格的过敏情况
+    allergy_history = models.TextField(verbose_name='过敏史', null=True, blank=True)  # 逗号分隔的过敏情况
     priority_disease = models.TextField(verbose_name='慢病/重点疾病', null=True, blank=True)  # 逗号分隔的疾病名称
     past_medical_history = models.TextField(verbose_name='既往病史简介', null=True, blank=True)  # json字符串
     contagion = models.TextField(verbose_name='传染病', null=True, blank=True)  # 逗号分隔的疾病名称: 肺结核, 肝炎, 其他
@@ -271,6 +314,12 @@ class AbstractPatient(models.Model):
     disability = models.TextField(verbose_name='残疾情况', null=True,
                                   blank=True)  # 逗号分隔的字符串: 类型 - 视力残疾, 听力残疾, 语言残疾, 肢体残疾, 智力残疾, 精神残疾, 其他残疾
     vaccination_history = models.TextField(verbose_name='预防接种史', null=True, blank=True)  # json字符串
+
+    blood_type = models.SmallIntegerField(choices=BLOOD_TYPES, verbose_name='血型', default=0)
+    rh_blood_type = models.SmallIntegerField(choices=RH_BLOOD_TYPES, verbose_name='RH血型', default=0)
+
+
+
     wx_user_id = models.PositiveIntegerField(verbose_name='微信用户ID', blank=True, null=True)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
