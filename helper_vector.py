@@ -15,4 +15,13 @@ def convert_to_bin(vec_path):
 def load_word_vectors(vec_path):
     return KeyedVectors.load(vec_path, mmap='r')
 
+
+class TxKeyedVectors(object):
+    def __init__(self, vec_path):
+        self.wv = load_word_vectors(vec_path)
+        
+        
+    def get_vector(self, word):
+        return self.wv[word]    
+    
     
