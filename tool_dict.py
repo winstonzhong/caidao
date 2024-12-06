@@ -20,7 +20,9 @@ class PropDict(dict):
     def __getattr__ (self, name):
         return self.get(name)
 
-
+    
+    
+    
 if __name__ == "__main__":
     import doctest
     print(doctest.testmod(verbose=False, report=False))

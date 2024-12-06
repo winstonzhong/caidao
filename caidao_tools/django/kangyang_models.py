@@ -156,13 +156,13 @@ class AbstractOrder(models.Model):
     STATUS_WAIT_PAID = 1
     STATUS_WAIT_DELIVER = 2
     STATUS_WAIT_RECEIVE = 3
-    STATUS_WAIT_COMPLETE = 4
+    STATUS_COMPLETE = 4
     TYPE_CHOICE = (
         (STATUS_INIT, "待付款"),
         (STATUS_WAIT_PAID, "已付款"),
         (STATUS_WAIT_DELIVER, "待发货"),
         (STATUS_WAIT_RECEIVE, "待收货"),
-        (STATUS_WAIT_COMPLETE, "已完成"),
+        (STATUS_COMPLETE, "已完成"),
     )
     order_sn = models.CharField(verbose_name='订单编号', max_length=40, null=True, blank=True)
     user_id = models.PositiveIntegerField(verbose_name='用户ID', blank=True, null=True)
@@ -176,6 +176,7 @@ class AbstractOrder(models.Model):
         abstract = True
         indexes = [
             models.Index(fields=['order_sn']),
+            models.Index(fields=['user_id','status']),
             models.Index(fields=['status']),
         ]
 
@@ -193,7 +194,7 @@ class AbstractOrderDetail(models.Model):
     class Meta:
         abstract = True
         indexes = [
-            models.Index(fields=['order_id']),
+            models.Index(fields=['order_id','product_name']),
         ]
 
 
@@ -295,8 +296,8 @@ class AbstractPatient(models.Model):
     name_pinyin = models.CharField(max_length=128, verbose_name='患者姓名拼音', db_index=True, blank=True, null=True)
     pinyin_target = models.CharField(max_length=5, verbose_name='姓名首字母标记', db_index=True, blank=True, null=True)
     gender = models.SmallIntegerField(choices=USER_GENDER, verbose_name='*性别', default=0)
-    height = models.SmallIntegerField(verbose_name="*身高(单位：cm)", help_text="单位：cm", blank=True, null=True)
-    weight = models.DecimalField(verbose_name="*体重(单位：kg)", help_text="单位：kg", max_digits=6, decimal_places=2, blank=True,
+    height = models.SmallIntegerField(verbose_name="*身高", help_text="单位：cm", blank=True, null=True)
+    weight = models.DecimalField(verbose_name="*体重", help_text="单位：kg", max_digits=6, decimal_places=2, blank=True,
                                  null=True)
     marriage = models.SmallIntegerField(verbose_name="*婚姻状况", choices=MARRIAGE, default=0)
     social_card = models.CharField(verbose_name="社保卡号", null=True, blank=True, max_length=100)
