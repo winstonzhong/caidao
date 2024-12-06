@@ -166,6 +166,7 @@ class AbstractOrder(models.Model):
     )
     order_sn = models.CharField(verbose_name='订单编号', max_length=40, null=True, blank=True)
     user_id = models.PositiveIntegerField(verbose_name='用户ID', blank=True, null=True)
+    open_id = models.CharField(max_length=50, verbose_name='微信Open ID', blank=True, null=True, unique=True)
     amount = models.DecimalField(verbose_name='订单金额', max_digits=6, decimal_places=2, default=0)
     address = models.CharField(verbose_name='详细地址', max_length=200, blank=True, null=True)
     status = models.SmallIntegerField(verbose_name='状态', choices=TYPE_CHOICE, default=STATUS_INIT)
@@ -178,11 +179,14 @@ class AbstractOrder(models.Model):
             models.Index(fields=['order_sn']),
             models.Index(fields=['user_id','status']),
             models.Index(fields=['status']),
+            models.Index(fields=['open_id']),
         ]
 
 
 class AbstractOrderDetail(models.Model):
     order_id = models.PositiveIntegerField(verbose_name='产品ID', blank=True, null=True)
+    user_id = models.PositiveIntegerField(verbose_name='用户ID', blank=True, null=True)
+    open_id = models.CharField(max_length=50, verbose_name='微信Open ID', blank=True, null=True, unique=True)
     product_name = models.CharField(verbose_name='产品描述', max_length=200, default='')
     product_img = models.TextField(verbose_name='图片', max_length=200, null=True, blank=True)
     quantity = models.IntegerField(verbose_name='数量', default=1)
@@ -195,6 +199,8 @@ class AbstractOrderDetail(models.Model):
         abstract = True
         indexes = [
             models.Index(fields=['order_id','product_name']),
+            models.Index(fields=['user_id']),
+            models.Index(fields=['open_id']),
         ]
 
 
