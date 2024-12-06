@@ -157,12 +157,14 @@ class AbstractOrder(models.Model):
     STATUS_DELIVERED = 2
     STATUS_RECEIVED = 3
     STATUS_COMPLETE = 4
+    STATUS_BAD = 5
     TYPE_CHOICE = (
         (STATUS_INIT, "待付款"),
         (STATUS_PAID, "已付款"),
         (STATUS_DELIVERED, "已发货"),
         (STATUS_RECEIVED, "已收货"),
         (STATUS_COMPLETE, "已完成"),
+        (STATUS_BAD, "废弃"),
     )
     order_sn = models.CharField(verbose_name='订单编号', max_length=40, null=True, blank=True)
     user_id = models.PositiveIntegerField(verbose_name='用户ID', blank=True, null=True)
