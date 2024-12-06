@@ -153,15 +153,15 @@ class AbstractProductImg(models.Model):
 
 class AbstractOrder(models.Model):
     STATUS_INIT = 0
-    STATUS_WAIT_PAID = 1
-    STATUS_WAIT_DELIVER = 2
-    STATUS_WAIT_RECEIVE = 3
+    STATUS_PAID = 1
+    STATUS_DELIVERED = 2
+    STATUS_RECEIVED = 3
     STATUS_COMPLETE = 4
     TYPE_CHOICE = (
         (STATUS_INIT, "待付款"),
-        (STATUS_WAIT_PAID, "已付款"),
-        (STATUS_WAIT_DELIVER, "待发货"),
-        (STATUS_WAIT_RECEIVE, "待收货"),
+        (STATUS_PAID, "已付款"),
+        (STATUS_DELIVERED, "已发货"),
+        (STATUS_RECEIVED, "已收货"),
         (STATUS_COMPLETE, "已完成"),
     )
     order_sn = models.CharField(verbose_name='订单编号', max_length=40, null=True, blank=True)
