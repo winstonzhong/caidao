@@ -32,6 +32,10 @@ else:
     DRIVER_PATH = r'D:\chrome_driver\chromedriver.exe'
 
 
+
+user_data_dir = 'd:/cache/google-chrome/Default'
+DRIVER_PATH = r'D:\soft\chromedriver\chromedriver.exe'
+
 import selenium
 
 assert selenium.__version__ == '4.12.0'

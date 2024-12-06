@@ -20,7 +20,7 @@ class AbstractUser(models.Model):
     )
     name = models.CharField(max_length=50, verbose_name='用户名称', default='')
     open_id = models.CharField(max_length=50, verbose_name='微信Open ID', blank=True, null=True, unique=True)
-    head_img = models.FileField(verbose_name='用户头像', storage=MyStorage, null=True, blank=True)
+    head_img = models.FileField(verbose_name='用户头像', max_length=200, storage=MyStorage, null=True, blank=True)
     gender = models.SmallIntegerField(verbose_name='性别', choices=GENDER_CHOICE, blank=True, null=True)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
