@@ -292,10 +292,11 @@ class AbstractPatient(models.Model):
     )
 
     MATERNAL_RISK_LEVELS = (
-        (0, "低风险"),
-        (1, "一般风险"),
-        (2, "较高风险"),
-        (2, "高风险"),
+        (0, "未知"),
+        (1, "低风险"),
+        (2, "一般风险"),
+        (3, "较高风险"),
+        (4, "高风险"),
     )
 
     # uuid = models.CharField(max_length=32, verbose_name="患者唯一id", db_index=True, unique=True)
