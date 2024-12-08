@@ -278,17 +278,19 @@ class AbstractPatient(models.Model):
     )
 
     BLOOD_TYPES = (
-        (0, "不详"),
+        (0, "未知"),
         (1, "A"),
         (2, "B"),
         (3, "O"),
         (4, "AB"),
+        (5, "不详"),
     )
 
     RH_BLOOD_TYPES = (
-        (0, "不详"),
+        (0, "未知"),
         (1, "RH 阴性"),
         (2, "RH 阳性"),
+        (3, "不详"),
     )
 
     MATERNAL_RISK_LEVELS = (
