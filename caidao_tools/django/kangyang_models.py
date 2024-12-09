@@ -340,14 +340,16 @@ class AbstractPatient(models.Model):
 
     maternal_risk_level = models.SmallIntegerField(choices=MATERNAL_RISK_LEVELS, verbose_name='孕产妇风险等级', default=0)
 
-    open_id = models.CharField(max_length=50, verbose_name='微信Open ID', blank=True, null=True, unique=True)
+    open_id = models.CharField(max_length=50, verbose_name='Open ID', blank=True, null=True, unique=True)
     wx_user_id = models.PositiveIntegerField(verbose_name='微信用户ID', blank=True, null=True)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
 
     class Meta:
         abstract = True
-        indexes = []
+        indexes = [
+            models.Index(fields=['open_id']),
+        ]
 
 
 class AbstractMedicalHistory(models.Model):
@@ -370,7 +372,7 @@ class AbstractMedicalHistory(models.Model):
         (CATE_SUMMARY, "健康小结"),
         (CATE_MEASURE, "健康测评"),
     )
-
+    open_id = models.CharField(max_length=50, verbose_name='Open ID', blank=True, null=True)
     treatment_date = models.DateField(help_text='就诊时间', null=True, blank=True)
     patient_id = models.PositiveIntegerField(verbose_name='患者ID', blank=True, null=True)
     # platform_patient = models.ForeignKey(patient_user_platform,on_delete=models.SET_NULL,null=True)
@@ -393,11 +395,14 @@ class AbstractMedicalHistory(models.Model):
 
     class Meta:
         abstract = True
-        indexes = []
+        indexes = [
+            models.Index(fields=['open_id']),
+        ]
         verbose_name = verbose_name_plural = '健康小结'
 
 
 class AbstractMedicalHistoryReport(models.Model):
+    open_id = models.CharField(max_length=50, verbose_name='Open ID', blank=True, null=True)
     patient_id = models.PositiveIntegerField(verbose_name='患者ID', blank=True, null=True)
     medical_history_id = models.PositiveIntegerField(verbose_name='健康小结ID', blank=True, null=True)
     report_file = models.FileField(verbose_name='文件地址', storage=MyStorage, null=True, blank=True)
@@ -408,11 +413,14 @@ class AbstractMedicalHistoryReport(models.Model):
 
     class Meta:
         abstract = True
-        indexes = []
+        indexes = [
+            models.Index(fields=['open_id']),
+        ]
         verbose_name = verbose_name_plural = '报告识别'
 
 
 class AbstractMedicalHistoryAttachment(models.Model):
+    open_id = models.CharField(max_length=50, verbose_name='Open ID', blank=True, null=True)
     patient_id = models.PositiveIntegerField(verbose_name='患者ID', blank=True, null=True)
     medical_history_id = models.PositiveIntegerField(verbose_name='健康小结ID', blank=True, null=True)
     attach_file = models.FileField(verbose_name='文件地址', storage=MyStorage, null=True, blank=True)
@@ -422,12 +430,15 @@ class AbstractMedicalHistoryAttachment(models.Model):
 
     class Meta:
         abstract = True
-        indexes = []
+        indexes = [
+            models.Index(fields=['open_id']),
+        ]
         verbose_name = verbose_name_plural = '病历附件表'
 
 
 class AbstractTemperature(models.Model):
     """体温"""
+    open_id = models.CharField(max_length=50, verbose_name='Open ID', blank=True, null=True)
     patient_id = models.PositiveIntegerField(verbose_name='患者ID', blank=True, null=True)
     value = models.DecimalField(verbose_name="温度", help_text="单位: ℃", max_digits=3, decimal_places=1, default=0)
     measure_time = models.DateTimeField(verbose_name='更新时间', default=timezone.now)
@@ -436,13 +447,16 @@ class AbstractTemperature(models.Model):
 
     class Meta:
         abstract = True
-        indexes = []
+        indexes = [
+            models.Index(fields=['open_id']),
+        ]
         verbose_name = '体温记录'
         verbose_name_plural = verbose_name
 
 
 class AbstractBreath(models.Model):
     """呼吸"""
+    open_id = models.CharField(max_length=50, verbose_name='Open ID', blank=True, null=True)
     patient_id = models.PositiveIntegerField(verbose_name='患者ID', blank=True, null=True)
     value = models.SmallIntegerField(verbose_name="呼吸", help_text="单位: 次/min", default=0)
     measure_time = models.DateTimeField(verbose_name='更新时间', default=timezone.now)
@@ -451,15 +465,16 @@ class AbstractBreath(models.Model):
 
     class Meta:
         abstract = True
-        indexes = []
+        indexes = [
+            models.Index(fields=['open_id']),
+        ]
         verbose_name = '呼吸记录'
         verbose_name_plural = verbose_name
 
 
-
-
 class AbstractPulse(models.Model):
     """脉搏"""
+    open_id = models.CharField(max_length=50, verbose_name='Open ID', blank=True, null=True)
     patient_id = models.PositiveIntegerField(verbose_name='患者ID', blank=True, null=True)
     value = models.SmallIntegerField(verbose_name="脉搏", help_text="单位: 次/min", default=0)
     measure_time = models.DateTimeField(verbose_name='更新时间', default=timezone.now)
@@ -468,13 +483,16 @@ class AbstractPulse(models.Model):
 
     class Meta:
         abstract = True
-        indexes = []
+        indexes = [
+            models.Index(fields=['open_id']),
+        ]
         verbose_name = '脉搏记录'
         verbose_name_plural = verbose_name
 
 
 class AbstractBloodPressure(models.Model):
     """血压"""
+    open_id = models.CharField(max_length=50, verbose_name='Open ID', blank=True, null=True)
     patient_id = models.PositiveIntegerField(verbose_name='患者ID', blank=True, null=True)
     systolic_pressure = models.SmallIntegerField(verbose_name="收缩压", help_text="单位: mmHg", default=0)
     diastolic_pressure = models.SmallIntegerField(verbose_name="舒张压", help_text="单位: mmHg", default=0)
@@ -485,13 +503,16 @@ class AbstractBloodPressure(models.Model):
 
     class Meta:
         abstract = True
-        indexes = []
+        indexes = [
+            models.Index(fields=['open_id']),
+        ]
         verbose_name = '血压记录'
         verbose_name_plural = verbose_name
 
 
 class AbstractBloodOxygen(models.Model):
     """血氧"""
+    open_id = models.CharField(max_length=50, verbose_name='Open ID', blank=True, null=True)
     patient_id = models.PositiveIntegerField(verbose_name='患者ID', blank=True, null=True)
     value = models.DecimalField(verbose_name="血氧", help_text="单位: %", max_digits=4, decimal_places=2, default=0)
     perfusion_index = models.DecimalField(verbose_name="灌注指数", help_text="单位: %", max_digits=4, decimal_places=2, default=0)
@@ -502,7 +523,9 @@ class AbstractBloodOxygen(models.Model):
 
     class Meta:
         abstract = True
-        indexes = []
+        indexes = [
+            models.Index(fields=['open_id']),
+        ]
         verbose_name = '血氧记录'
         verbose_name_plural = verbose_name
 
@@ -525,6 +548,8 @@ class AbstractBloodGlucose(models.Model):
         (0, '用药前'),
         (1, '用药后'),
     )
+
+    open_id = models.CharField(max_length=50, verbose_name='Open ID', blank=True, null=True)
     patient_id = models.PositiveIntegerField(verbose_name='患者ID', blank=True, null=True)
     value = models.DecimalField(verbose_name="血糖", help_text="单位: mmol/L", max_digits=6, decimal_places=2, default=0)
     measure_condition = models.SmallIntegerField(verbose_name="测量状态", choices=MEASURE_CONDITION_CHOICES, default=0)
@@ -535,13 +560,16 @@ class AbstractBloodGlucose(models.Model):
 
     class Meta:
         abstract = True
-        indexes = []
+        indexes = [
+            models.Index(fields=['open_id']),
+        ]
         verbose_name = '血糖记录'
         verbose_name_plural = verbose_name
 
 
 class AbstractUricAcid(models.Model):
     """尿酸"""
+    open_id = models.CharField(max_length=50, verbose_name='Open ID', blank=True, null=True)
     patient_id = models.PositiveIntegerField(verbose_name='患者ID', blank=True, null=True)
     value = models.SmallIntegerField(verbose_name="尿酸", help_text="单位: μmol/L", default=0)
     measure_time = models.DateTimeField(verbose_name='更新时间', default=timezone.now)
@@ -550,13 +578,16 @@ class AbstractUricAcid(models.Model):
 
     class Meta:
         abstract = True
-        indexes = []
+        indexes = [
+            models.Index(fields=['open_id']),
+        ]
         verbose_name = '尿酸记录'
         verbose_name_plural = verbose_name
 
 
 class AbstractBMI(models.Model):
     """BMI"""
+    open_id = models.CharField(max_length=50, verbose_name='Open ID', blank=True, null=True)
     patient_id = models.PositiveIntegerField(verbose_name='患者ID', blank=True, null=True)
     height = models.SmallIntegerField(verbose_name="身高", help_text="单位: cm", default=0)
     weight = models.DecimalField(verbose_name="体重", help_text="单位: kg", max_digits=6, decimal_places=2, default=0)
@@ -566,6 +597,8 @@ class AbstractBMI(models.Model):
 
     class Meta:
         abstract = True
-        indexes = []
+        indexes = [
+            models.Index(fields=['open_id']),
+        ]
         verbose_name = 'BMI记录'
         verbose_name_plural = verbose_name

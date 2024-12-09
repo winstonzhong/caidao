@@ -314,7 +314,7 @@ class OffiAccount:
                         "url": "https://chat-live.j1.sale/h5"
                     }, {
                         "type": "view",
-                        "name": "购买建档服务",
+                        "name": "购买医生服务包",
                         "url": "https://chat-live.j1.sale/product?id=1"
                     }, {
                         "type": "view",
@@ -544,6 +544,7 @@ class OffiAccount:
             rtn = self.query_voice_result_for_text(voice_id)
             assert rtn.get('is_end'), rtn
             return rtn.get('result')
+
 
 if __name__ == '__main__':
     # oa = OffiAccount()
