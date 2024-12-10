@@ -101,8 +101,6 @@ def bin2img(b):
     
 def base642cv2(b64):
     return bin2img(base64.b64decode(b64))    
-        # image = numpy.asarray(bytearray(self.bin), dtype="uint8")
-        # return cv2.imdecode(image, cv2.IMREAD_COLOR)
 
 def to_jpeg(img):
     _, buffer = cv2.imencode(".jpg", img)
