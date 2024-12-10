@@ -241,10 +241,10 @@ class AbstractPatient(models.Model):
                 name: 名称
          
         past_medical_history 既往史
-            - 示例: {"data":[{"type": "疾病", "name": "肺炎","time": "2024-01-01 12:00:00"}], "raw_data":""}
+            - 示例: {"data":[{"name": "疾病", "value": "肺炎","time": "2024-01-01 12:00:00"}], "raw_data":""}
             - json字段说明:
-                type: 类型; 包含(疾病, 手术, 外伤, 输血)
-                name: 名称
+                name: 名称; 包含(疾病, 手术, 外伤, 输血)
+                value: 值
                 time: 时间
 
         vaccination_history 预防接种史
@@ -254,10 +254,10 @@ class AbstractPatient(models.Model):
                 time: 时间
 
         family_medical_history 家族史
-            - 示例: {"data":[{"relation": "父亲", "name_list": ["高血压"]}], "raw_data":""}
+            - 示例: {"data":[{"name": "父亲", "value": ["高血压"]}], "raw_data":""}
             - json字段说明:
-                relation: 关系 (父亲, 母亲, 兄弟姐妹, 子女)
-                name: 疾病名称
+                name: 关系 (父亲, 母亲, 兄弟姐妹, 子女)
+                value: 疾病名称
     """
     AUDIT_STATUS = (
         (0, '初始创建'),
