@@ -271,10 +271,11 @@ class AbstractPatient(models.Model):
         (2, '女性')
     )
     MARRIAGE = (
-        (0, "不详"),
+        (0, "未知"),
         (1, "未婚"),
         (2, "已婚"),
-        (3, "离异")
+        (3, "离异"),
+        (4, "不详"),
     )
 
     BLOOD_TYPES = (

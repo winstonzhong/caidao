@@ -42,7 +42,7 @@ def 一年前的某天():
     return dash_date(今天() - datetime.timedelta(days=365))
 
 def n年前(n):
-    return dash_date(今天() - datetime.timedelta(days=n*365))
+    return 今天() - datetime.timedelta(days=n*365)
 
 def first_day_of_month():
     return today()[:-2] + '01'
