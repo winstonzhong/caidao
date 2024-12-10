@@ -300,6 +300,7 @@ class AbstractPatient(models.Model):
         (2, "一般风险"),
         (3, "较高风险"),
         (4, "高风险"),
+        (5, "无"),
     )
 
     # uuid = models.CharField(max_length=32, verbose_name="患者唯一id", db_index=True, unique=True)
