@@ -24,7 +24,7 @@ from selenium.webdriver.chrome.service import Service
 from tool_env import OS_WIN
 
 
-user_data_dir = 'd:/google-chrome/Default'
+USER_DATA_DIR = 'd:/google-chrome/Default'
 
 if not OS_WIN:
     DRIVER_PATH = "/big/download/bin/chromedriver"
@@ -33,8 +33,8 @@ else:
 
 
 
-user_data_dir = 'd:/cache/google-chrome/Default'
-DRIVER_PATH = r'D:\soft\chromedriver\chromedriver.exe'
+# user_data_dir = 'd:/cache/google-chrome/Default'
+# DRIVER_PATH = r'D:\soft\chromedriver\chromedriver.exe'
 
 import selenium
 
@@ -42,7 +42,7 @@ assert selenium.__version__ == '4.12.0'
 
 # D:\google-chrome\Default\Default\Preferences
 # chrome version:130.0.6723.92
-fpath_preferences = os.path.join(user_data_dir, 'Default/Preferences')
+fpath_preferences = os.path.join(USER_DATA_DIR, 'Default/Preferences')
 def replace_crash_report():
     with open(fpath_preferences, 'rb') as fp:
         content = fp.read().decode('utf8')
@@ -61,7 +61,7 @@ def get_driver(headless=True):
         chrome_options.add_argument('--headless')
 
     chrome_options.add_argument(
-        "user-data-dir=%s" % user_data_dir)
+        "user-data-dir=%s" % USER_DATA_DIR)
 
     # chrome_options.add_argument("--incognito")  # 无痕模式
     
@@ -81,7 +81,9 @@ def get_driver(headless=True):
     return driver
 
 
-def get_driver_new(headless=True, implicitly_wait_seconds=5):
+def get_driver_new(headless=True, implicitly_wait_seconds=5,
+                   driver_path=DRIVER_PATH, user_data_dir=USER_DATA_DIR
+                   ):
     option = webdriver.ChromeOptions()
     if headless:
         option.add_argument('headless')
@@ -107,7 +109,7 @@ def get_driver_new(headless=True, implicitly_wait_seconds=5):
     option.set_capability("goog:loggingPrefs", {'performance': 'ALL'})
     
     # option.add_experimental_option('excludeSwitches', ['enable-logging'])    
-    service = Service(executable_path=DRIVER_PATH)
+    service = Service(executable_path=driver_path)
     driver = webdriver.Chrome(options=option, service=service)
     if implicitly_wait_seconds:
         driver.implicitly_wait(implicitly_wait_seconds)
@@ -115,7 +117,10 @@ def get_driver_new(headless=True, implicitly_wait_seconds=5):
 
 def get_driver_service(headless=True, 
                        implicitly_wait_seconds=5,
-                       port=9222):
+                       port=9222,
+                       user_data_dir=USER_DATA_DIR
+
+                       ):
     option = webdriver.ChromeOptions()
     if headless:
         option.add_argument('headless')
