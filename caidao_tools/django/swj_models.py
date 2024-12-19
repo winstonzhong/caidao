@@ -90,15 +90,16 @@ class AbstractDnaStrand(models.Model):
             if not self.is_chain_overlaped(x):
                 j = i.intersection(x.index)
                 d = self.do_compute(task, j)
-                if d.get('attend') > 0 and d.get('pl') > self.pl:
+                if d.get('attend') > 0 and d.get('pl') >= self.pl:
                     fragment_ids=','.join(map(lambda x:str(x), sorted(dna_ids + x.dna_ids)))
                     key=hashlib.sha256(fragment_ids.encode()).hexdigest()
-                    if not self.has_key(key):
-                        d.update(fragment_ids=fragment_ids,
-                                 level=self.level+1,
-                                 task_id=self.task_id,
-                                 key=key,
-                                 )
-                        l.append(d)
+                    # if not self.has_key(key):
+                    d.update(fragment_ids=fragment_ids,
+                             level=self.level+1,
+                             task_id=self.task_id,
+                             key=key,
+                             expanded=d.get('pl') == self.pl,
+                             )
+                    l.append(d)
             cp.update()
         return l
