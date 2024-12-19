@@ -347,6 +347,9 @@ class AbstractPatient(models.Model):
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
 
+    present_medical_history = models.TextField(verbose_name='现病史', null=True, blank=True)
+    chief_complaint = models.TextField(verbose_name='主诉', null=True, blank=True)
+
     class Meta:
         abstract = True
         indexes = [
