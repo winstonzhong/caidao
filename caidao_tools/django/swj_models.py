@@ -78,28 +78,3 @@ class AbstractDnaStrand(models.Model):
     @classmethod
     def has_key(cls, key):
         return cls.objects.filter(key=key).first() is not None
-
-    def do_compute_all_combinations(self):
-        i = self.index
-        task = self.task
-        dna_ids = self.dna_ids
-        l = []
-        q = self.get_all_level0()
-        cp = CmdProgress(q.count())
-        for x in q.iterator():
-            if not self.is_chain_overlaped(x):
-                j = i.intersection(x.index)
-                d = self.do_compute(task, j)
-                if d.get('attend') > 0 and d.get('pl') >= self.pl:
-                    fragment_ids=','.join(map(lambda x:str(x), sorted(dna_ids + x.dna_ids)))
-                    key=hashlib.sha256(fragment_ids.encode()).hexdigest()
-                    # if not self.has_key(key):
-                    d.update(fragment_ids=fragment_ids,
-                             level=self.level+1,
-                             task_id=self.task_id,
-                             key=key,
-                             expanded=d.get('pl') == self.pl,
-                             )
-                    l.append(d)
-            cp.update()
-        return l
