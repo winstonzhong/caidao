@@ -47,6 +47,7 @@ class AbstractDnaStrand(models.Model):
     pl_cut = models.FloatField(null=True)
     level = models.PositiveSmallIntegerField(default=0)
     expanded = models.SmallIntegerField(default=0)
+    reverse = models.SmallIntegerField(default=0)
     key = models.CharField(max_length=64, null=True)
     update_time = models.DateTimeField(auto_now=True)
 
