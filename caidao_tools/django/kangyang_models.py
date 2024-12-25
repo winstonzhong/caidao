@@ -40,6 +40,7 @@ class AbstractUser(models.Model):
         return '[{self.open_id}]{self.name}'.format(self=self)
 
 
+
 class AbstractMsg(models.Model):
     """用户消息"""
 
