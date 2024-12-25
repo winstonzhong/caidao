@@ -75,6 +75,7 @@ class AbstractMsg(models.Model):
         (STATUS_SYNCED, '已同步'),
     )
     user_id = models.PositiveIntegerField(verbose_name="用户ID")
+    gh_id = models.CharField(max_length=50, verbose_name='公众号ID', blank=True, null=True)
     type = models.SmallIntegerField(verbose_name="消息类型", choices=TYPES, default=0)
     event = models.SmallIntegerField(verbose_name="事件", choices=EVENTS, default=0)
     content = models.TextField(verbose_name='内容', default="")
@@ -86,7 +87,7 @@ class AbstractMsg(models.Model):
     class Meta:
         abstract = True
         indexes = [
-            models.Index(fields=['status']),
+            models.Index(fields=['status','gh_id']),
         ]
 
 
