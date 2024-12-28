@@ -89,6 +89,18 @@ class AbstractMsg(models.Model):
         indexes = [
             models.Index(fields=['status','gh_id']),
         ]
+    
+    @classmethod
+    def 设置所有未同步消息为已同步(cls):
+        print(cls.objects.filter(status=cls.STATUS_INIT).update(status=cls.STATUS_SYNCED))
+    
+    @classmethod
+    def 最早一条未同步消息(cls, gh_id=None, user_id=None):
+        k = {k:v for k, v in (('status',cls.STATUS_INIT),
+                              ('gh_id',gh_id),
+                              ('user_id',user_id),
+                              ) if v is not None}
+        return cls.objects.filter(**k).first()
 
 
 class AbstractAddress(models.Model):

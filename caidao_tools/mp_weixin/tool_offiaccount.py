@@ -153,7 +153,6 @@ WeChatClient.message = WeChatMessageTyping()
 
 class OffiAccount:
     """微信公众号操作"""
-
     def __init__(self, app_id, app_secret):
         # WeChatClient.API_BASE_URL = 'http://47.98.218.74/cgi-bin/'
         self.app_id = app_id
