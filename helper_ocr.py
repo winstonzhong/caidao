@@ -25,7 +25,7 @@ def testit_ocr_url(file_url=r'000/test/00001.JPG'):
     # print(json.dumps(d, indent=3))
     
 def url_2_ocr_json(url):
-    requests.post(URL_API, 
+    return requests.post(URL_API, 
                   json={
                       'url': 链接到相对路径(url)
                       }).json()
