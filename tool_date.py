@@ -41,8 +41,12 @@ def yesterday():
 def 一年前的某天():
     return dash_date(今天() - datetime.timedelta(days=365))
 
-def n年前(n):
-    return 今天() - datetime.timedelta(days=n*365)
+def n年前(n, tdate=None):
+    if tdate is not None:
+        tdate = to_date(tdate)
+    else:
+        tdate = 今天()
+    return tdate - datetime.timedelta(days=n*365)
 
 def first_day_of_month():
     return today()[:-2] + '01'
@@ -173,6 +177,7 @@ def to_date(date):
     >>> to_date(0)
     >>> to_date(u'2016-04-22 10:46:00')
     datetime.date(2016, 4, 22)
+    >>> to_date('1967-10-17')
     '''
     if isinstance(date, datetime.datetime):
         return date.date()
@@ -180,6 +185,8 @@ def to_date(date):
         return date
     try:
         return datetime.datetime.fromtimestamp(mktime(strptime(dash_date(date)[:10], "%Y-%m-%d"))).date()
+    except OverflowError as e:
+        raise e
     except:
         pass
 
