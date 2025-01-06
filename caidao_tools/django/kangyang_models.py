@@ -411,6 +411,7 @@ class AbstractMedicalHistory(models.Model):
     is_deleted = models.BooleanField(verbose_name='是否删除', default=False)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
+    data = models.JSONField(verbose_name='大模型生成的原始数据', null=True)
 
     class Meta:
         abstract = True
