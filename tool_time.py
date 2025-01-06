@@ -271,7 +271,84 @@ def is_between(v, start, end, include_equal=True):
     return v < max(start, end) and v > min(start, end)
 
 
+
+def friendly_time_expression(dt):
+    """
+    将输入的datetime值根据当天时间转换为用户友好的时间表达。
+
+    Args:
+        dt (datetime.datetime): 输入的datetime值。
+
+    Returns:
+        str: 用户友好的时间表达。
+
+    Examples:
+        >>> friendly_time_expression(datetime.datetime.now())
+        '刚刚'
+        >>> friendly_time_expression(datetime.datetime.now() - datetime.timedelta(minutes=5))
+        '5分钟前'
+        >>> friendly_time_expression(datetime.datetime.now() - datetime.timedelta(hours=1))
+        '1小时前'
+        >>> friendly_time_expression(datetime.datetime.now() - datetime.timedelta(days=1))
+        '1天前'
+        >>> friendly_time_expression(datetime.datetime.now() - datetime.timedelta(days=7))
+        '1周前'
+        >>> friendly_time_expression(datetime.datetime.now() - datetime.timedelta(days=30))
+        '1个月前'
+        >>> friendly_time_expression(datetime.datetime.now() - datetime.timedelta(days=365))
+        '1年前'
+    """
+    now = datetime.datetime.now()
+    delta = now - dt
+
+    if delta.total_seconds() < 60:
+        return "刚刚"
+    elif delta.total_seconds() < 3600:
+        return f"{int(delta.total_seconds() // 60)}分钟前"
+    elif delta.total_seconds() < 86400:
+        return f"{int(delta.total_seconds() // 3600)}小时前"
+    elif delta.days < 7:
+        return f"{delta.days}天前"
+    elif delta.days < 30:
+        return f"{delta.days // 7}周前"
+    elif delta.days < 365:
+        return f"{delta.days // 30}个月前"
+    else:
+        return f"{delta.days // 365}年前"
+
+def 获取前一天0点的时间戳(日期):
+    """
+    获取前一天0点的时间戳。
+
+    Args:
+        日期 (str): 日期。
+
+    Returns:
+        int: 前一天0点的时间戳。
+
+    Examples:
+        >>> 获取前一天0点的时间戳("2023-11-03")
+        1698854400
+    """
+    return int((datetime.datetime.strptime(日期, "%Y-%m-%d") - datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+
+def 获取当前日期的0点时间戳(日期=None):
+    """
+    获取当前日期的0点时间戳。
+
+    Args:
+        日期 (str): 日期。
+
+    Returns:
+        int: 当前日期的0点时间戳。
+
+    Examples:
+        >>> 获取当前日期的0点时间戳("2023-11-03")
+        1698940800
+    """
+    日期 = 日期 or datetime.datetime.now().strftime("%Y-%m-%d")
+    return int(datetime.datetime.strptime(日期, "%Y-%m-%d").replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+
 if __name__ == '__main__':
     import doctest
     print(doctest.testmod(verbose=False, report=False))
-    

@@ -75,6 +75,14 @@ def 链接到路径(url, base_dir=BASE_DIR_56T):
     assert url.startswith(BASE_URL_56T)
     return url.replace(BASE_URL_56T,base_dir)
 
+def 链接到相对路径(url, base_dir=BASE_DIR_56T):
+    '''
+    >>> 链接到相对路径('https://file.j1.sale/api/file/2024-11-26/1732629182.2386892.amr')
+    'file/2024-11-26/1732629182.2386892.amr'
+    '''
+    return 链接到路径(url, base_dir).replace('v:/', '')
+
+
 if __name__ == '__main__':
     import doctest
     fpath1 = r'v:\file\test\x.jpg'
