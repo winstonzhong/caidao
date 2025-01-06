@@ -1,6 +1,7 @@
+import uuid
 from django.db import models
 from django.utils import timezone
-
+from django.forms import model_to_dict
 from caidao_tools.django.storage import MyStorage
 
 
@@ -9,6 +10,11 @@ MEASURE_SOURCE_CHOICES = (
     (0, '用户输入数据'),
     (1, '智能手环')
 )
+
+
+def get_uuid():
+    return uuid.uuid1().hex
+
 
 class AbstractUser(models.Model):
     """用户"""
@@ -305,7 +311,7 @@ class AbstractPatient(models.Model):
         (5, "无"),
     )
 
-    # uuid = models.CharField(max_length=32, verbose_name="患者唯一id", db_index=True, unique=True)
+    uuid = models.CharField(max_length=32, verbose_name="患者唯一id", db_index=True, default=get_uuid)
     head_img = models.FileField(verbose_name='用户头像', storage=MyStorage, null=True, blank=True)
     name = models.CharField(max_length=15, verbose_name='*姓名', null=True)
     name_pinyin = models.CharField(max_length=128, verbose_name='患者姓名拼音', db_index=True, blank=True, null=True)
@@ -344,7 +350,7 @@ class AbstractPatient(models.Model):
 
     maternal_risk_level = models.SmallIntegerField(choices=MATERNAL_RISK_LEVELS, verbose_name='孕产妇风险等级', default=0)
 
-    open_id = models.CharField(max_length=50, verbose_name='Open ID', blank=True, null=True, unique=True)
+    open_id = models.CharField(max_length=50, verbose_name='Open ID', blank=True, null=True)
     wx_user_id = models.PositiveIntegerField(verbose_name='微信用户ID', blank=True, null=True)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
@@ -609,3 +615,156 @@ class AbstractBMI(models.Model):
         ]
         verbose_name = 'BMI记录'
         verbose_name_plural = verbose_name
+
+# IM
+class AbstractRoom(models.Model):
+    ROOM_CHANNEL_TYPE = (
+        (1, "单聊"),
+        (2, "群聊")
+    )
+    ROOM_STATUS = (
+        (0, "已解散"),
+        (1, "正常")
+    )
+    name = models.CharField(verbose_name='房间名称', max_length=50, null=True)
+    code = models.CharField(verbose_name="房间唯一编码", max_length=100, default='', unique=True)
+    channel_type = models.SmallIntegerField(verbose_name="房间类型", choices=ROOM_CHANNEL_TYPE, default=1)
+    last_message_id = models.BigIntegerField(verbose_name='房间内最新消息的ID', default=0)
+    out_time = models.BigIntegerField(verbose_name="到期时间", default=0)
+    status = models.SmallIntegerField(verbose_name="房间状态", choices=ROOM_STATUS, default=1)
+    create_time = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+    update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
+
+    class Meta:
+        abstract = True
+        indexes = [
+            models.Index(fields=['channel_type']),
+        ]
+        verbose_name_plural = verbose_name = '房间'
+
+    @classmethod
+    def get_room_by_code(cls, code, to_dict=True):
+        record, _ = cls.objects.get_or_create(code=code)
+        if to_dict:
+            return model_to_dict(record)
+        else:
+            return record
+
+
+class AbstractRoomUser(models.Model):
+    ROOM_ROLE_TYPE_KF = 1
+    ROOM_ROLE_TYPE_PATIENT = 2
+    ROOM_ROLE_TYPE = (
+        (ROOM_ROLE_TYPE_KF, "客服机器人"),
+        (ROOM_ROLE_TYPE_PATIENT, "患者")
+    )
+
+    room_id = models.PositiveIntegerField(verbose_name='房间ID', blank=True, null=True)
+    user_id = models.CharField(verbose_name="用户id", max_length=64)
+    role = models.SmallIntegerField(verbose_name="成员角色类型", choices=ROOM_ROLE_TYPE, default=1)
+    create_time = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+    update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
+
+    class Meta:
+        abstract = True
+        indexes = [
+            models.Index(fields=['room_id']),
+            models.Index(fields=['role']),
+        ]
+        verbose_name_plural = verbose_name = '房间成员'
+
+
+class AbstractMessage(models.Model):
+    MESSAGE_SENDER_TYPE = (
+        (0, "unknown"),
+        (1, "im系统"),
+        (2, '用户'),
+        (3, '业务服务器'),
+    )
+    MESSAGE_TYPE = (
+        (1, '文本'),
+        (2, '表情'),
+        (3, '语音'),
+        (4, '图片'),
+        (5, '视频'),
+        (6, '转诊'),
+        (7, '预约服务'),
+        (8, '自定义'),
+        (9, '患者健康档案'),
+        (10, '系统提示信息'),
+        (11, '患者名片'),
+        (12, '健康评估'),
+        (13, '健康小结'),
+        (14, '健康小结回复'),
+    )
+    MESSAGE_RECEIVER_TYPE = (
+        (0, 'unknown'),
+        (1, '用户'),
+        (2, '群组'),
+    )
+    MESSAGE_STATUS = (
+        (0, 'unknown'),
+        (1, '正常'),
+        (2, '已撤回')
+    )
+    room_id = models.PositiveIntegerField(verbose_name='当前消息所属房间ID', blank=True, null=True)
+    content = models.CharField(verbose_name='消息内容', max_length=4094)
+    sender_id = models.CharField(verbose_name='发送者ID', max_length=64)
+    sender_type = models.SmallIntegerField(verbose_name='发送者类型', choices=MESSAGE_SENDER_TYPE, default=2)
+    receiver_type = models.SmallIntegerField(verbose_name='接收者类型', choices=MESSAGE_RECEIVER_TYPE, default=1)
+    type = models.SmallIntegerField(verbose_name='消息类型', choices=MESSAGE_TYPE, default=1)
+    request_id = models.BigIntegerField(verbose_name='请求id', default=0)
+    send_time = models.DateTimeField(verbose_name='发送时间', auto_now_add=True)
+    status = models.SmallIntegerField(verbose_name="消息状态", choices=MESSAGE_STATUS, default=1)
+    create_time = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+    update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
+
+    class Meta:
+        abstract = True
+        indexes = [
+            models.Index(fields=['room_id']),
+            models.Index(fields=['sender_id']),
+        ]
+        verbose_name_plural = verbose_name = '消息'
+
+
+class AbstractMessageRead(models.Model):
+    message_id = models.PositiveIntegerField(verbose_name='消息ID', blank=True, null=True)
+    room_id = models.PositiveIntegerField(verbose_name='房间ID', blank=True, null=True)
+    user_id = models.CharField(verbose_name="用户id", max_length=64)
+    create_time = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+
+    class Meta:
+        abstract = True
+        indexes = [
+            models.Index(fields=['message_id']),
+            models.Index(fields=['user_id']),
+        ]
+        verbose_name_plural = verbose_name = '消息读取状态'
+
+
+class AbstractChannel(models.Model):
+    ActiveType = (
+        (0, "无效"),
+        (1, "有效")
+    )
+    name = models.CharField(verbose_name="ws channel句柄", max_length=255)
+    user_id = models.CharField(verbose_name="用户id", max_length=64)
+    is_active = models.SmallIntegerField(choices=ActiveType, default=0, help_text="有效状态")
+    create_time = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+    update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
+
+    class Meta:
+        abstract = True
+        indexes = [
+        ]
+        verbose_name_plural = verbose_name = '通道'
+
+
+class AbstractRobotKF(models.Model):
+    name = models.CharField(verbose_name="姓名", max_length=50)
+
+    class Meta:
+        abstract = True
+        indexes = []
+        verbose_name_plural = verbose_name = '客服机器人'

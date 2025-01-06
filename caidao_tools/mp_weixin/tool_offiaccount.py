@@ -320,6 +320,10 @@ class OffiAccount:
                         "type": "view",
                         "name": "绑定邮箱",
                         "url": "https://chat-live.j1.sale/accountbind"
+                    }, {
+                        "type": "view",
+                        "name": "绑定手机",
+                        "url": "https://chat-live.j1.sale/account-mobile-bind"
                     }
                     ]
                 }]
