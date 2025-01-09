@@ -431,7 +431,7 @@ class AbstractMedicalHistoryReport(models.Model):
     open_id = models.CharField(max_length=50, verbose_name='Open ID', blank=True, null=True)
     patient_id = models.PositiveIntegerField(verbose_name='患者ID', blank=True, null=True)
     medical_history_id = models.PositiveIntegerField(verbose_name='健康小结ID', blank=True, null=True)
-    report_file = models.FileField(verbose_name='文件地址', storage=MyStorage, null=True, blank=True)
+    url = models.URLField(verbose_name='文件地址', null=True, blank=True)
     data = models.TextField(verbose_name='识别结果', null=True, blank=True)
     is_deleted = models.BooleanField(default=False, help_text='是否删除')
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
@@ -673,6 +673,7 @@ class AbstractRoomUser(models.Model):
     )
 
     room_id = models.PositiveIntegerField(verbose_name='房间ID', blank=True, null=True)
+    # role为ROOM_ROLE_TYPE_KF时, user_id为RobotKF表ID, role为ROOM_ROLE_TYPE_PATIENT时, 为Patient表的uuid
     user_id = models.CharField(verbose_name="用户id", max_length=64)
     role = models.SmallIntegerField(verbose_name="成员角色类型", choices=ROOM_ROLE_TYPE, default=1)
     create_time = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
@@ -688,11 +689,12 @@ class AbstractRoomUser(models.Model):
 
 
 class AbstractMessage(models.Model):
+    MESSAGE_SENDER_TYPE_SERVER = 3
     MESSAGE_SENDER_TYPE = (
         (0, "unknown"),
         (1, "im系统"),
         (2, '用户'),
-        (3, '业务服务器'),
+        (MESSAGE_SENDER_TYPE_SERVER, '业务服务器'),
     )
     MESSAGE_TYPE = (
         (1, '文本'),

@@ -6,7 +6,11 @@ Created on 2022年7月24日
 import os
 from django.contrib import admin
 from django.utils.safestring import mark_safe
-from tool_file import get_suffix
+# from tool_file import get_suffix
+
+def get_suffix(fpath):
+    return fpath.rsplit('.', 1)[-1]
+
 
 def to_img_html(fpath, width=100):
     if fpath.name:
