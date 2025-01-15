@@ -21,15 +21,25 @@ class StrSecret(object):
         >>> e = StrSecret(key).encrypt('aaa')
         >>> StrSecret(key).decrypt(e)
         'aaa'
+        >>> eb = StrSecret(key).encrypt_to_base64('bbb')
+        >>> StrSecret(key).decrypt_from_base64(eb)
+        'bbb'
         '''
         self.fn = Fernet(key)
     
     def encrypt(self, s):
         return self.fn.encrypt(s.encode())
     
+    def encrypt_to_base64(self, s):
+        return base64.b64encode(self.encrypt(s)).decode()
+
     def decrypt(self, s):
         s = self.fn.decrypt(s.encode() if type(s) == str else s)
         return s.decode()
+    
+    def decrypt_from_base64(self, s):
+        return self.decrypt(base64.b64decode(s))
+
 
     @classmethod
     def gen_key(cls):
