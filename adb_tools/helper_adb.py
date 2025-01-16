@@ -1508,9 +1508,6 @@ class BaseAdb(object):
             self.ua2.swipe(w // 2, h // 2, w // 2, (h // 2) - distance, duration=duration)
         else:
             self.swipe((w // 2, h // 2), (w // 2, (h // 2) - distance), wait=wait)
-            
-    
-        
     
     def scroll_down_untill_prompt(self, x, distance=200, retry_num=5):
         for _ in range(retry_num):
@@ -1522,9 +1519,16 @@ class BaseAdb(object):
     def scroll_up(self,distance=200, duration=None):
         w, h = self.get_sys_width_height()
         self.ua2.swipe(w // 2, h // 2, w // 2, (h // 2) + distance, duration=duration)
-        # self.swipe((w // 2, h // 2), (w // 2, (h // 2) - distance), wait=duration)
 
+    def page_up(self):
+        w, h = self.get_sys_width_height()
+        self.ua2.swipe(w // 2, h // 2, w // 2, h)
     
+    def page_down(self):
+        w, h = self.get_sys_width_height()
+        self.ua2.swipe(w // 2, h // 2, w // 2, 0)
+
+
     def has_element(self, x, no_wait=False):
         e = self.find_xpath_safe(x)
         if no_wait:

@@ -72,13 +72,20 @@ class SnapShotDevice(DummyDevice):
     def show_bounds(self, bounds):
         show(self.crop_bounds(bounds))
 
-
 class SteadyDevice(DummyDevice):
     def __init__(self, adb, old_key = None):
         self.adb = adb
+        self.settings = {'xpath_debug':False}
+        self.watcher = DummyWatcher()
+        self.wait_timeout = 0
+        self.key = None
+        self.refresh()
+    
+    def refresh(self):
+        old_key = None
         max_try = 6
         for i in range(max_try):
-            xml_dumped = adb.ua2.dump_hierarchy()
+            xml_dumped = self.adb.ua2.dump_hierarchy()
             key = get_hash(xml_dumped)
             if old_key != key and i < max_try - 1:
                 print(f'waiting xml tobe steady:...{i}')
@@ -86,16 +93,12 @@ class SteadyDevice(DummyDevice):
                 time.sleep(0.1)
             else:
                 self.key = key
-                self.init(xml_dumped, 0)
+                self.source = xml_dumped
                 break
-        
     
     def find_xpath_safe(self, x):
         return find_by_xpath(self, x)    
 
-
-    def click(self, *a, **k):
-        return self.adb.ua2.click(*a, **k)
     
 class TaskSnapShotDevice(SnapShotDevice):
     def __init__(self, adb, task, base_dir):
