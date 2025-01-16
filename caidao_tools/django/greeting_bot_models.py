@@ -32,19 +32,13 @@ class AbstractContact(models.Model):
     RELATION_UNKNOWN = 0
     RELATION_FRIEND = 1
     RELATION_FAMILY = 2
-
-
     RELATION_WORK = 3
     RELATION_COWORKER = 4
-    RELATION_FRIEND = 5
-    RELATION_FAMILY = 6
-    RELATION_WORK = 7
-    RELATION_COWORKER = 8
-    RELATION_TEACHER = 9
-    RELATION_SCHOOLMATE = 10
-    RELATION_STUDENT = 11
-    RELATION_MEMBER = 12
-    RELATION_CLIENT = 13
+    RELATION_TEACHER = 5
+    RELATION_SCHOOLMATE = 6
+    RELATION_STUDENT = 7
+    RELATION_MEMBER = 8
+    RELATION_CLIENT = 9
 
     RELATIONS = (
         (RELATION_UNKNOWN, '未知'),
@@ -61,7 +55,7 @@ class AbstractContact(models.Model):
     RELATION_MAP = dict(RELATIONS)
     user_id = models.PositiveIntegerField(verbose_name="用户ID")
     name = models.CharField(verbose_name="姓名", max_length=50, blank=True, null=True)
-    relation = models.SmallIntegerField(verbose_name="消息类型", choices=RELATIONS, default=RELATION_UNKNOWN)
+    relation = models.SmallIntegerField(verbose_name="关系", choices=RELATIONS, default=RELATION_UNKNOWN)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
 
