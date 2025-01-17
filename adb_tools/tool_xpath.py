@@ -98,6 +98,14 @@ class SteadyDevice(DummyDevice):
     
     def find_xpath_safe(self, x):
         return find_by_xpath(self, x)    
+    
+    def find_xpath_first(self, x):
+        l = self.find_xpath_safe(x).all()
+        return l[0] if l else None
+
+    def has_xpath(self, x):
+        return bool(self.find_xpath_safe(x).all())
+    
 
     
 class TaskSnapShotDevice(SnapShotDevice):

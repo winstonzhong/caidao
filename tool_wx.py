@@ -21,8 +21,11 @@ def clean_session_name(line):
     >>> clean_session_name('主流程测试(5)1')
     '主流程测试(5)1'
     >>> clean_session_name(None)
+    >>> clean_session_name('广州HR同城进阶学习群(56) ')
+    '广州HR同城进阶学习群'
     '''
-    return ptn_session_name.sub('',line) if line else None
+    if line:
+        return ptn_session_name.sub('',line.strip())
 
 def clean_head_description(line):
     '''
