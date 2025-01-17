@@ -57,9 +57,18 @@ class AbstractContact(models.Model):
         (RELATION_CLIENT, '客户'),
     )
     RELATION_MAP = dict(RELATIONS)
+
+    TYPE_PRIVATE = 0
+    TYPE_GROUP = 1
+    TYPES = (
+        (TYPE_PRIVATE, '单聊'),
+        (TYPE_GROUP, '群聊'),
+    )
+
     user_id = models.PositiveIntegerField(verbose_name="用户ID")
     name = models.CharField(verbose_name="姓名", max_length=50, blank=True, null=True)
     relation = models.SmallIntegerField(verbose_name="关系", choices=RELATIONS, default=RELATION_UNKNOWN)
+    type = models.SmallIntegerField(verbose_name="关系", choices=TYPES, default=TYPE_PRIVATE)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
 
