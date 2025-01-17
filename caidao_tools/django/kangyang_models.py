@@ -189,11 +189,13 @@ class AbstractOrder(models.Model):
     order_sn = models.CharField(verbose_name='订单编号', max_length=40, null=True, blank=True)
     user_id = models.PositiveIntegerField(verbose_name='用户ID', blank=True, null=True)
     open_id = models.CharField(max_length=50, verbose_name='微信Open ID', blank=True, null=True, unique=True)
+    external_uuid = models.CharField(max_length=32, verbose_name="外部uuid", blank=True, null=True)
     amount = models.DecimalField(verbose_name='订单金额', max_digits=6, decimal_places=2, default=0)
     address = models.CharField(verbose_name='详细地址', max_length=200, blank=True, null=True)
     status = models.SmallIntegerField(verbose_name='状态', choices=TYPE_CHOICE, default=STATUS_INIT)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
+    is_gen_sn = models.BooleanField(verbose_name='是否需要生成sn', default=False)
 
     class Meta:
         abstract = True
@@ -783,3 +785,15 @@ class AbstractRobotKF(models.Model):
         abstract = True
         indexes = []
         verbose_name_plural = verbose_name = '客服机器人'
+
+
+class AbstractSn(models.Model):
+    sn = models.CharField(verbose_name="注册码", max_length=50)
+    order_id = models.PositiveIntegerField(verbose_name='订单ID', blank=True, null=True)
+    uuid = models.CharField(max_length=32, verbose_name="uuid", blank=True, null=True)
+    external_uuid = models.CharField(max_length=32, verbose_name="外部uuid", blank=True, null=True)
+
+    class Meta:
+        abstract = True
+        indexes = []
+        verbose_name_plural = verbose_name = '注册码'
