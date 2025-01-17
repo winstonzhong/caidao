@@ -9,9 +9,9 @@ class ModelMixin:
         if offset:
             query_data['id__gt'] = offset
         print('query_data', query_data)
-        q = cls.objects.filter(**query_data)
+        records = cls.objects.filter(**query_data)
         if limit:
-            records = q[:limit]
+            records = records[:limit]
         return records
 
     @classmethod

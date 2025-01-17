@@ -68,7 +68,7 @@ class AbstractContact(models.Model):
     user_id = models.PositiveIntegerField(verbose_name="用户ID")
     name = models.CharField(verbose_name="姓名", max_length=50, blank=True, null=True)
     relation = models.SmallIntegerField(verbose_name="关系", choices=RELATIONS, default=RELATION_UNKNOWN)
-    type = models.SmallIntegerField(verbose_name="关系", choices=TYPES, default=TYPE_PRIVATE)
+    type = models.SmallIntegerField(verbose_name="类型", choices=TYPES, default=TYPE_PRIVATE)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
 
