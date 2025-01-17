@@ -20,3 +20,10 @@ class ModelMixin:
         value_list = list() if value_list is None else value_list
         data_list = cls.get_records(query_data=query_data, offset=offset, limit=limit).values(*value_list)
         return list(data_list)
+
+    @classmethod
+    def is_fields_valid(cls, check_fields):
+        model_fields = [i.name for i in cls._meta.fields]
+        invalid_fields = set(check_fields) - set(model_fields)
+        if invalid_fields:
+            return False

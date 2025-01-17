@@ -15,17 +15,21 @@ class AbstractUser(models.Model):
         (STATUS_SEND_MSG, '发送消息'),
     )
 
+    uuid = models.CharField(verbose_name="uuid", max_length=32, blank=True, null=True)
     name = models.CharField(verbose_name="姓名", max_length=50, blank=True, null=True)
     sn = models.CharField(verbose_name="注册码", max_length=50, blank=True, null=True)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
     worker_status = models.SmallIntegerField(verbose_name="worker状态", choices=WORKER_STATUS, default=STATUS_INIT)
-    worker_thread = models.IntegerField(verbose_name="worker线程", blank=True, null=True)
+    worker_thread_id = models.IntegerField(verbose_name="worker线程", blank=True, null=True)
 
     class Meta:
         abstract = True
         indexes = []
         verbose_name_plural = verbose_name = '用户'
+
+
+
 
 
 class AbstractContact(models.Model):
@@ -68,15 +72,18 @@ class AbstractContact(models.Model):
 class AbstractMessage(models.Model):
     STATUS_INIT = 0
     STATUS_GENERATED = 1
-    STATUS_SENT = 2
-    STATUS_SEND_FAILED = 3
+    STATUS_TO_SEND = 2
+    STATUS_SENT = 3
+    STATUS_SEND_FAILED = 4
 
     STATUS = (
         (STATUS_INIT, '初始化'),
         (STATUS_GENERATED, '已生成'),
+        (STATUS_TO_SEND, '待发送'),
         (STATUS_SENT, '已发送'),
         (STATUS_SEND_FAILED, '发送失败'),
     )
+    STATUS_DICT = dict(STATUS)
     user_id = models.PositiveIntegerField(verbose_name="用户ID", default=0)
     contact_id = models.PositiveIntegerField(verbose_name="通讯录成员ID", default=0)
     requirement = models.TextField(verbose_name="要求", blank=True, null=True)
