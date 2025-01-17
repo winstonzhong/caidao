@@ -65,10 +65,32 @@ class AbstractContact(models.Model):
         (TYPE_GROUP, '群聊'),
     )
 
+    MSG_STATUS_INIT = 0
+    MSG_STATUS_GENERATED = 1
+    MSG_STATUS_TO_SEND = 2
+    MSG_STATUS_SENT = 3
+    MSG_STATUS_SEND_FAILED = 4
+
+    MSG_STATUS = (
+        (MSG_STATUS_INIT, '初始化'),
+        (MSG_STATUS_GENERATED, '已生成'),
+        (MSG_STATUS_TO_SEND, '待发送'),
+        (MSG_STATUS_SENT, '已发送'),
+        (MSG_STATUS_SEND_FAILED, '发送失败'),
+    )
+    MS_STATUS_DICT = dict(MSG_STATUS)
+
     user_id = models.PositiveIntegerField(verbose_name="用户ID")
     name = models.CharField(verbose_name="姓名", max_length=50, blank=True, null=True)
     relation = models.SmallIntegerField(verbose_name="关系", choices=RELATIONS, default=RELATION_UNKNOWN)
     type = models.SmallIntegerField(verbose_name="类型", choices=TYPES, default=TYPE_PRIVATE)
+
+    requirement = models.TextField(verbose_name="要求", blank=True, null=True)
+    content = models.TextField(verbose_name="内容", blank=True, null=True)
+    voice_url = models.URLField(verbose_name='语音消息URL', blank=True, null=True)
+    msg_status = models.SmallIntegerField(verbose_name="消息转台", choices=MSG_STATUS, default=MSG_STATUS_INIT)
+    is_send_voice_msg = models.BooleanField(verbose_name="是否发送语音消息", default=True)
+
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
 
@@ -78,32 +100,32 @@ class AbstractContact(models.Model):
         verbose_name_plural = verbose_name = '联系人'
 
 
-class AbstractMessage(models.Model):
-    STATUS_INIT = 0
-    STATUS_GENERATED = 1
-    STATUS_TO_SEND = 2
-    STATUS_SENT = 3
-    STATUS_SEND_FAILED = 4
-
-    STATUS = (
-        (STATUS_INIT, '初始化'),
-        (STATUS_GENERATED, '已生成'),
-        (STATUS_TO_SEND, '待发送'),
-        (STATUS_SENT, '已发送'),
-        (STATUS_SEND_FAILED, '发送失败'),
-    )
-    STATUS_DICT = dict(STATUS)
+class AbstractMessageHistory(models.Model):
+    # STATUS_INIT = 0
+    # STATUS_GENERATED = 1
+    # STATUS_TO_SEND = 2
+    # STATUS_SENT = 3
+    # STATUS_SEND_FAILED = 4
+    #
+    # STATUS = (
+    #     (STATUS_INIT, '初始化'),
+    #     (STATUS_GENERATED, '已生成'),
+    #     (STATUS_TO_SEND, '待发送'),
+    #     (STATUS_SENT, '已发送'),
+    #     (STATUS_SEND_FAILED, '发送失败'),
+    # )
+    # STATUS_DICT = dict(STATUS)
     user_id = models.PositiveIntegerField(verbose_name="用户ID", default=0)
     contact_id = models.PositiveIntegerField(verbose_name="通讯录成员ID", default=0)
     requirement = models.TextField(verbose_name="要求", blank=True, null=True)
     content = models.TextField(verbose_name="内容", blank=True, null=True)
     voice_url = models.URLField(verbose_name='语音消息URL',blank=True, null=True)
-    status = models.SmallIntegerField(verbose_name="消息类型", choices=STATUS, default=STATUS_INIT)
+    # status = models.SmallIntegerField(verbose_name="消息类型", choices=STATUS, default=STATUS_INIT)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
 
     class Meta:
         abstract = True
         indexes = []
-        verbose_name_plural = verbose_name = '消息'
+        verbose_name_plural = verbose_name = '消息发送历史'
 
