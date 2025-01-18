@@ -29,6 +29,7 @@ class AbstractUser(models.Model):
     worker_thread_id = models.IntegerField(verbose_name="worker线程", blank=True, null=True)
     search_key = models.CharField(verbose_name="搜索词", max_length=100, blank=True, null=True)
     device_name = models.CharField(verbose_name="设备名称", max_length=50, blank=True, null=True)
+    is_hosted_mode = models.BooleanField(verbose_name="是否托管模式", default=False)
 
     class Meta:
         abstract = True
