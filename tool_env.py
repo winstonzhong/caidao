@@ -488,6 +488,11 @@ def simple_encode(line, v=122):
 
 
 def first_or_last(list_like, i, default=None):
+    if hasattr(list_like, '__next__'):
+        try:
+            return list(list_like)[i]
+        except IndexError:
+            return
     if isinstance(list_like, pandas.DataFrame):
         return default if list_like.empty else list_like.iloc[i]
     if list_like is not None and len(list_like) > 0:
@@ -508,6 +513,10 @@ def first(list_like, default=None):
     >>> first(empty_df)
     >>> first(demo_df).x
     1
+    >>> first(range(10))
+    0
+    >>> first(filter(lambda x:x, range(1,10)))
+    1
     '''
     return first_or_last(list_like, 0, default)
 
@@ -525,6 +534,10 @@ def last(list_like, default=None):
     >>> last(empty_df)
     >>> last(demo_df).x
     2
+    >>> last(range(10))
+    9
+    >>> last(filter(lambda x:x, range(1,100)))
+    99
     '''
     return first_or_last(list_like, -1, default)
 
