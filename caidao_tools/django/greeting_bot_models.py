@@ -7,13 +7,18 @@ class AbstractUser(models.Model):
     STATUS_SYNC_CONTACT = 1
     STATUS_GENERATE_MSG = 2
     STATUS_SEND_MSG = 3
+    STATUS_SEARCH_IN_WX = 4
+    STATUS_CONNECT_DEVICE = 5
 
     WORKER_STATUS = (
         (STATUS_INIT, '空闲'),
         (STATUS_SYNC_CONTACT, '通讯录同步'),
         (STATUS_GENERATE_MSG, '生成消息'),
         (STATUS_SEND_MSG, '发送消息'),
+        (STATUS_SEARCH_IN_WX, '微信关键词搜索'),
+        (STATUS_CONNECT_DEVICE, '连接设备'),
     )
+    WORKER_STATUS_MAP = dict(WORKER_STATUS)
 
     uuid = models.CharField(verbose_name="uuid", max_length=32, blank=True, null=True)
     name = models.CharField(verbose_name="姓名", max_length=50, blank=True, null=True)
@@ -22,6 +27,8 @@ class AbstractUser(models.Model):
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
     worker_status = models.SmallIntegerField(verbose_name="worker状态", choices=WORKER_STATUS, default=STATUS_INIT)
     worker_thread_id = models.IntegerField(verbose_name="worker线程", blank=True, null=True)
+    search_key = models.CharField(verbose_name="搜索词", max_length=100, blank=True, null=True)
+    device_name = models.CharField(verbose_name="设备名称", max_length=50, blank=True, null=True)
 
     class Meta:
         abstract = True
