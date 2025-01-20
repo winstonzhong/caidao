@@ -14,7 +14,7 @@ from uiautomator2.xpath import XPath
 from helper_hash import get_hash
 from tool_env import bounds_to_rect
 from tool_img import get_template_points, show, pil2cv2, cv2pil
-
+from lxml import etree
 
 class NoTemplatePopupException(Exception):
     pass
@@ -81,12 +81,26 @@ class SteadyDevice(DummyDevice):
         self.key = None
         self.refresh()
     
+    def get_hash_key(self, xml):
+        t = etree.fromstring(xml.encode('utf8'))
+        e = t.xpath('//node[@class="android.widget.FrameLayout"][@package="com.android.systemui"][@resource-id=""]')
+        if e:
+            e = e[0]
+            t.remove(e)
+            # xml = t.tostring().decode('utf8')
+            xml = etree.tostring(t, encoding='utf8').decode('utf8')
+        key = get_hash(xml)
+        return key
+
+
+
     def refresh(self):
         old_key = None
         max_try = 6
         for i in range(max_try):
             xml_dumped = self.adb.ua2.dump_hierarchy()
-            key = get_hash(xml_dumped)
+            # key = get_hash(xml_dumped)
+            key = self.get_hash_key(xml_dumped)
             if old_key != key and i < max_try - 1:
                 print(f'waiting xml tobe steady:...{i}')
                 old_key = key
