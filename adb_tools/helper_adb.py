@@ -1434,7 +1434,7 @@ class BaseAdb(object):
         return len(self.find_template(img)) > 0
     
     def do_click(self, x, y):
-        print(x, y)
+        # print(x, y)
         self.execute(f'input tap {x} {y}')
         return self
 
