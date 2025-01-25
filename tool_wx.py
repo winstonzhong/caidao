@@ -14,6 +14,21 @@ from tool_env import bounds_to_rect
 
 ptn_session_name = re.compile('\(\d+\)$')
 
+def is_session_name(line):
+    '''
+    >>> is_session_name("主流程测试(5)")
+    True
+    >>> is_session_name("主流程测试(5)1")
+    False
+    >>> is_session_name("广州HR同城进阶学习群(56) ")
+    True
+    >>> is_session_name("(5)")
+    False
+    >>> is_session_name("11(5)")
+    True
+    '''
+    return bool(re.match('.+\(\d+\)$', line.strip()))
+
 def clean_session_name(line):
     '''
     >>> clean_session_name('主流程测试(5)')

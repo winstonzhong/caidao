@@ -514,7 +514,7 @@ class BaseAdb(object):
     def get_latest_file(self, base_dir='/sdcard/DCIM/Camera'):
         r = self.ua2.shell(f'ls -t {base_dir}')
         if r.exit_code == 0 and r.output:
-            return f'{base_dir}/{r.output.splitlines()[0]}'
+            return f'{base_dir}/{r.output.splitlines()[0]}'.replace('//','/')
     
     def get_file_size(self, remote_fpath, is_file=True):
         r = self.ua2.shell(f'ls -lt  {remote_fpath}')
@@ -525,10 +525,6 @@ class BaseAdb(object):
             
     def get_latest_file_size(self, base_dir='/sdcard/DCIM/Camera'):
         return self.get_file_size(base_dir, is_file=False)
-        # r = self.ua2.shell(f'ls -lt  {base_dir}')
-        # if r.exit_code == 0 and r.output:
-        #     l = r.output.splitlines()
-        #     return int(re.split('\s+', l[i+1])[4]) if len(l) > i else None
         
     def pull_lastest_file(self, 
                           to_dir=TMP_DIR, 
@@ -547,7 +543,23 @@ class BaseAdb(object):
             print(dst)
             return dst
     
-    
+    def wait_file_safe(self, remote):
+        old_size = None 
+        while 1:
+            new_size = self.get_file_size(remote)
+            if new_size and new_size == old_size:
+                break
+            print(f'waiting {remote}:', new_size, old_size)
+            old_size = new_size
+            time.sleep(0.1)
+
+    def get_latest_file_safe(self, base_dir):
+        fpath = self.get_latest_file(base_dir)
+        if fpath is not None:
+            self.wait_file_safe(remote=fpath)
+            return fpath
+
+
     def pull_file_safe(self, remote, local):
         old_size = None 
         while 1:
@@ -609,10 +621,31 @@ class BaseAdb(object):
         src = fpath
         suffix = os.path.basename(fpath).rsplit('.')[-1] 
         dst = f'{self.DIR_TMP}/{time.time()}.{suffix}'
-        # print(src, dst)
         self.ua2.shell(f'cp {src} {dst}')
         time.sleep(sleep_span)
         self.broadcast(dst)
+    
+    def change_file_suffix(self, fpath, new_suffix):
+        base = fpath.rsplit('.', maxsplit=1)[0]
+        dst = f'{base}.{new_suffix}'
+        self.ua2.shell(f'mv {fpath} {dst}')
+        time.sleep(0.1)
+        self.broadcast(dst)
+        return dst
+    
+    def rename_file(self, fpath, new_filename):
+        base = os.path.dirname(fpath)
+        dst = os.path.join(base, new_filename)
+        dst = f'{base}/{new_filename}'.replace('//','/')
+        self.ua2.shell(f'mv {fpath} {dst}')
+        time.sleep(0.1)
+        self.broadcast(dst)
+        return dst
+    
+    def delete_file(self, fpath):
+        self.ua2.shell(f'rm -f {fpath}')
+        time.sleep(0.1)
+        self.broadcast(fpath)
         
     def push_file_to_temp(self, 
                           src, 
@@ -1434,6 +1467,7 @@ class BaseAdb(object):
         return len(self.find_template(img)) > 0
     
     def do_click(self, x, y):
+        # print(x, y)
         self.execute(f'input tap {x} {y}')
         return self
 
