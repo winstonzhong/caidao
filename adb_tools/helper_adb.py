@@ -525,10 +525,6 @@ class BaseAdb(object):
             
     def get_latest_file_size(self, base_dir='/sdcard/DCIM/Camera'):
         return self.get_file_size(base_dir, is_file=False)
-        # r = self.ua2.shell(f'ls -lt  {base_dir}')
-        # if r.exit_code == 0 and r.output:
-        #     l = r.output.splitlines()
-        #     return int(re.split('\s+', l[i+1])[4]) if len(l) > i else None
         
     def pull_lastest_file(self, 
                           to_dir=TMP_DIR, 
@@ -636,7 +632,20 @@ class BaseAdb(object):
         time.sleep(0.1)
         self.broadcast(dst)
         return dst
- 
+    
+    def rename_file(self, fpath, new_filename):
+        base = os.path.dirname(fpath)
+        dst = os.path.join(base, new_filename)
+        dst = f'{base}/{new_filename}'.replace('//','/')
+        self.ua2.shell(f'mv {fpath} {dst}')
+        time.sleep(0.1)
+        self.broadcast(dst)
+        return dst
+    
+    def delete_file(self, fpath):
+        self.ua2.shell(f'rm -f {fpath}')
+        time.sleep(0.1)
+        self.broadcast(fpath)
         
     def push_file_to_temp(self, 
                           src, 
