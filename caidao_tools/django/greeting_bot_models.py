@@ -22,7 +22,7 @@ class AbstractUser(models.Model):
 
     uuid = models.CharField(verbose_name="uuid", max_length=32, blank=True, null=True)
     name = models.CharField(verbose_name="姓名", max_length=50, blank=True, null=True)
-    sn = models.CharField(verbose_name="注册码", max_length=50, blank=True, null=True)
+    sn = models.CharField(verbose_name="注册码", max_length=64, blank=True, null=True)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
     worker_status = models.SmallIntegerField(verbose_name="worker状态", choices=WORKER_STATUS, default=STATUS_INIT)
