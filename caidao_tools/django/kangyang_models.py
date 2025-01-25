@@ -142,6 +142,7 @@ class AbstractProduct(models.Model):
     enabled = models.BooleanField(verbose_name='可用', default=True)
     style = models.CharField(verbose_name='款式', max_length=200, null=True, blank=True)
     json_data = models.TextField(verbose_name='json数据', null=True, blank=True)
+    app_id = models.PositiveIntegerField(verbose_name='应用ID', blank=True, null=True)
 
     class Meta:
         abstract = True
@@ -161,7 +162,7 @@ class AbstractProductImg(models.Model):
     img = models.FileField(verbose_name='图片', storage=MyStorage, null=True, blank=True)
     # img = models.FileField(verbose_name='图片', null=True, blank=True)
     seq = models.IntegerField(verbose_name='序号', default=0)
-    type = models.SmallIntegerField(verbose_name='类型', choices=TYPE_CHOICE, default=TYPE_SLIDE_SHOW)
+    type = models.SmallIntegerField(verbose_name='类型', choices=TYPE_CHOICE, default=TYPE_DETAIL)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
     enabled = models.BooleanField(verbose_name='可用', default=True)
@@ -177,7 +178,7 @@ class AbstractOrder(models.Model):
     STATUS_DELIVERED = 2
     STATUS_RECEIVED = 3
     STATUS_COMPLETE = 4
-    STATUS_BAD = 5
+    STATUS_BAD = -1
     TYPE_CHOICE = (
         (STATUS_INIT, "待付款"),
         (STATUS_PAID, "已付款"),
@@ -216,6 +217,8 @@ class AbstractOrderDetail(models.Model):
     quantity = models.IntegerField(verbose_name='数量', default=1)
     price = models.DecimalField(verbose_name='价格', max_digits=6, decimal_places=2, default=0)
     product_id = models.PositiveIntegerField(verbose_name='产品ID', blank=True, null=True)
+    app_id = models.PositiveIntegerField(verbose_name='应用ID', blank=True, null=True)
+    external_app_id = models.PositiveIntegerField(verbose_name='应用ID(外部)', blank=True, null=True)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
 
@@ -797,3 +800,13 @@ class AbstractSn(models.Model):
         abstract = True
         indexes = []
         verbose_name_plural = verbose_name = '注册码'
+
+
+class AbstractApp(models.Model):
+    name = models.CharField(verbose_name="应用名称", max_length=30)
+    external_app_id = models.CharField(verbose_name="app id", max_length=30)
+
+    class Meta:
+        abstract = True
+        indexes = []
+        verbose_name_plural = verbose_name = '应用'
