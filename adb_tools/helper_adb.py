@@ -27,7 +27,7 @@ from adb_tools.tool_xpath import find_by_xpath, SteadyDevice
 import helper_icmp
 from helper_net import retry
 from tool_cmd import 得到ADB连接状态
-from tool_env import is_ipv4, is_string, bounds_to_center
+from tool_env import is_ipv4, is_string, bounds_to_center, first, last
 from tool_file import get_suffix
 from tool_img import bin2img, get_template_points, pil2cv2, to_gray, mask_to_img, \
     rgb_to_mono, cut_empty_margin
@@ -273,6 +273,9 @@ class SwitchOverviewError(Exception):
 class ScreenShotEmpty(Exception):
     pass
 
+class NoAdbDeviceError(Exception):
+    pass
+
 class BaseAdb(object):
     # app_name = None
     # activity = None
@@ -453,6 +456,9 @@ class BaseAdb(object):
                 return x
 
     def __init__(self, device):
+        if not device:
+            raise NoAdbDeviceError
+
         if hasattr(device, 'device_id'):
             self.ip_port = device.device_id
         elif not device.get('ip') and device.get('id'):
@@ -1271,11 +1277,17 @@ class BaseAdb(object):
     
     @classmethod
     def first_device(cls):
-        return list(cls.get_devices_as_dict())[0]
+        return first(cls.get_devices_as_dict())
+        # old = time.time()
+        # rtn = first(cls.get_devices_as_dict())
+        # print(time.time() - old)
+        # return rtn
+        # return list(cls.get_devices_as_dict())[0]
 
     @classmethod
     def last_device(cls):
-        return list(cls.get_devices_as_dict())[-1]
+        return last(cls.get_devices_as_dict())
+        # return list(cls.get_devices_as_dict())[-1]
     
     @classmethod
     def from_ip_port(cls, ip_port):
