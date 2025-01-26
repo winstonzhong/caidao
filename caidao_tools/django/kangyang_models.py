@@ -791,7 +791,7 @@ class AbstractRobotKF(models.Model):
 
 
 class AbstractSn(models.Model):
-    sn = models.CharField(verbose_name="注册码", max_length=50)
+    sn = models.CharField(verbose_name="注册码", max_length=64, default='')
     order_id = models.PositiveIntegerField(verbose_name='订单ID', blank=True, null=True)
     uuid = models.CharField(max_length=32, verbose_name="uuid", blank=True, null=True)
     external_uuid = models.CharField(max_length=32, verbose_name="外部uuid", blank=True, null=True)
