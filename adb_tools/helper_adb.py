@@ -518,9 +518,18 @@ class BaseAdb(object):
     
     
     def get_latest_file(self, base_dir='/sdcard/DCIM/Camera'):
-        r = self.ua2.shell(f'ls -t {base_dir}')
+        r = self.ua2.shell(f'ls -lt {base_dir} | grep -v ^d')
+
         if r.exit_code == 0 and r.output:
-            return f'{base_dir}/{r.output.splitlines()[0]}'.replace('//','/')
+            l = r.output.splitlines()
+            # for x in l:
+            #     print(x)
+            if len(l) > 1:
+                return f'{base_dir}/{l[1].split()[-1]}'.replace('//','/')
+            # fname = re.split('\s+', l[1])[-1]
+            # return f'{base_dir}/{fname}'.replace('//','/')
+
+            # return f'{base_dir}/{r.output.splitlines()[0]}'.replace('//','/')
     
     def get_file_size(self, remote_fpath, is_file=True):
         r = self.ua2.shell(f'ls -lt  {remote_fpath}')
