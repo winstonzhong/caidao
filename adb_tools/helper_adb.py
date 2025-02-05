@@ -300,7 +300,10 @@ class BaseAdb(object):
         os.makedirs(DIR_CFG, exist_ok=True)
     
     def __str__(self):
-        return self.ip_port
+        return str(self.device)
+    
+    def __repr__(self):
+        return str(self.device)
     
     @classmethod
     def get_all_jobs(cls):
@@ -1271,7 +1274,23 @@ class BaseAdb(object):
     @classmethod
     def get_devices_as_dict(cls):
         return list(tool_devices.parse_devices(BaseAdb.get_devices()[0]))
-    
+
+
+    @classmethod
+    def get_devcie_wifi(cls):
+        l = filter(lambda x: is_ipv4(x.get('id')), cls.get_devices_as_dict())
+        return list(l)
+
+    @classmethod
+    def get_devcie_usb(cls):
+        l = filter(lambda x: not is_ipv4(x.get('id')), cls.get_devices_as_dict())
+        return list(l)
+
+    @classmethod
+    def get_device_by_id(cls, id):
+        return next((item for item in cls.get_devices_as_dict() if item["id"] == id), None)
+
+
     @classmethod
     def is_offline(cls, ip_port):
         l = cls.get_devices_as_dict()
@@ -1283,20 +1302,13 @@ class BaseAdb(object):
     def get_devcie_ids(cls):
         return list(map(lambda x:x.get('id'), cls.get_devices_as_dict()))
     
-    
     @classmethod
     def first_device(cls):
         return first(cls.get_devices_as_dict())
-        # old = time.time()
-        # rtn = first(cls.get_devices_as_dict())
-        # print(time.time() - old)
-        # return rtn
-        # return list(cls.get_devices_as_dict())[0]
 
     @classmethod
     def last_device(cls):
         return last(cls.get_devices_as_dict())
-        # return list(cls.get_devices_as_dict())[-1]
     
     @classmethod
     def from_ip_port(cls, ip_port):
