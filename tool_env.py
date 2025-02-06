@@ -14,6 +14,7 @@ import pandas
 from tool_rect import Rect
 import json
 
+IPV4_PAT = '(?:[0-9]{1,3}\\.){3}[0-9]{1,3}'
 
 OPENAI = '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'
 
@@ -183,7 +184,6 @@ def to_number_with_chinese_safe_dict(d):
     return {k:to_number_with_chinese_safe(v) for k,v in d.items()}
 
 def is_ipv4(host):
-    from urllib3.util.url import IPV4_PAT
     return re.match(IPV4_PAT, host) is not None
 
 def clear_emoji(content):
