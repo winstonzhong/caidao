@@ -17,7 +17,7 @@ from helper_net import get_with_random_agent
 from tool_rect import Rect
 from tool_env import is_string
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 def describe_hsv(img):
