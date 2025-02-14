@@ -24,8 +24,8 @@ class AbstractUser(models.Model):
         (MALE_CODE, "男性"),
         (FEMALE_CODE, "女性"),
     )
-    name = models.CharField(max_length=50, verbose_name='用户名称', default='')
-    open_id = models.CharField(max_length=50, verbose_name='微信Open ID', blank=True, null=True, unique=True)
+    name = models.CharField(max_length=64, verbose_name='用户名称', default='')
+    open_id = models.CharField(max_length=64, verbose_name='微信Open ID', blank=True, null=True, unique=True)
     head_img = models.FileField(verbose_name='用户头像', max_length=200, storage=MyStorage, null=True, blank=True)
     gender = models.SmallIntegerField(verbose_name='性别', choices=GENDER_CHOICE, blank=True, null=True)
     update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
@@ -34,6 +34,7 @@ class AbstractUser(models.Model):
     phone = models.CharField(verbose_name='手机号', max_length=20, blank=True, null=True)
     email = models.CharField(verbose_name='邮箱地址', max_length=50, blank=True, null=True)
     birthday = models.DateTimeField(verbose_name='出生日期', null=True, blank=True)
+    uuid = models.CharField(max_length=32, verbose_name="uuid", db_index=True, default=get_uuid)
 
     class Meta:
         abstract = True
@@ -798,7 +799,7 @@ class AbstractSn(models.Model):
 
     class Meta:
         abstract = True
-        indexes = []
+        indexes = [models.Index(fields=['sn']), models.Index(fields=['external_uuid'])]
         verbose_name_plural = verbose_name = '注册码'
 
 
