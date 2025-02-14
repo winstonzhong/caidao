@@ -11,8 +11,8 @@ from django.db.models.aggregates import Sum, Count
 from django.db.models.query_utils import Q
 from django.utils.functional import cached_property
 import numpy
-import torch
-from torchvision import transforms
+# import torch
+# from torchvision import transforms
 
 from caidao_tools.django.abstract import BaseModel
 from helper_cmd import CmdProgress

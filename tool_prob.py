@@ -4,10 +4,10 @@ Created on 2024年6月18日
 @author: lenovo
 '''
 import pandas
-import torch
 
 
 def get_prob_df(l, inverse_ratio=False):
+    import torch
     df = pandas.DataFrame({'cnt':list(l)})
     df['tmp'] = df.cnt.sum() / df.cnt if inverse_ratio else df.cnt / df.cnt.sum()
     
