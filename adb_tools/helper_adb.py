@@ -1245,6 +1245,7 @@ class BaseAdb(object):
             ip = self.ua2.wlan_ip
             port = 7080  # random.randint(7006, 8006)
             self.init_wifi_connection(device_id=self.ip_port, ip=ip, port=port)
+            return f'{ip}:{port}'
 
     @classmethod
     def init_wifi_connection(cls, index=None, ip=None, port=None, device_id=None):
@@ -1355,6 +1356,12 @@ class BaseAdb(object):
         return next(
             (item for item in cls.get_devices_as_dict() if item["id"] == id), None
         )
+    @classmethod
+    def get_device_by_index(cls, index):
+        try:
+            return cls.get_devices_as_dict()[index]
+        except IndexError:
+            pass
 
     @classmethod
     def is_offline(cls, ip_port):
