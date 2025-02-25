@@ -14,17 +14,48 @@ from tool_env import bounds_to_rect
 
 ptn_session_name = re.compile("\(\d+\)$")
 
-ptn_renamed_session_name = re.compile("_[A-Z]{4}_\(\d+\)$")
+ptn_renamed_session_name = re.compile("_[A-Z]{4}\(\d+\)$")
+ptn_renamed_person_name = re.compile(".+_[A-Z]{4}$")
+
+ptn_renamed_name = re.compile(".*_[A-Z]{4}$")
+
+# def parse_session_name(line):
+#     m = ptn_session_name.search(line)
+#     if m:
+#         return int(m.group()[:-1])
+
+def is_renamed_person_name(line):
+    """
+    >>> is_renamed_person_name("SunnyAftRain_SUNY")
+    True
+    >>> is_renamed_person_name("SunnyAftRain_1UNY")
+    False
+    """
+    return bool(ptn_renamed_person_name.match(line.strip()))
 
 
 def is_renamed_session_name(line):
     """
-    >>> is_renamed_session_name("_SUNY_(5)")
+    >>> is_renamed_session_name("_SUNY(5)")
     True
-    >>> is_renamed_session_name("_1UNY_(5)")
+    >>> is_renamed_session_name("_1UNY(5)")
     False
     """
     return bool(ptn_renamed_session_name.match(line.strip()))
+
+def is_renamed_name(line):
+    """
+    >>> is_renamed_name("SunnyAftRain_SUNY")
+    True
+    >>> is_renamed_name("SunnyAftRain_1UNY")
+    False
+    >>> is_renamed_name("_1UNY")
+    False
+    >>> is_renamed_name("_AUNY")
+    True
+    """
+    return bool(ptn_renamed_name.match(line.strip()))
+    # return is_renamed_session_name(line) or is_renamed_person_name(line)
 
 def is_session_name(line):
     """
