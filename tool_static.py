@@ -13,6 +13,7 @@ import random
 from tool_env import OS_WIN
 
 BASE_URL_56T = "https://file.j1.sale/api/file"
+
 BASE_DIR_56T = "v:/file" if OS_WIN else "/mnt/56T/file"
 
 
@@ -64,7 +65,9 @@ def 路径到链接(fpath, base_dir=BASE_DIR_56T):
     >>> 路径到链接(fpath1)
     'https://file.j1.sale/api/file/test/x.jpg'
     """
-    return fpath.lower().replace("\\", "/").replace(base_dir, BASE_URL_56T)
+    if OS_WIN:
+        fpath = fpath.lower()
+    return fpath.replace("\\", "/").replace(base_dir, BASE_URL_56T)
 
 
 def 存储文件(content, suffix, 返回路径=False, base_dir=BASE_DIR_56T):
