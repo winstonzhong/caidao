@@ -55,7 +55,17 @@ def is_renamed_name(line):
     True
     """
     return bool(ptn_renamed_name.match(line.strip()))
-    # return is_renamed_session_name(line) or is_renamed_person_name(line)
+
+def cutoff_renamed_suffix(line):
+    """
+    >>> cutoff_renamed_suffix("SunnyAftRain_SUNY")
+    'SunnyAftRain'
+    >>> cutoff_renamed_suffix("SunnyAftRain_1UNY")
+    'SunnyAftRain_1UNY'
+    """
+    return line.rsplit('_', maxsplit=1)[0] if is_renamed_name(line) else line
+
+
 
 def is_session_name(line):
     """
