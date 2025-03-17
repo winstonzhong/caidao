@@ -601,15 +601,18 @@ class BaseAdb(object):
         to_dir=TMP_DIR,
         base_dir="/sdcard/DCIM/Camera",
         fpath=None,
+        to_56T=False,
     ):
         src = self.get_latest_file(base_dir)
         if src:
-            if fpath is None:
+            if fpath is not None:
+                dst = fpath
+            elif to_56T:
+                dst = 得到一个不重复的文件路径(src)
+            else:
                 if not os.path.lexists(to_dir):
                     os.makedirs(to_dir, exist_ok=True)
                 dst = dst = os.path.join(to_dir, os.path.basename(src))
-            else:
-                dst = fpath
             self.ua2.pull(src, dst)
             print(dst)
             return dst
@@ -646,12 +649,17 @@ class BaseAdb(object):
         to_dir=TMP_DIR,
         base_dir="/sdcard/DCIM/Camera",
         max_retry=100,
+        # clear_base_dir=False,
+        fpath=None,
+        to_56T=False,
     ):
         old_size = None
+        # if clear_base_dir:
+        #     self.clear_temp_dir(base_dir)
         for i in range(max_retry):
             new_size = self.get_latest_file_size(base_dir)
             if new_size and new_size == old_size:
-                fpath = self.pull_lastest_file(to_dir=to_dir, base_dir=base_dir)
+                fpath = self.pull_lastest_file(to_dir=to_dir, base_dir=base_dir, fpath=fpath, to_56T=to_56T)
                 if fpath is not None:
                     return fpath
             print(f"waiting file:{i}", new_size, old_size)

@@ -12,7 +12,7 @@ from numpy.lib._iotools import _is_string_like
 import pandas
 
 from tool_rect import Rect
-import json
+
 
 IPV4_PAT = '(?:[0-9]{1,3}\\.){3}[0-9]{1,3}'
 

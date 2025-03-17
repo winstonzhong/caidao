@@ -84,6 +84,10 @@ class SteadyDevice(DummyDevice):
         self.key = None
         self.refresh()
 
+    def 拷贝环境(self, other):
+        self.key = other.key
+        self.source = other.source
+
     def get_hash_key(self, xml):
         t = etree.fromstring(xml.encode("utf8"))
         e = t.xpath(

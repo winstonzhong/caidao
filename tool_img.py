@@ -247,8 +247,8 @@ def bin_to_base64(bin_buffer):
     return base64.b64encode(bin_buffer).decode()
 
 
-def show(img, max_length=900):
-    if max_length is not None:
+def show(img, max_length=900, force_resize=True):
+    if max_length is not None and force_resize:
         img = resize_if_too_large(img, max_length)
     cv2.imshow("image", img)
     cv2.waitKey()
