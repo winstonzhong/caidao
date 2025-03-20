@@ -27,7 +27,10 @@ from tool_env import OS_WIN
 USER_DATA_DIR = 'd:/google-chrome/Default'
 
 if not OS_WIN:
-    DRIVER_PATH = "/big/download/bin/chromedriver"
+    if os.path.lexists('/home/yka-003/'):
+        DRIVER_PATH = "/home/yka-003/Downloads/chromedriver-linux64"
+    else:
+        DRIVER_PATH = "/big/download/bin/chromedriver"
 else:
     DRIVER_PATH = r'D:\chrome_driver\chromedriver.exe'
 
