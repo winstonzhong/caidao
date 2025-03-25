@@ -8,7 +8,7 @@ import re
 import subprocess
 from tool_env import is_number
 from tool_file import change_suffix
-
+from tool_static import 得到一个不重复的文件路径
 
 ptn_line = re.compile('(\d{2}):(\d{2}).(\d{2,3})')
 
@@ -113,6 +113,26 @@ def split_mp4(fpath_mp4, dir_dst, fps=30):
 def merge_mp4_wav(fpath_mp4, fpath_wav, fpath_dst, seconds):
     process = subprocess.Popen(
         f'''ffmpeg -i  {fpath_wav}  -i  {fpath_mp4}  -ss 0:0 -t {seconds:.3f} {fpath_dst} -y''',
+        shell=True)
+    process.wait()
+
+def concat_mp3_file_list(*a):
+    import tempfile
+
+    # 创建临时文件（关闭后不自动删除）
+    tmp = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log')
+    for fpath in a:
+        tmp.write(f"file '{fpath}'\n")
+    tmp.close()  # 需要手动关闭
+    fpath_dst = 得到一个不重复的文件路径('.mp3')
+    concat_mp3s(tmp.name, fpath_dst)
+    os.unlink(tmp.name)
+    return fpath_dst
+
+def concat_mp3s(mp3_txt, fpath_dst):
+    # ffmpeg -f concat -safe 0 -i list.txt -c copy output.mp3
+    process = subprocess.Popen(
+        f'''ffmpeg -f concat -safe 0 -i "{mp3_txt}" -c copy "{fpath_dst}" -y''', 
         shell=True)
     process.wait()
 

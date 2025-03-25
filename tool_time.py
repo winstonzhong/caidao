@@ -76,6 +76,9 @@ def get_firendly_display(dt_utc):
 def shanghai_time_now():
     return datetime.datetime.now(TIME_ZONE_SHANGHAI)#.strftime("%H:%M:%S")
 
+def shanghai_time_now_str():
+    return shanghai_time_now().strftime("%H:%M:%S")
+
 def shanghai_yesterday():
     return shanghai_time_now() - datetime.timedelta(days=1)
 
