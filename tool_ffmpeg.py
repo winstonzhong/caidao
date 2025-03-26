@@ -118,8 +118,6 @@ def merge_mp4_wav(fpath_mp4, fpath_wav, fpath_dst, seconds):
 
 def concat_mp3_file_list(*a):
     import tempfile
-
-    # 创建临时文件（关闭后不自动删除）
     tmp = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log')
     for fpath in a:
         tmp.write(f"file '{fpath}'\n")
