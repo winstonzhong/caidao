@@ -98,6 +98,7 @@ def 链接到相对路径(url, base_dir=BASE_DIR_56T):
     return 链接到路径(url, base_dir).replace("v:/", "")
 
 
+
 if __name__ == "__main__":
     import doctest
     fpath1 = r"v:\file\test\x.jpg"
