@@ -43,6 +43,9 @@ from tool_img import (
     cut_empty_margin,
 )
 from tool_static import 得到一个不重复的文件路径, 路径到链接
+import tempfile
+import requests
+from urllib.parse import unquote
 
 
 # from base_adb import tool_devices
@@ -336,6 +339,35 @@ class BaseAdb(object):
 
     def __repr__(self):
         return str(self.device)
+
+    @property
+    def device_name(self):
+        return self.dict.get("name")
+
+    @cached_property
+    def dict(self):
+        return self.get_device_by_id(self.ip_port)
+
+    def download_file(self, url, suffix=".mp3"):
+        with requests.get(url, stream=True) as r:
+            if r.status_code == 200:
+                tmp = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=suffix)
+                fname = r.headers["Content-Disposition"].rsplit("'", maxsplit=1)[-1]
+                fname = unquote(fname)
+                with open(tmp.name, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=1024):
+                        if chunk:
+                            f.write(chunk)
+                return tmp.name, fname
+
+    def download_and_push(self, url, suffix=".mp3", to_dir=None):
+        result = self.download_file(url, suffix)
+        if result is not None:
+            fpath, fname = result
+            to_dir = to_dir or self.DIR_UPLOAD
+            dst = self.push_file_to_temp(fpath, fname=fname, base_dir=to_dir)
+            os.unlink(fpath)
+            return dst
 
     @classmethod
     def get_all_jobs(cls):
@@ -659,7 +691,9 @@ class BaseAdb(object):
         for i in range(max_retry):
             new_size = self.get_latest_file_size(base_dir)
             if new_size and new_size == old_size:
-                fpath = self.pull_lastest_file(to_dir=to_dir, base_dir=base_dir, fpath=fpath, to_56T=to_56T)
+                fpath = self.pull_lastest_file(
+                    to_dir=to_dir, base_dir=base_dir, fpath=fpath, to_56T=to_56T
+                )
                 if fpath is not None:
                     return fpath
             print(f"waiting file:{i}", new_size, old_size)
@@ -738,18 +772,21 @@ class BaseAdb(object):
         clean_temp=False,
         use_timestamp=True,
         base_dir=None,
+        fname=None,
     ):
 
         base_dir = base_dir or self.DIR_TMP
         if clean_temp:
             self.clear_temp_dir(base_dir)
 
-        if not use_timestamp:
+        if fname is not None:
+            dst = f"{base_dir}/{fname}"
+        elif not use_timestamp:
             dst = f"{base_dir}/{os.path.basename(src)}"
         else:
             dst = f"{base_dir}/{time.time()}.{get_suffix(src)}"
         print(src, dst)
-        print(self.push_file(src, dst))
+        self.push_file(src, dst)
         time.sleep(sleep_span)
         self.ua2.shell(f"touch {dst}")
         time.sleep(sleep_span)
@@ -1253,7 +1290,7 @@ class BaseAdb(object):
             ip = self.ua2.wlan_ip
             port = 7080  # random.randint(7006, 8006)
             self.init_wifi_connection(device_id=self.ip_port, ip=ip, port=port)
-            return f'{ip}:{port}'
+            return f"{ip}:{port}"
 
     @classmethod
     def init_wifi_connection(cls, index=None, ip=None, port=None, device_id=None):
@@ -1364,6 +1401,7 @@ class BaseAdb(object):
         return next(
             (item for item in cls.get_devices_as_dict() if item["id"] == id), None
         )
+
     @classmethod
     def get_device_by_index(cls, index):
         try:
