@@ -804,9 +804,15 @@ class BaseAdb(object):
         sleep_span=0.1,
         clean_temp=False,
         use_timestamp=True,
+        fname=None,
     ):
         return self.push_file_to_temp(
-            src, sleep_span, clean_temp, use_timestamp, base_dir="/sdcard/Download"
+            src=src, 
+            sleep_span=sleep_span, 
+            clean_temp=clean_temp, 
+            use_timestamp=use_timestamp, 
+            base_dir=self.DIR_UPLOAD,
+            fname=fname
         )
 
     def push_file_to_temp_all(self, files):
