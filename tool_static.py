@@ -41,10 +41,10 @@ def 得到后缀(fpath=""):
 
 def 得到一个固定文件路径(相对路径, base_dir=BASE_DIR_56T):
     """
-    >>> 得到一个固定文件路径('aaa/bbb')
-    'v:/file/aaa/bbb'
-    >>> 得到一个固定文件路径('/aaa/bbb')
-    'v:/file/aaa/bbb'
+    >>> 得到一个固定文件路径('aaa/bbb') == f'{BASE_DIR_56T}/aaa/bbb'
+    True
+    >>> 得到一个固定文件路径('/aaa/bbb') == f'{BASE_DIR_56T}/aaa/bbb'
+    True
     """
     相对路径 = 相对路径.replace("\\", "/")
     相对路径 = 相对路径[1:] if 相对路径.startswith("/") else 相对路径
@@ -62,7 +62,7 @@ def 得到一个不重复的文件路径(fpath=""):
 
 def 路径到链接(fpath, base_dir=BASE_DIR_56T):
     """
-    >>> 路径到链接(fpath1)
+    >>> 路径到链接(f'{BASE_DIR_56T}/test/x.jpg')
     'https://file.j1.sale/api/file/test/x.jpg'
     """
     if OS_WIN:
@@ -81,13 +81,15 @@ def 存储链接到文件(url, suffix, 返回路径=False, base_dir=BASE_DIR_56T
     return 存储文件(rget(url).content, suffix, 返回路径, base_dir=base_dir)
 
 
-def 链接到路径(url, base_dir=BASE_DIR_56T):
+def 链接到路径(url, base_dir=BASE_DIR_56T, safe=True):
     """
-    >>> 链接到路径('https://file.j1.sale/api/file/2024-11-26/1732629182.2386892.amr')
-    'v:/file/2024-11-26/1732629182.2386892.amr'
+    >>> 链接到路径('https://file.j1.sale/api/file/2024-11-26/1732629182.2386892.amr') == f'{BASE_DIR_56T}/2024-11-26/1732629182.2386892.amr'
+    True
     """
-    assert url.startswith(BASE_URL_56T)
-    return url.replace(BASE_URL_56T, base_dir)
+    if url.startswith(BASE_URL_56T):
+        return url.replace(BASE_URL_56T, base_dir)
+    elif safe:
+        raise ValueError(f"{url}不是56T的链接")
 
 
 def 链接到相对路径(url, base_dir=BASE_DIR_56T):
@@ -95,7 +97,7 @@ def 链接到相对路径(url, base_dir=BASE_DIR_56T):
     >>> 链接到相对路径('https://file.j1.sale/api/file/2024-11-26/1732629182.2386892.amr')
     'file/2024-11-26/1732629182.2386892.amr'
     """
-    return 链接到路径(url, base_dir).replace("v:/", "")
+    return 链接到路径(url, base_dir).replace(os.path.dirname(BASE_DIR_56T)+'/', "")
 
 
 

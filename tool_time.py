@@ -7,6 +7,7 @@ from datetime import timedelta
 import datetime
 import re
 from time import strptime, mktime
+from zoneinfo import ZoneInfo
 
 from django.utils import timezone
 import pandas
@@ -351,6 +352,22 @@ def 获取当前日期的0点时间戳(日期=None):
     """
     日期 = 日期 or datetime.datetime.now().strftime("%Y-%m-%d")
     return int(datetime.datetime.strptime(日期, "%Y-%m-%d").replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+
+def 解析一般格式日期时间(time_str):
+    '''
+    >>> 解析一般格式日期时间('Sat, 29 Mar 2025 11:16:00 GMT')
+    datetime.datetime(2025, 3, 29, 11, 16, tzinfo=zoneinfo.ZoneInfo(key='GMT'))
+    '''
+    try:
+        # 定义时间格式
+        time_format = "%a, %d %b %Y %H:%M:%S %Z"
+        # 解析时间字符串
+        naive_dt = datetime.datetime.strptime(time_str, time_format)
+        aware_dt = naive_dt.replace(tzinfo=ZoneInfo("GMT"))
+        return aware_dt
+    except ValueError as e:
+        print(f"解析时间字符串失败：{e}")
+
 
 if __name__ == '__main__':
     import doctest
