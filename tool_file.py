@@ -266,5 +266,60 @@ def download_img_srb(d):
     return d 
 
 
-def 搜索第一个稳定存在的文件(directory, suffix):
-    pass
+def 搜索第一个稳定存在的文件(directory, file_extension=".mp3"):
+    pattern = os.path.join(directory, f"**/*{file_extension}")
+    files = glob.glob(pattern, recursive=True)
+
+    if files:
+        file_path = next(iter(files))
+        print(f"找到文件: {file_path}")
+        old_size = os.path.getsize(file_path)
+        while 1:
+            time.sleep(1)
+            new_size = os.path.getsize(file_path)
+            if new_size == 0:
+                continue
+
+            if old_size != new_size:
+                old_size = new_size
+                continue
+            break
+        return file_path
+
+def 删除指定目录下的所有文件和文件夹(directory):
+    """
+    删除指定目录下的所有文件和文件夹，但保留目录本身。
+
+    参数:
+        directory (str): 要清理的目录路径。
+    """
+    if not os.path.exists(directory):
+        print(f"目录不存在: {directory}")
+        return
+
+    if not os.path.isdir(directory):
+        print(f"路径不是目录: {directory}")
+        return
+
+    # 遍历目录中的所有文件和文件夹
+    for item in os.listdir(directory):
+        item_path = os.path.join(directory, item)
+
+        # 如果是文件，直接删除
+        if os.path.isfile(item_path):
+            try:
+                os.remove(item_path)
+                print(f"已删除文件: {item_path}")
+            except Exception as e:
+                print(f"删除文件失败: {item_path} - {e}")
+
+        # 如果是目录，递归删除
+        elif os.path.isdir(item_path):
+            try:
+                shutil.rmtree(item_path)
+                print(f"已删除目录: {item_path}")
+            except Exception as e:
+                print(f"删除目录失败: {item_path} - {e}")
+
+    print(f"目录 {directory} 的内容已清空。")
+
