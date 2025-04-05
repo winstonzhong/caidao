@@ -270,6 +270,8 @@ def 搜索第一个稳定存在的文件(directory, file_extension=".mp3"):
     pattern = os.path.join(directory, f"**/*{file_extension}")
     files = glob.glob(pattern, recursive=True)
 
+    files = list(sorted(files, key=lambda x: os.path.getctime(x), reverse=True))
+
     if files:
         file_path = next(iter(files))
         print(f"找到文件: {file_path}")
