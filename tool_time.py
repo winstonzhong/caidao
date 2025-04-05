@@ -83,6 +83,9 @@ def shanghai_time_now_str():
 def shanghai_yesterday():
     return shanghai_time_now() - datetime.timedelta(days=1)
 
+def shanghai_today():
+    return dash_date(shanghai_time_now())
+
 def dash_date(tdate):
     '''
     >>> dash_date('20160308')
@@ -372,3 +375,4 @@ def 解析一般格式日期时间(time_str):
 if __name__ == '__main__':
     import doctest
     print(doctest.testmod(verbose=False, report=False))
+
