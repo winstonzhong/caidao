@@ -5,6 +5,7 @@ Created on 2022年5月1日
 '''
 
 from django.db import models
+from django.forms import model_to_dict
 
 from evovle.helper_store import compute, get_train_test_df, compute_group
 from helper_net import retry
@@ -65,6 +66,10 @@ class BaseModel(models.Model):
         return cls.FIELDS
     
     @classmethod
+    def has_field(cls,name):
+        return name in cls.get_fields()
+    
+    @classmethod
     def get_fields_without_id(cls):
         return filter(lambda x:x !='id', cls.get_fields())
 
@@ -97,6 +102,26 @@ class AbstractModel(BaseModel):
 
     class Meta:
         abstract = True
+        
+        
+
+    @classmethod
+    def 得到一条任务(cls, 字段名称):
+        return cls.objects.filter(**{f'{字段名称}_完成':False}).order_by('create_time').first()
+
+    @classmethod
+    def 得到一条任务json(cls, 字段名称):
+        obj = cls.得到一条任务(字段名称)
+        return obj.json if obj is not None else {}
+
+    def 设置制作结果(self, name, value):
+        setattr(self, f'{name}', value)
+        setattr(self, f'{name}_完成', True)
+        self.save()
+        
+    @property
+    def json(self):
+        return model_to_dict(self)
 
 class StatusModel(AbstractModel):
     status = models.SmallIntegerField(default=NEW_RECORD, choices=STATUS)
