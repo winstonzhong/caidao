@@ -7,7 +7,7 @@ Created on 2024 Nov 10
 import logging
 import os
 
-
+import requests
 import base64
 from io import BytesIO
 import json
@@ -32,6 +32,10 @@ from tool_env import OS_WIN
 
 from selenium.webdriver.support.wait import WebDriverWait
 
+from requests.cookies import RequestsCookieJar
+from tool_static import 得到一个不重复的文件路径, 路径到链接
+
+from selenium.webdriver.common.keys import Keys
 
 selenium_logger = logging.getLogger("selenium")
 # 创建一个空的日志处理器，它不会处理和输出任何日志
@@ -206,6 +210,44 @@ class 基本爬虫(object):
 
         self.网址变更时间 = 0
         self.go_homepage()
+
+    def 清空输入框(self, input_element):
+        input_element.send_keys(Keys.CONTROL + "a")  # 全选
+        input_element.send_keys(Keys.BACKSPACE)  # 删除
+
+    @property
+    def headers(self):
+        return {
+            "User-Agent": self.driver.execute_script("return navigator.userAgent"),
+            "Referer": self.driver.current_url,
+        }
+
+    @property
+    def cookie_jar(self):
+        # 初始化 Selenium 并获取 Cookie
+        selenium_cookies = self.driver.get_cookies()
+
+        # 将 Selenium Cookie 转换为 requests 的 CookieJar
+        cookie_jar = RequestsCookieJar()
+        for cookie in selenium_cookies:
+            cookie_jar.set(
+                name=cookie["name"],
+                value=cookie["value"],
+                domain=cookie.get("domain"),  # 确保 domain 匹配目标 URL
+                path=cookie.get("path", "/"),
+            )
+        return cookie_jar
+
+    def 用当前浏览器cookie下载文件(self, file_url, 后缀):
+        fpath = 得到一个不重复的文件路径(后缀)
+        response = requests.get(
+            file_url, headers=self.headers, cookies=self.cookie_jar, stream=True
+        )
+        with open(fpath, "wb") as fp:
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:
+                    fp.write(chunk)
+        return 路径到链接(fpath)
 
     @classmethod
     def base64_to_image(cls, base64_str):
@@ -398,6 +440,9 @@ class 基本爬虫(object):
         e = self.find_element_css(s)
         ActionChains(self.driver).move_to_element(e).perform()
         return e
+    
+    def 光标移到元素(self, element):
+        ActionChains(self.driver).move_to_element(element).perform()
 
     def 切换回爬虫(self):
         window_handles = self.driver.window_handles
