@@ -1,8 +1,8 @@
-'''
+"""
 Created on 2022年5月1日
 
 @author: Administrator
-'''
+"""
 
 from django.db import models
 from django.forms import model_to_dict
@@ -20,32 +20,34 @@ ROOT_RECORD = 4
 COMPUTEED_RECORD = 5
 TRANSLATED_RECORD = 6
 EMPTY_RECORD = 400
-DEAD_RECORD =  401
-ABNORMAL_RECORD =  402
+DEAD_RECORD = 401
+ABNORMAL_RECORD = 402
 FAILED_TRANS_RECORD = 403
 
 
-STATUS = ((NEW_RECORD, "新记录"),
-          (DOWNLOADED_RECORD, "已下载"),
-          (PRODUCED_RECORD, "已制作"),
-          (UPLOADED_RECORD, "已上传"),
-          (ROOT_RECORD, "根记录"),
-          (COMPUTEED_RECORD, "已计算"),
-          (TRANSLATED_RECORD, "已翻译"),
-          (EMPTY_RECORD, "空记录"),
-          (DEAD_RECORD, "坏记录"),
-          (ABNORMAL_RECORD, "异常记录"),
-          (FAILED_TRANS_RECORD, "翻译失败记录"),          
-          )
+STATUS = (
+    (NEW_RECORD, "新记录"),
+    (DOWNLOADED_RECORD, "已下载"),
+    (PRODUCED_RECORD, "已制作"),
+    (UPLOADED_RECORD, "已上传"),
+    (ROOT_RECORD, "根记录"),
+    (COMPUTEED_RECORD, "已计算"),
+    (TRANSLATED_RECORD, "已翻译"),
+    (EMPTY_RECORD, "空记录"),
+    (DEAD_RECORD, "坏记录"),
+    (ABNORMAL_RECORD, "异常记录"),
+    (FAILED_TRANS_RECORD, "翻译失败记录"),
+)
+
 
 class FullTextField(models.TextField):
     def __init__(self, *args, **kwargs):
-        kwargs['null'] = True
-        kwargs['blank'] = True
+        kwargs["null"] = True
+        kwargs["blank"] = True
         super().__init__(*args, **kwargs)
 
     def db_type(self, connection):
-        return 'fts'
+        return "fts"
 
     def get_prep_value(self, value):
         return value
@@ -54,24 +56,25 @@ class FullTextField(models.TextField):
 class Base(object):
     @classmethod
     def get_fields(cls):
-        return [x.name for x in cls._meta.fields if x.name != 'id']
+        return [x.name for x in cls._meta.fields if x.name != "id"]
 
 
 class BaseModel(models.Model):
     FIELDS = None
+
     @classmethod
     def get_fields(cls):
         if not cls.FIELDS:
             cls.FIELDS = list(map(lambda x: x.get_attname(), cls._meta.fields))
         return cls.FIELDS
-    
+
     @classmethod
-    def has_field(cls,name):
+    def has_field(cls, name):
         return name in cls.get_fields()
-    
+
     @classmethod
     def get_fields_without_id(cls):
-        return filter(lambda x:x !='id', cls.get_fields())
+        return filter(lambda x: x != "id", cls.get_fields())
 
     @retry(10, True)
     def save_safe(self):
@@ -87,27 +90,29 @@ class BaseModel(models.Model):
                 break
             yield o
             start = o.id
-    
+
     @classmethod
     def get_filters(cls, **k):
         return get_filters(cls.get_fields(), **k)
-    
-    
+
     class Meta:
         abstract = True
 
+
 class AbstractModel(BaseModel):
-    update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
+    update_time = models.DateTimeField(verbose_name="更新时间", auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
 
     class Meta:
         abstract = True
-        
-        
 
     @classmethod
     def 得到一条任务(cls, 字段名称):
-        return cls.objects.filter(**{f'{字段名称}_完成':False}).order_by('create_time').first()
+        return (
+            cls.objects.filter(**{f"{字段名称}_完成": False})
+            .order_by("create_time")
+            .first()
+        )
 
     @classmethod
     def 得到一条任务json(cls, 字段名称):
@@ -115,28 +120,59 @@ class AbstractModel(BaseModel):
         return obj.json if obj is not None else {}
 
     def 设置制作结果(self, name, value):
-        setattr(self, f'{name}', value)
-        setattr(self, f'{name}_完成', True)
+        setattr(self, f"{name}", value)
+        setattr(self, f"{name}_完成", True)
         self.save()
-        
+
     @property
     def json(self):
         return model_to_dict(self)
+
+    def 执行任务(self):
+        raise NotImplementedError
+
+    @classmethod
+    def 得到当前待执行的任务(cls):
+        raise NotImplementedError
+
+    @classmethod
+    def 单步执行(cls):
+        obj = cls.得到当前待执行的任务()
+        if obj is not None:
+            obj.执行任务()
+            return True
+        return False
+
+
+class 任务管理器(object):
+    def __init__(self, *a):
+        self.类表 = a
+
+    def 单步执行任务(self):
+        pass
+
+    def 长时间运行所有任务(self):
+        pass
+
 
 class StatusModel(AbstractModel):
     status = models.SmallIntegerField(default=NEW_RECORD, choices=STATUS)
 
     class Meta:
         abstract = True
-    
+
+
 class BaseSection(object):
     result_cache = {}
+
     @property
     def direction_display(self):
-        return '>=' if self.direction else '<='
+        return ">=" if self.direction else "<="
 
     def __str__(self):
-        return '{self.single_chain}{self.direction_display}{self.point}'.format(self=self)
+        return "{self.single_chain}{self.direction_display}{self.point}".format(
+            self=self
+        )
 
     def simple_cut(self, is_first=False):
         s = self.single_chain.s
@@ -147,16 +183,16 @@ class BaseSection(object):
         if is_first:
             s.sort_values(ascending=not self.direction, inplace=True)
         return s.index
-    
+
     @classmethod
     def do_simple_cut(cls, oid, is_first=False):
         obj = cls.objects.get(id=oid)
         return obj.simple_cut(is_first)
-    
+
     @classmethod
     def batch_simple_cut_parent(cls, ids):
         ids.reverse()
-        key = ','.join([str(x) for x in ids])
+        key = ",".join([str(x) for x in ids])
         if cls.result_cache.get(key) is None:
             index = cls.do_simple_cut(ids[0], is_first=True)
             for oid in ids[1:]:
@@ -165,11 +201,11 @@ class BaseSection(object):
             cls.result_cache.clear()
             cls.result_cache[key] = index
         return cls.result_cache.get(key)
-    
+
     @classmethod
     def batch_simple_cut(cls, ids):
         head, root = ids[0], ids[1:]
-        
+
         if root:
             index_root = cls.batch_simple_cut_parent(root)
             index = cls.do_simple_cut(head, is_first=False)
@@ -178,35 +214,33 @@ class BaseSection(object):
             index = cls.do_simple_cut(head, is_first=False)
         return index
 
+    @classmethod
+    def get_single_result(cls, d={"id": 152, "ancestors": [125311]}):
+        r = compute(cls.batch_simple_cut(ids=d.get("ancestors")))
+        r["id"] = d.get("id")
+        return r
 
     @classmethod
-    def get_single_result(cls, d={'id': 152, 'ancestors': [125311]}):
-        r = compute(cls.batch_simple_cut(ids=d.get('ancestors')))
-        r['id'] = d.get('id')
-        return r
-    
-    @classmethod
     def get_train_test_df(cls, ancestors=[125311]):
-        return get_train_test_df(cls.batch_simple_cut(ids=ancestors))    
+        return get_train_test_df(cls.batch_simple_cut(ids=ancestors))
 
 
 class AbstractSection(BaseSection, models.Model):
     sid = models.PositiveIntegerField()
     direction = models.BooleanField(null=True)
     point = models.FloatField()
-   
+
     class Meta:
         abstract = True
 
         indexes = [
-            models.Index(fields=['sid', 'direction']),
+            models.Index(fields=["sid", "direction"]),
         ]
-    
+
     @property
     def single_chain(self):
         raise NotImplementedError
-    
-    
+
     def simple_cut(self):
         s = self.single_chain.s
         if self.direction:
@@ -221,7 +255,7 @@ class AbstractSection(BaseSection, models.Model):
 
     @classmethod
     def batch_simple_cut_parent(cls, ids):
-        key = ','.join([str(x) for x in ids])
+        key = ",".join([str(x) for x in ids])
         if cls.result_cache.get(key) is None:
             index = cls.do_simple_cut(ids[0])
             for oid in ids[1:]:
@@ -233,7 +267,7 @@ class AbstractSection(BaseSection, models.Model):
     @classmethod
     def batch_simple_cut(cls, ids):
         head, root = ids[-1], ids[:-1]
-        
+
         if root:
             index_root = cls.batch_simple_cut_parent(root)
             index = cls.do_simple_cut(head)
@@ -243,41 +277,41 @@ class AbstractSection(BaseSection, models.Model):
         return index
 
     @classmethod
-    def get_single_result(cls, d={'id': 152, 'ancestors': [125311]}):
-        r = compute_group(cls.batch_simple_cut(ids=d.get('ancestors')))
-        r['id'] = d.get('id')
+    def get_single_result(cls, d={"id": 152, "ancestors": [125311]}):
+        r = compute_group(cls.batch_simple_cut(ids=d.get("ancestors")))
+        r["id"] = d.get("id")
         return r
-    
+
 
 class AbstractDna(models.Model):
-    DNA_STATUS = ((NEW_RECORD, "新"),
-              (PRODUCED_RECORD, "已计算"),
-              (DEAD_RECORD, "停止计算"),
-              (ROOT_RECORD, "根节点"),
-              )
-    
+    DNA_STATUS = (
+        (NEW_RECORD, "新"),
+        (PRODUCED_RECORD, "已计算"),
+        (DEAD_RECORD, "停止计算"),
+        (ROOT_RECORD, "根节点"),
+    )
+
     section_id = models.PositiveIntegerField()
-    
+
     parent_id = models.PositiveBigIntegerField(null=True)
 
     pl = models.SmallIntegerField(null=True)
-    
+
     atte = models.PositiveSmallIntegerField(null=True)
 
     status = models.SmallIntegerField(default=0, choices=DNA_STATUS)
 
     update_time = models.DateTimeField(auto_now=True)
-    
 
     class Meta:
         abstract = True
-        
+
         indexes = [
-            models.Index(fields=['status', 'atte', 'pl']),
-            models.Index(fields=['status', 'update_time']),
-            models.Index(fields=['parent_id', 'status']),
+            models.Index(fields=["status", "atte", "pl"]),
+            models.Index(fields=["status", "update_time"]),
+            models.Index(fields=["parent_id", "status"]),
         ]
-    
+
     cache_section_ids = {}
 
     cache_singlechain_ids = {}
@@ -288,25 +322,24 @@ class AbstractDna(models.Model):
             self.cache_singlechain_ids[self.section_id] = self.section.sid
         return self.cache_singlechain_ids.get(self.section_id)
 
-    
     @property
     def parent(self):
         return self.__class__.objects.get(id=self.parent_id) if self.parent_id else None
-    
+
     def set_cache_section_ids(self):
         self.cache_section_ids[self.id] = self.section_ids_clean
-    
+
     @property
     def section_ids(self):
         rtn = self.cache_section_ids.get(self.id, None)
         if rtn is not None:
             return rtn
-        
+
         if self.parent_id is None:
             return [self.section_id]
 
         return self.parent.section_ids + [self.section_id]
-    
+
     @property
     def section_ids2(self):
         parent = self.parent
@@ -315,25 +348,25 @@ class AbstractDna(models.Model):
                 yield x
         yield self.section_id
 
-        
     @property
     def section(self):
         raise NotImplementedError
 
     @property
     def dict(self):
-        return {'id': self.id, 
-                'ancestors': list(self.section_ids), 
-                }
-        
+        return {
+            "id": self.id,
+            "ancestors": list(self.section_ids),
+        }
+
     @classmethod
     def has_tasks(cls):
         return len(cls.redis_conn.lrange(cls.cache_key, 0, 0)) == 1
-    
+
     @classmethod
     def get_tasks_count(cls):
         return len(cls.redis_conn.lrange(cls.cache_key, 0, 1000))
-    
+
     @classmethod
     def clear_tasks(cls):
         cls.redis_conn.delete(cls.cache_key)
@@ -341,4 +374,3 @@ class AbstractDna(models.Model):
     @classmethod
     def book(cls):
         return cls.redis_conn.rpop(cls.cache_key)
-    
