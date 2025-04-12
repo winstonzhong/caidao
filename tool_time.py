@@ -372,6 +372,70 @@ def 解析一般格式日期时间(time_str):
         print(f"解析时间字符串失败：{e}")
 
 
+def convert_time_description_to_seconds(description):
+    """
+    将定时任务描述转换为以秒为单位的时间。
+
+    参数:
+        description (str): 定时任务描述，格式为 "every n unit"，例如 "every 2 seconds"。
+
+    返回:
+        int: 对应的秒数。
+
+    示例:
+        >>> convert_time_description_to_seconds("every 2 seconds")
+        2
+        >>> convert_time_description_to_seconds("every 1 minute")
+        60
+        >>> convert_time_description_to_seconds("every 2 minute")
+        120
+        >>> convert_time_description_to_seconds("every 1 hour")
+        3600
+        >>> convert_time_description_to_seconds("every 1 day")
+        86400
+        >>> convert_time_description_to_seconds("every 1 week")
+        604800
+        >>> convert_time_description_to_seconds("every 3 months")
+        7776000
+        >>> convert_time_description_to_seconds("every 1 year")
+        31536000
+        >>> convert_time_description_to_seconds("every abc seconds")
+        Traceback (most recent call last):
+          ...
+        ValueError: 描述中的数字部分必须是有效的整数。
+        >>> convert_time_description_to_seconds("abc 2 seconds")
+        Traceback (most recent call last):
+          ...
+        ValueError: 输入的描述格式不正确，应遵循 'every n unit' 的格式。
+        >>> convert_time_description_to_seconds("every 1 abc")
+        Traceback (most recent call last):
+          ...
+        ValueError: 不支持的时间单位: abc
+    """
+    parts = description.split()
+    if len(parts) != 3 or parts[0] != "every":
+        raise ValueError("输入的描述格式不正确，应遵循 'every n unit' 的格式。")
+    try:
+        number = int(parts[1])
+    except ValueError:
+        raise ValueError("描述中的数字部分必须是有效的整数。")
+    unit = parts[2].lower()
+    if unit.endswith('s'):
+        unit = unit[:-1]
+    conversion = {
+        "second": 1,
+        "minute": 60,
+        "hour": 3600,
+        "day": 86400,
+        "week": 604800,
+        "month": 2592000,  # 按照 30 天估算
+        "year": 31536000
+    }
+    if unit not in conversion:
+        raise ValueError(f"不支持的时间单位: {unit}")
+    return number * conversion[unit]
+
+
 if __name__ == '__main__':
     import doctest
     print(doctest.testmod(verbose=False, report=False))

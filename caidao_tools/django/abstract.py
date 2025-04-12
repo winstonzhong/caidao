@@ -4,12 +4,14 @@ Created on 2022年5月1日
 @author: Administrator
 """
 
+import traceback
 from django.db import models
 from django.forms import model_to_dict
 
 from evovle.helper_store import compute, get_train_test_df, compute_group
 from helper_net import retry
 from caidao_tools.django.tool_django import get_filters
+import time
 
 
 NEW_RECORD = 0
@@ -128,6 +130,10 @@ class AbstractModel(BaseModel):
     def json(self):
         return model_to_dict(self)
 
+class 抽象任务(AbstractModel):
+    class Meta:
+        abstract = True
+
     def 执行任务(self):
         raise NotImplementedError
 
@@ -144,16 +150,39 @@ class AbstractModel(BaseModel):
         return False
 
 
-class 任务管理器(object):
-    def __init__(self, *a):
-        self.类表 = a
+class 抽象定时任务(AbstractModel):
+    类名 = models.CharField(max_length=50)
+    静态函数 =  models.CharField(max_length=50, default="单步执行")
+    任务描述 = models.CharField(max_length=200, null=True, blank=True)
+    定时表达式 = models.CharField(max_length=50, null=True, blank=True)
+    起始时间 = models.DateTimeField()
+    一次执行 = models.BooleanField(default=False)
+    激活 = models.BooleanField(default=True)
 
+    class Meta:
+        abstract = True
+    
     def 单步执行任务(self):
-        pass
+        for cls in self.类表:
+            if cls.单步执行():
+                break
+    
+    @classmethod
+    def 运行(self, 每轮间隔秒数=1):
+        while 1:
+            try:
+                self.单步执行任务()
+            except Exception as e:
+                print(e)
+                traceback.print_exc()
+            time.sleep(每轮间隔秒数)
 
-    def 长时间运行所有任务(self):
-        pass
+class 抽象定时任务日志(AbstractModel):
+    定时任务_id = models.BigIntegerField()
+    异常日志 = models.TextField(null=True, blank=True)
 
+    class Meta:
+        abstract = True
 
 class StatusModel(AbstractModel):
     status = models.SmallIntegerField(default=NEW_RECORD, choices=STATUS)
