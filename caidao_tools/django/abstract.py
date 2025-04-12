@@ -12,7 +12,14 @@ from evovle.helper_store import compute, get_train_test_df, compute_group
 from helper_net import retry
 from caidao_tools.django.tool_django import get_filters
 import time
+from tool_time import convert_time_description_to_seconds
+from django.utils import timezone
+import datetime
 
+from django.db.models import F, ExpressionWrapper, Value
+from django.db.models.fields import DurationField
+from tool_time import shanghai_time_now
+from .tool_task import calculate_rtn
 
 NEW_RECORD = 0
 DOWNLOADED_RECORD = 1
@@ -131,8 +138,16 @@ class AbstractModel(BaseModel):
         return model_to_dict(self)
 
 class 抽象任务(AbstractModel):
+
     class Meta:
         abstract = True
+        indexes = [
+            models.Index(fields=["update_time"]),
+        ]
+
+    @classmethod
+    def 得到日志类(cls):
+        raise NotImplementedError
 
     def 执行任务(self):
         raise NotImplementedError
@@ -145,44 +160,89 @@ class 抽象任务(AbstractModel):
     def 单步执行(cls):
         obj = cls.得到当前待执行的任务()
         if obj is not None:
-            obj.执行任务()
-            return True
-        return False
+            try:
+                obj.执行任务()
+            except Exception:
+                log = cls.得到日志类()
+                log.异常日志 = traceback.format_exc()
+                print(log.异常日志)
+                log.save()
 
 
-class 抽象定时任务(AbstractModel):
+class 抽象定时任务(BaseModel):
     类名 = models.CharField(max_length=50)
     静态函数 =  models.CharField(max_length=50, default="单步执行")
     任务描述 = models.CharField(max_length=200, null=True, blank=True)
-    定时表达式 = models.CharField(max_length=50, null=True, blank=True)
-    起始时间 = models.DateTimeField()
+    定时表达式 = models.CharField(max_length=50, default="every 1 second")
+    间隔秒 = models.IntegerField(null=True, blank=True)
+    设定时间 = models.DateTimeField()
     一次执行 = models.BooleanField(default=False)
     激活 = models.BooleanField(default=True)
+    update_time = models.DateTimeField(verbose_name="更新时间", null=True)
+    create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
 
     class Meta:
         abstract = True
-    
-    def 单步执行任务(self):
-        for cls in self.类表:
-            if cls.单步执行():
-                break
-    
+        indexes = [
+            models.Index(fields=["激活", "update_time"]),
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+    def save(self, *args, **kwargs):
+        if self.一次执行:
+            self.激活 = False
+        else:
+            # print(self.update_time, self.间隔秒, shanghai_time_now())
+            # return self.update_time, self.间隔秒, shanghai_time_now()
+            self.update_time = calculate_rtn(self.update_time, self.间隔秒, shanghai_time_now())
+            print(self.update_time)
+        super().save(*args, **kwargs)
+
+    @property
+    def 全局命名空间(self):
+        raise NotImplementedError
+
+    @property
+    def 执行类(self):
+        return eval(self.类名, self.全局命名空间)
+        # return eval(self.类名, globals(), locals())
+
+    @property
+    def 执行类静态函数(self):
+        return getattr(self.执行类, self.静态函数)
+
     @classmethod
-    def 运行(self, 每轮间隔秒数=1):
+    def 得到所有待执行的任务(cls):
+        queryset = cls.objects.filter(
+            激活=True,
+            update_time__lte=timezone.now() - ExpressionWrapper(
+                Value(datetime.timedelta(seconds=1)) * F('间隔秒'),
+                output_field=DurationField()
+            )
+        )
+        return queryset
+
+    @classmethod
+    def 执行所有定时任务(cls, 每轮间隔秒数=1):
         while 1:
-            try:
-                self.单步执行任务()
-            except Exception as e:
-                print(e)
-                traceback.print_exc()
+            q = cls.得到所有待执行的任务().order_by("update_time")
+            for obj in q:
+                obj.执行类静态函数()
             time.sleep(每轮间隔秒数)
 
 class 抽象定时任务日志(AbstractModel):
     定时任务_id = models.BigIntegerField()
+    数据_id = models.BigIntegerField(null=True)
     异常日志 = models.TextField(null=True, blank=True)
 
     class Meta:
         abstract = True
+        indexes = [
+            models.Index(fields=["定时任务_id", "数据_id"]),
+        ]
 
 class StatusModel(AbstractModel):
     status = models.SmallIntegerField(default=NEW_RECORD, choices=STATUS)

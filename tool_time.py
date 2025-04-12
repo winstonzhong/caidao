@@ -383,6 +383,10 @@ def convert_time_description_to_seconds(description):
         int: 对应的秒数。
 
     示例:
+        >>> convert_time_description_to_seconds("2")
+        2
+        >>> convert_time_description_to_seconds("2 seconds")
+        2
         >>> convert_time_description_to_seconds("every 2 seconds")
         2
         >>> convert_time_description_to_seconds("every 1 minute")
@@ -411,8 +415,19 @@ def convert_time_description_to_seconds(description):
         Traceback (most recent call last):
           ...
         ValueError: 不支持的时间单位: abc
+        >>> convert_time_description_to_seconds("seconds")
+        Traceback (most recent call last):
+          ...
+        ValueError: 描述中的数字部分必须是有效的整数。
     """
-    parts = description.split()
+    parts = re.split('\s+', description.strip())
+
+    if len(parts) != 3:
+        try:
+            return int(parts[0])
+        except ValueError:
+            raise ValueError("描述中的数字部分必须是有效的整数。")
+
     if len(parts) != 3 or parts[0] != "every":
         raise ValueError("输入的描述格式不正确，应遵循 'every n unit' 的格式。")
     try:

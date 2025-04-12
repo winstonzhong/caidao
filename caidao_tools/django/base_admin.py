@@ -6,6 +6,9 @@ Created on 2022年7月24日
 import os
 from django.contrib import admin
 from django.utils.safestring import mark_safe
+from tool_time import convert_time_description_to_seconds, shanghai_time_now
+from django.db import models
+import datetime
 # from tool_file import get_suffix
 
 def get_suffix(fpath):
@@ -73,6 +76,40 @@ class BaseAdmin(admin.ModelAdmin):
         if os.path.lexists(rel_js_path) or os.path.lexists(f'../{rel_js_path}'):
             js.append(f'/{rel_js_path}')
 
+class 抽象定时任务Admin(BaseAdmin):
+    
+    def 更新数据(self, obj):
+        if obj.一次执行:
+            obj.间隔秒 = 0
+            obj.update_time = obj.设定时间
+        else:
+            obj.间隔秒 = convert_time_description_to_seconds(obj.定时表达式)
+            obj.update_time = obj.设定时间
+            if obj.设定时间 > shanghai_time_now():
+                obj.update_time -= datetime.timedelta(seconds=obj.间隔秒)
+
+    # def 设置更新时间(self, obj):
+    #     obj.update_time = obj.设定时间
+
+    def save_model(self, request, obj, form, change):
+        # from tool_time import shanghai_time_now
+        # if change:
+        #     print("这是一次修改操作")
+        #     changed_fields = form.changed_data
+        #     if changed_fields:
+        #         print("发生变化的字段有:", changed_fields)
+        #         if '定时表达式' in changed_fields:
+        #             self.设定间隔秒(obj)
+        # else:
+        #     print("这是一次新建操作")
+        #     obj.间隔秒 = convert_time_description_to_seconds(obj.定时表达式)
+        # super().save_model(request, obj, form, change)    
+        self.更新数据(obj)
+        # update_time_field = obj._meta.get_field('update_time')
+        # update_time_field.auto_now = False
+        models.Model.save(obj)
+        # super().save_model(request, obj, form, change)    
+        # update_time_field.auto_now = True
 
 class CodeBaseAdmin(BaseAdmin):
     class Media:
