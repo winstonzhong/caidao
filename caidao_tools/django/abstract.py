@@ -195,8 +195,6 @@ class 抽象定时任务(BaseModel):
         if self.一次执行:
             self.激活 = False
         else:
-            # print(self.update_time, self.间隔秒, shanghai_time_now())
-            # return self.update_time, self.间隔秒, shanghai_time_now()
             self.update_time = calculate_rtn(self.update_time, self.间隔秒, shanghai_time_now())
             print(self.update_time)
         super().save(*args, **kwargs)
