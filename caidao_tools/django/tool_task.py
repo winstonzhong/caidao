@@ -50,25 +50,6 @@ def calculate_rtn(a, b, x):
     delta_seconds = (x - a).total_seconds()
     return a + datetime.timedelta(seconds=(delta_seconds // b) * b)
 
-
-    # while 1:
-    #     a = a + datetime.timedelta(seconds=b)
-    #     if x - datetime.timedelta(seconds=b) <= a <= x:
-    #         return a
-
-
-    # n = 0
-    # rtn = a
-    # while True:
-
-    #     new_rtn = a + datetime.timedelta(seconds=n * b)
-    #     if new_rtn - datetime.timedelta(seconds=b) < x <= new_rtn:
-    #         rtn = new_rtn
-    #         break
-    #     n += 1
-    # return rtn
-
-
 if __name__ == '__main__':
     import doctest
     print(doctest.testmod(verbose=False, report=False))
