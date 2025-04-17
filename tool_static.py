@@ -76,6 +76,11 @@ def 存储文件(content, suffix, 返回路径=False, base_dir=BASE_DIR_56T):
         fp.write(content)
     return 路径到链接(fpath, base_dir=base_dir) if not 返回路径 else fpath
 
+def 转存文件(fpath):
+    with open(fpath, "rb") as fp:
+        content = fp.read()
+    return 存储文件(content, 得到后缀(fpath), 返回路径=True)
+    
 
 def 存储链接到文件(url, suffix, 返回路径=False, base_dir=BASE_DIR_56T):
     return 存储文件(rget(url).content, suffix, 返回路径, base_dir=base_dir)
