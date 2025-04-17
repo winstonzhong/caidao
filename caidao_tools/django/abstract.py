@@ -461,3 +461,28 @@ class AbstractDna(models.Model):
     @classmethod
     def book(cls):
         return cls.redis_conn.rpop(cls.cache_key)
+
+
+class 抽象原子标签(AbstractModel):
+    名称 = models.CharField(max_length=100)
+    提示词 = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        abstract = True
+
+
+    @classmethod
+    def 初始化家医智驾标签(cls):
+        x = [
+            ('儿童','青少年','青年','中年','老年'),
+            ('体重不足', '超重', '肥胖'),
+            ('男性','女性'),
+            ('哮喘','高血压', '心脏病', '糖尿病')
+        ]
+        for y in x:
+            for z in y:
+                cls.objects.create(名称=z)
+
+    @classmethod
+    def 生成提示词(cls):
+        pass
