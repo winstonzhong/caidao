@@ -80,6 +80,9 @@ def shanghai_time_now():
 def shanghai_time_now_str():
     return shanghai_time_now().strftime("%H:%M:%S")
 
+def time_now():
+    return shanghai_time_now_str()
+
 def shanghai_yesterday():
     return shanghai_time_now() - datetime.timedelta(days=1)
 

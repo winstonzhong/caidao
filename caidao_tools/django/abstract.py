@@ -20,6 +20,11 @@ from django.db.models import F, ExpressionWrapper, Value
 from django.db.models.fields import DurationField
 from tool_time import shanghai_time_now
 from .tool_task import calculate_rtn
+from tool_static import 存储字典到文件
+import requests
+import json
+
+
 
 NEW_RECORD = 0
 DOWNLOADED_RECORD = 1
@@ -462,10 +467,16 @@ class AbstractDna(models.Model):
     def book(cls):
         return cls.redis_conn.rpop(cls.cache_key)
 
+# {
+#   "output": "\n\n你是一个贴标签的专家，你现在需要使用如下标签“儿童”去匹配输入内容，判断内容是否涉及儿童相关主题（包括但不限于小孩、孩子、幼儿、少年、青少年、小朋友、未成年人等近义词）。请严格按以下规则输出JSON：若相关则{'标签匹配结果':'是'}，否则{'标签匹配结果':'否'}。仅输出结果，不要解释。"
+# }
 
+# {
+#   "output": "你是一个贴标签的专家，你现在需要使用如下标签“儿童”去匹配输入内容，判断内容是否与该标签相关。标签“儿童”的近义词包括但不限于：小孩、孩子、幼儿、少年、小朋友等。请根据输入内容判断是否匹配该标签或其近义词，并以JSON格式输出结果。如果是，输出{'标签匹配结果':'是'}；如果否，输出{'标签匹配结果':'否'}。"
+# }
 class 抽象原子标签(AbstractModel):
     名称 = models.CharField(max_length=100)
-    提示词 = models.TextField(blank=True, null=True)
+    提示词 = models.CharField(blank=True, null=True, max_length=255)
     
     class Meta:
         abstract = True
@@ -481,8 +492,41 @@ class 抽象原子标签(AbstractModel):
         ]
         for y in x:
             for z in y:
-                cls.objects.create(名称=z)
+                cls.objects.get_or_create(名称=z)
 
     @classmethod
-    def 生成提示词(cls):
-        pass
+    def 生成提示词的提示词(cls):
+        return '''我目前有一个词汇标签：“{名称}”，我希望使用这个标签：“{名称}”去匹配一段文字，这个匹配能够输出该段内容是否匹配成功的结果。
+    通常这个过程是通过大模型提示词完成的，我希望你能写出这个标签匹配过程的提示词：
+1，提示词和“{名称}”这个标签相关，是否也能匹配它的各类近义词，并在提示词中举例一些近义词，同时也强调不限于这些近义词。
+2，界定输出的格式，为json格式。{{'标签匹配结果':‘是’}}
+3, 如果结果是否，则JSON格式为：{{'标签匹配结果':‘否’}}
+4, 请以如下开头编写：你是一个贴标签的专家，你现在需要使用如下标签“{名称}”去匹配输入内容，。。。。
+5， 请直接输出结果，不要再加前后说明性解释和其他内容。
+
+'''
+
+    @classmethod
+    def 未生成提示词的提示词的字典(cls):
+        # q = cls.objects.filter(提示词__isnull=True)
+        q = cls.objects.filter()
+        d = {'名称': [x.名称 for x in q]}
+        d['模版'] = cls.生成提示词的提示词()
+        return d
+
+    @classmethod
+    def 生成未生成提示词的提示词的字典链接(cls):
+        return 存储字典到文件(cls.未生成提示词的提示词的字典(), '.json')
+
+    @classmethod
+    def 读取并更新结果(cls, url):
+        d = requests.get(url).json()
+        for k, v in d.items():
+            print(f'{k}')
+            cls.objects.filter(名称=k).update(提示词=v)
+
+    @classmethod
+    def 得到打标签字典链接(cls):
+        return 存储字典到文件(cls.打标签字典(), '.json')
+    
+    
