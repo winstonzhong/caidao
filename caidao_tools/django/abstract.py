@@ -525,9 +525,6 @@ class 抽象原子标签(AbstractModel):
             print(f'{k}')
             cls.objects.filter(名称=k).update(提示词=v)
 
-    @classmethod
-    def 得到打标签字典链接(cls):
-        return 存储字典到文件(cls.打标签字典(), '.json')
     
     
     @property
