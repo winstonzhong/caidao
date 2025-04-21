@@ -481,7 +481,9 @@ class 抽象原子标签(AbstractModel):
     class Meta:
         abstract = True
 
-
+    def __str__(self):
+        return self.名称
+    
     @classmethod
     def 初始化家医智驾标签(cls):
         x = [
