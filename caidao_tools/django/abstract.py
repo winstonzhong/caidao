@@ -532,11 +532,14 @@ class 抽象原子标签(AbstractModel):
     
     @property
     def 集成提示词(self):
-        return self.提示词.replace('标签匹配结果',f'{self.名称}')
+        return self.提示词.replace('标签匹配结果',f'{self.名称}') if self.提示词 else None
     
     @classmethod
     def 得到标签抽取集成提示词(cls):
-        prompt_list = '\n'.join([x.集成提示词 for x in cls.objects.all()])
+        l = map(lambda x:x.集成提示词, cls.objects.all())
+        l = filter(lambda x:x, l)
+        # prompt_list = '\n'.join([x.集成提示词 for x in cls.objects.all()])
+        prompt_list = '\n'.join(l)
         return f'''
         你是一个贴标签的专家，以下是一些标签抽取的列表：
         ******标签抽取列表：开始******
