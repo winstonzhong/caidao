@@ -10,16 +10,25 @@ def is_equal_to_range(lst):
     >>> is_equal_to_range([1, 3, 2, 5])
     False
     >>> is_equal_to_range([])
-    True
+    False
     >>> is_equal_to_range([1])
     True
     >>> is_equal_to_range([1, 2, 4, 3])
     True
     >>> is_equal_to_range([1, 2, 4, 3, 0])
     False
+    >>> is_equal_to_range([2, 4, 3, 5])
+    True
+    >>> is_equal_to_range([2])
+    True
+    >>> is_equal_to_range([2, 1, 4])
+    False
     """
-    n = len(lst) + 1
-    return sorted(lst) == list(range(1, n))
+    if 0 in lst or not lst:
+        return False
+    start = min(lst)
+    end = start + len(lst)
+    return sorted(lst) == list(range(start, end))
 
 
 

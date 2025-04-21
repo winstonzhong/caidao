@@ -22,7 +22,7 @@ from tool_time import shanghai_time_now
 from .tool_task import calculate_rtn
 from tool_static import 存储字典到文件
 import requests
-import json
+
 
 
 
@@ -530,3 +530,23 @@ class 抽象原子标签(AbstractModel):
         return 存储字典到文件(cls.打标签字典(), '.json')
     
     
+    @property
+    def 集成提示词(self):
+        return self.提示词.replace('标签匹配结果',f'{self.名称}')
+    
+    @classmethod
+    def 得到标签抽取集成提示词(cls):
+        prompt_list = '\n'.join([x.集成提示词 for x in cls.objects.all()])
+        return f'''
+        你是一个贴标签的专家，以下是一些标签抽取的列表：
+        ******标签抽取列表：开始******
+        {prompt_list}
+        ******标签抽取列表：结束******
+        
+        ******输出要求：******
+        1， 以上全部标签抽取列表处理完成后，将结果放入一个list， 输出的格式为一个JSON，列表格式，例如：[{{"糖尿病":"是"}},{{"青少年":"否"}},...]
+        2， 列表中的每个元素都是一个字典，只含一个键，举例如：{{"糖尿病":"是"}} 或 {{"糖尿病":"否"}}
+        3， 值只有两种结果："是"或"否"
+        请严格按以下规则输出JSON：仅输出结果，不要解释。
+    '''
+
