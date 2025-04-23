@@ -21,8 +21,8 @@ from django.db.models.fields import DurationField
 from tool_time import shanghai_time_now
 from .tool_task import calculate_rtn
 from tool_static import 存储字典到文件
-import requests
 
+from django.utils import timezone
 
 
 
@@ -175,15 +175,17 @@ class 抽象任务(AbstractModel):
 
 
 class 抽象定时任务(BaseModel):
-    类名 = models.CharField(max_length=50)
-    静态函数 =  models.CharField(max_length=50, default="单步执行")
+    # 类名 = models.CharField(max_length=50)
+    执行函数 =  models.CharField(max_length=50, default="单步执行")
     任务描述 = models.CharField(max_length=200, null=True, blank=True)
     定时表达式 = models.CharField(max_length=50, default="every 1 second")
     间隔秒 = models.IntegerField(null=True, blank=True)
+    超时秒 = models.PositiveBigIntegerField(default=0)
     设定时间 = models.DateTimeField()
     一次执行 = models.BooleanField(default=False)
+    任务数据 = models.JSONField(default=dict)
     激活 = models.BooleanField(default=True)
-    update_time = models.DateTimeField(verbose_name="更新时间", null=True)
+    update_time = models.DateTimeField(verbose_name="更新时间", null=True, blank=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
 
     class Meta:
@@ -200,22 +202,19 @@ class 抽象定时任务(BaseModel):
         if self.一次执行:
             self.激活 = False
         else:
-            self.update_time = calculate_rtn(self.update_time, self.间隔秒, shanghai_time_now())
-            print(self.update_time)
+            # print(self.update_time, self.间隔秒, shanghai_time_now())
+            update_time = timezone.localtime(self.update_time)
+            # print(update_time, self.间隔秒, shanghai_time_now())
+            self.update_time = calculate_rtn(update_time, self.间隔秒, shanghai_time_now())
         super().save(*args, **kwargs)
 
+    def 是否任务超时(self):
+        return self.超时秒 > 0 and (shanghai_time_now() - self.update_time).total_seconds()>=self.超时秒
+    
     @property
-    def 全局命名空间(self):
-        raise NotImplementedError
+    def 执行函数实例(self):
+        return getattr(self, self.执行函数)
 
-    @property
-    def 执行类(self):
-        return eval(self.类名, self.全局命名空间)
-        # return eval(self.类名, globals(), locals())
-
-    @property
-    def 执行类静态函数(self):
-        return getattr(self.执行类, self.静态函数)
 
     @classmethod
     def 得到所有待执行的任务(cls):
@@ -229,11 +228,13 @@ class 抽象定时任务(BaseModel):
         return queryset
 
     @classmethod
-    def 执行所有定时任务(cls, 每轮间隔秒数=1):
+    def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False):
         while 1:
             q = cls.得到所有待执行的任务().order_by("update_time")
             for obj in q:
-                obj.执行类静态函数()
+                obj.执行函数实例()
+            if 单步:
+                break
             time.sleep(每轮间隔秒数)
 
 class 抽象定时任务日志(AbstractModel):
@@ -510,24 +511,12 @@ class 抽象原子标签(AbstractModel):
 
     @classmethod
     def 未生成提示词的提示词的字典(cls):
-        # q = cls.objects.filter(提示词__isnull=True)
-        q = cls.objects.filter()
-        d = {'名称': [x.名称 for x in q]}
-        d['模版'] = cls.生成提示词的提示词()
-        return d
+        q = cls.objects.filter(提示词__isnull=True).exclude(名称='其他')
+        if q.exists():
+            d = {'名称': [x.名称 for x in q]}
+            d['模版'] = cls.生成提示词的提示词()
+            return d
 
-    @classmethod
-    def 生成未生成提示词的提示词的字典链接(cls):
-        return 存储字典到文件(cls.未生成提示词的提示词的字典(), '.json')
-
-    @classmethod
-    def 读取并更新结果(cls, url):
-        d = requests.get(url).json()
-        for k, v in d.items():
-            print(f'{k}')
-            cls.objects.filter(名称=k).update(提示词=v)
-
-    
     
     @property
     def 集成提示词(self):
