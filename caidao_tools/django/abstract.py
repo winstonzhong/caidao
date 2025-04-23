@@ -475,9 +475,20 @@ class AbstractDna(models.Model):
 # {
 #   "output": "你是一个贴标签的专家，你现在需要使用如下标签“儿童”去匹配输入内容，判断内容是否与该标签相关。标签“儿童”的近义词包括但不限于：小孩、孩子、幼儿、少年、小朋友等。请根据输入内容判断是否匹配该标签或其近义词，并以JSON格式输出结果。如果是，输出{'标签匹配结果':'是'}；如果否，输出{'标签匹配结果':'否'}。"
 # }
+class 抽象标签组(AbstractModel):
+    列表 = models.JSONField(default=list)
+
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        return self.列表
+
 class 抽象原子标签(AbstractModel):
+    组_id = models.PositiveBigIntegerField(null=True)
     名称 = models.CharField(max_length=100)
     提示词 = models.CharField(blank=True, null=True, max_length=255)
+    
     
     class Meta:
         abstract = True
@@ -540,4 +551,19 @@ class 抽象原子标签(AbstractModel):
         3， 值只有两种结果："是"或"否"
         请严格按以下规则输出JSON：仅输出结果，不要解释。
     '''
+
+
+class 抽象微信标签(models.Model):
+    原子标签列表 = models.JSONField(default=list)
+    # 是否创建 = models.BooleanField(default=False)
+
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        return self.名称
+
+    @property
+    def 名称(self):
+        return self.原子标签列表
 

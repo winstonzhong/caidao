@@ -7,7 +7,7 @@ Created on 2023年11月24日
 # (base) PS C:\Users\lenovo> adb connect 192.168.0.148:7001
 import glob
 import os
-import os
+
 from pathlib import Path
 import random
 import re
