@@ -1403,10 +1403,17 @@ class BaseAdb(object):
         return list(l)
 
     @classmethod
-    def get_device_by_id(cls, id):
-        return next(
-            (item for item in cls.get_devices_as_dict() if item["id"] == id), None
-        )
+    def get_device_by_id(cls, id, 重连次数=10):
+        for i in range(重连次数):
+            rtn = next(
+                (item for item in cls.get_devices_as_dict() if item["id"] == id), None
+            )
+            if rtn is not None:
+                return rtn
+            print(f'设备掉线，等待重新连接中。。。({i})')
+            time.sleep(random.randint(1,3))
+            cls.reconnect(id)
+        raise NoAdbDeviceError(f"{id} not found")
 
     @classmethod
     def get_device_by_index(cls, index):
