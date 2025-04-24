@@ -480,12 +480,21 @@ class 抽象标签组(AbstractModel):
 
     class Meta:
         abstract = True
+    初始化表 = [
+            ('儿童','青少年','青年','中年','老年','未知_年龄段'),
+            ('体重不足', '超重', '肥胖','未知_体重'),
+            ('男性','女性','未知_性别'),
+            ('哮喘','高血压', '心脏病', '糖尿病', '未知_疾病')
+        ]
+    @classmethod
+    def 初始化标签组(cls):
+        for y in cls.初始化表:
+            y = sorted(list(y))
+            cls.objects.get_or_create(列表=y)
 
-    def __str__(self):
-        return self.列表
 
 class 抽象原子标签(AbstractModel):
-    组_id = models.PositiveBigIntegerField(null=True)
+    # 组_id = models.PositiveBigIntegerField(null=True)
     名称 = models.CharField(max_length=100)
     提示词 = models.CharField(blank=True, null=True, max_length=255)
     
@@ -497,16 +506,11 @@ class 抽象原子标签(AbstractModel):
         return self.名称
     
     @classmethod
-    def 初始化家医智驾标签(cls):
-        x = [
-            ('儿童','青少年','青年','中年','老年'),
-            ('体重不足', '超重', '肥胖'),
-            ('男性','女性'),
-            ('哮喘','高血压', '心脏病', '糖尿病')
-        ]
-        for y in x:
+    def 初始化原子标签(cls):
+        for y in 抽象标签组.初始化表:
             for z in y:
-                cls.objects.get_or_create(名称=z)
+                if not z.startswith('未知_'):
+                    cls.objects.get_or_create(名称=z)
 
     @classmethod
     def 生成提示词的提示词(cls):
@@ -519,7 +523,6 @@ class 抽象原子标签(AbstractModel):
 5， 请直接输出结果，不要再加前后说明性解释和其他内容。
 
 '''
-
     @classmethod
     def 未生成提示词的提示词的字典(cls):
         q = cls.objects.filter(提示词__isnull=True).exclude(名称='其他')
@@ -553,9 +556,8 @@ class 抽象原子标签(AbstractModel):
     '''
 
 
-class 抽象微信标签(models.Model):
+class 抽象微信组合标签(models.Model):
     原子标签列表 = models.JSONField(default=list)
-    # 是否创建 = models.BooleanField(default=False)
 
     class Meta:
         abstract = True
@@ -567,3 +569,10 @@ class 抽象微信标签(models.Model):
     def 名称(self):
         return self.原子标签列表
 
+
+    @classmethod
+    def 初始化微信组合标签(cls):
+        import itertools
+        for y in itertools.product(*抽象标签组.初始化表, repeat=1):
+            y = sorted(list(y))
+            cls.objects.get_or_create(原子标签列表=y)
