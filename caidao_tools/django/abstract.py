@@ -477,21 +477,36 @@ class AbstractDna(models.Model):
 #   "output": "你是一个贴标签的专家，你现在需要使用如下标签“儿童”去匹配输入内容，判断内容是否与该标签相关。标签“儿童”的近义词包括但不限于：小孩、孩子、幼儿、少年、小朋友等。请根据输入内容判断是否匹配该标签或其近义词，并以JSON格式输出结果。如果是，输出{'标签匹配结果':'是'}；如果否，输出{'标签匹配结果':'否'}。"
 # }
 class 抽象标签组(AbstractModel):
-    列表 = models.JSONField(default=list)
-
-    class Meta:
-        abstract = True
     初始化表 = [
             ('儿童','青少年','青年','中年','老年','未知_年龄段'),
-            ('体重不足', '超重', '肥胖','未知_体重'),
+            ('体重不足', '超重', '肥胖','未知_体重','正常体重'),
             ('男性','女性','未知_性别'),
             ('哮喘','高血压', '心脏病', '糖尿病', '未知_疾病')
         ]
+
+    健康档案字段名choices = (
+        ('gender', '性别'),
+        ('bmi', 'bmi'),
+        ('age', '年龄'),
+        ('chronic_disease', '慢性病'),
+    )
+    
+
+    列表 = models.JSONField(default=list)
+    健康档案字段名 = models.CharField(max_length=64, null=True, choices=健康档案字段名choices)
+    # 抽取提示词 = models.TextField(blank=True, null=True)
+
+
+    class Meta:
+        abstract = True
+    
     @classmethod
     def 初始化标签组(cls):
-        for y in cls.初始化表:
+        for i, y in enumerate(cls.初始化表):
             y = sorted(list(y))
-            cls.objects.get_or_create(列表=y)
+            cls.objects.get_or_create(列表=y,
+                                      健康档案字段名=cls.健康档案字段名choices[i][0],
+                                      )
 
 
 class 抽象原子标签(AbstractModel):
