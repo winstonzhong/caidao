@@ -29,3 +29,16 @@ class Redis任务管理器(object):
     def 拉出Redis(self):
         a = self.con.rpop(self.task_key)
         return json.loads(bz2.decompress(a)) if a is not None else None
+
+
+class 跨进程共享变量控制锁(Redis任务管理器):
+    def 获取锁(self):
+        while True:
+            if self.has_tasks():
+                continue
+            break
+        self.推入Redis({})
+
+    def 释放锁(self):
+        self.clear_tasks()
+        

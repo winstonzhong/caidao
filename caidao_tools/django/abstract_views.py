@@ -3,6 +3,28 @@ from django.http.response import JsonResponse
 
 # Create your views here.
 
+
+class 基础任务视图(APIView):
+    
+    @property
+    def key_name(self):
+        raise NotImplementedError
+    
+    @property
+    def model(self):
+        raise NotImplementedError
+    
+    
+    def get(self, request):
+        obj = self.model.objects.filter(**{self.key_name: request.GET.get('id')}).first()
+        if obj is not None:
+            return JsonResponse(obj.json)
+        else:
+            return JsonResponse({})
+
+
+
+
 class 抽象任务制作接口(APIView):
     def get(self, request, cls):
         print(request.GET)
