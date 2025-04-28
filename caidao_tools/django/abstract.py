@@ -251,7 +251,9 @@ class 抽象定时任务(BaseModel):
         while 1:
             q = cls.得到所有待执行的任务().order_by("优先级", "update_time")
             for obj in q:
+                print(f'开始执行任务:{obj.执行函数}')
                 obj.执行函数实例()
+                obj.save()
             if 单步:
                 break
             time.sleep(每轮间隔秒数)
