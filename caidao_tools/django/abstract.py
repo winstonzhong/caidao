@@ -177,8 +177,9 @@ class 抽象任务(AbstractModel):
 
 class 抽象定时任务(BaseModel):
     # 类名 = models.CharField(max_length=50)
+    优先级 = models.PositiveSmallIntegerField(default=0)
     执行函数 =  models.CharField(max_length=50, default="单步执行")
-    任务描述 = models.CharField(max_length=200, null=True, blank=True)
+    任务描述 = models.TextField(null=True, blank=True)
     定时表达式 = models.CharField(max_length=50, default="every 1 second")
     间隔秒 = models.IntegerField(null=True, blank=True)
     超时秒 = models.PositiveBigIntegerField(default=0)
@@ -192,7 +193,7 @@ class 抽象定时任务(BaseModel):
     class Meta:
         abstract = True
         indexes = [
-            models.Index(fields=["激活", "update_time"]),
+            models.Index(fields=["激活", "优先级","update_time"]),
         ]
 
     def __init__(self, *args, **kwargs):
@@ -216,22 +217,39 @@ class 抽象定时任务(BaseModel):
     def 执行函数实例(self):
         return getattr(self, self.执行函数)
 
-
     @classmethod
-    def 得到所有待执行的任务(cls):
-        queryset = cls.objects.filter(
-            激活=True,
-            update_time__lte=timezone.now() - ExpressionWrapper(
+    def 构建所有待执行的任务查询字典(cls, **kwargs):
+        kwargs['update_time__lte'] = timezone.now() - ExpressionWrapper(
                 Value(datetime.timedelta(seconds=1)) * F('间隔秒'),
                 output_field=DurationField()
             )
-        )
-        return queryset
+        kwargs['激活'] = True
+        return kwargs
+
+
+    @classmethod
+    def 得到所有待执行的任务(cls, **kwargs):
+        raise NotImplementedError
+        kwargs['update_time__lte'] = timezone.now() - ExpressionWrapper(
+                Value(datetime.timedelta(seconds=1)) * F('间隔秒'),
+                output_field=DurationField()
+            )
+        kwargs['激活'] = True
+        return cls.objects.filter(**kwargs)
+
+        # queryset = cls.objects.filter(
+        #     激活=True,
+        #     update_time__lte=timezone.now() - ExpressionWrapper(
+        #         Value(datetime.timedelta(seconds=1)) * F('间隔秒'),
+        #         output_field=DurationField()
+        #     )
+        # )
+        # return queryset
 
     @classmethod
     def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False):
         while 1:
-            q = cls.得到所有待执行的任务().order_by("update_time")
+            q = cls.得到所有待执行的任务().order_by("优先级", "update_time")
             for obj in q:
                 obj.执行函数实例()
             if 单步:
