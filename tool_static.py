@@ -18,7 +18,9 @@ BASE_URL_56T = "https://file.j1.sale/api/file"
 BASE_DIR_56T = "v:/file" if OS_WIN else "/mnt/56T/file"
 
 
-def 当前路径(base_dir=BASE_DIR_56T):
+def 当前路径(base_dir=BASE_DIR_56T, sub_dir=None):
+    if sub_dir is not None:
+        base_dir = os.path.join(base_dir, sub_dir)
     fpath = os.path.join(base_dir, today())
     if not os.path.lexists(fpath):
         os.makedirs(fpath, exist_ok=True)
@@ -52,13 +54,12 @@ def 得到一个固定文件路径(相对路径, base_dir=BASE_DIR_56T):
     return os.path.join(base_dir, 相对路径).replace("\\", "/")
 
 
-def 得到一个不重复的文件路径(fpath=""):
+def 得到一个不重复的文件路径(fpath="", sub_dir=None):
     time.sleep(0.01)
     后缀 = 得到后缀(fpath)
     后缀 = f".{后缀}" if 后缀 else ""
-    # return f'{os.path.join(当前路径(), str(time.time()))}{后缀}'
     name = f"{time.time():.6f}{random.random():.4f}{后缀}"
-    return os.path.join(当前路径(), name)
+    return os.path.join(当前路径(sub_dir=sub_dir), name)
 
 
 def 路径到链接(fpath, base_dir=BASE_DIR_56T):

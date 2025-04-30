@@ -16,7 +16,7 @@ from helper_hash import get_hash
 from tool_env import bounds_to_rect
 from tool_img import get_template_points, show, pil2cv2, cv2pil
 from lxml import etree
-
+import uiautomator2
 
 class NoTemplatePopupException(Exception):
     pass
@@ -45,11 +45,18 @@ class DummyDevice(object):
         return self.source
 
     def __getattr__(self, name):
+        # print('==================getting attr:',name)
         pass
 
     def click(self, *a, **k):
         return self.adb.ua2.click(*a, **k)
 
+    def swipe(self, fromx, fromy, tox, toy):
+        return self.adb.swipe((fromx, fromy), (tox, toy))
+
+    # def long_click(self, x, y, duration: float = .5):
+    #     pass
+    
     def move_to(self, *a, **k):
         print(a, k)
 
@@ -119,6 +126,11 @@ class SteadyDevice(DummyDevice):
 
     def find_xpath_safe(self, x):
         return find_by_xpath(self, x)
+        # try:
+        #     return find_by_xpath(self, x)
+        # except uiautomator2.exceptions.UiObjectNotFoundError:
+        #     self.refresh()
+        #     return find_by_xpath(self, x)
 
     def find_xpath_all(self, x):
         return self.find_xpath_safe(x).all()
