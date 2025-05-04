@@ -15,7 +15,14 @@ import json
 
 BASE_URL_56T = "https://file.j1.sale/api/file"
 
-BASE_DIR_56T = "v:/file" if OS_WIN else "/mnt/56T/file"
+if not OS_WIN:
+    BASE_DIR_56T = "/mnt/56T/file"
+elif os.path.lexists("v:/file"):
+    BASE_DIR_56T = "v:/file"
+else:
+    BASE_DIR_56T = "d:/file"
+
+# BASE_DIR_56T = "v:/file" if OS_WIN else "/mnt/56T/file"
 
 
 def 当前路径(base_dir=BASE_DIR_56T, sub_dir=None):
