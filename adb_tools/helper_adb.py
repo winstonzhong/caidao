@@ -7,7 +7,7 @@ Created on 2023年11月24日
 # (base) PS C:\Users\lenovo> adb connect 192.168.0.148:7001
 import glob
 import os
-import os
+
 from pathlib import Path
 import random
 import re
@@ -334,6 +334,23 @@ class BaseAdb(object):
     if not os.path.lexists(DIR_CFG):
         os.makedirs(DIR_CFG, exist_ok=True)
 
+    def __init__(self, device):
+        if not device:
+            raise NoAdbDeviceError
+
+        if hasattr(device, "device_id"):
+            self.ip_port = device.device_id
+        elif not device.get("ip") and device.get("id"):
+            self.ip_port = device.get("id")
+        else:
+            self.ip_port = f'{device["ip"]}:{device["port"]}'
+        self.device = device
+        self.current_shot = None
+        self.step_name = ""
+
+        self.old_key = None
+        self.current_key = None
+
     def __str__(self):
         return str(self.device)
 
@@ -542,22 +559,6 @@ class BaseAdb(object):
             if x.get("name") == d.get("device_name"):
                 return x
 
-    def __init__(self, device):
-        if not device:
-            raise NoAdbDeviceError
-
-        if hasattr(device, "device_id"):
-            self.ip_port = device.device_id
-        elif not device.get("ip") and device.get("id"):
-            self.ip_port = device.get("id")
-        else:
-            self.ip_port = f'{device["ip"]}:{device["port"]}'
-        self.device = device
-        self.current_shot = None
-        self.step_name = ""
-
-        self.old_key = None
-        self.current_key = None
 
     @property
     def ip(self):
@@ -1403,10 +1404,22 @@ class BaseAdb(object):
         return list(l)
 
     @classmethod
-    def get_device_by_id(cls, id):
-        return next(
-            (item for item in cls.get_devices_as_dict() if item["id"] == id), None
-        )
+    def get_device_by_id(cls, id, 重连次数=10):
+        for i in range(重连次数):
+            rtn = next(
+                (item for item in cls.get_devices_as_dict() if item["id"] == id), None
+            )
+            if rtn is not None:
+                if not rtn.get('device'):
+                    print('等待设备就绪。。。')
+                    time.sleep(random.randint(1,3))
+                else:
+                    return rtn
+            else:
+                print(f'设备掉线，等待重新连接中。。。({i})')
+                time.sleep(random.randint(1,3))
+                cls.reconnect(id)
+        raise NoAdbDeviceError(f"{id} not found")
 
     @classmethod
     def get_device_by_index(cls, index):
