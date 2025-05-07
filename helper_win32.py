@@ -35,7 +35,7 @@ import win32process
 import win32ui
 
 from tool_rect import Rect
-
+import win32api
 
 class InvalidHwnd(Exception):
     pass
@@ -291,3 +291,25 @@ def SCREENSHOT(hwnd):
     if im_PIL is None:
         raise ScreenCopyFailed
     return im_PIL
+
+
+
+def click_inside(hwnd, x, y):
+    if hwnd is not None:
+        long_position = win32api.MAKELONG(x, y)
+        win32api.SendMessage(hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, long_position)
+        win32api.SendMessage(hwnd, win32con.WM_LBUTTONUP, win32con.MK_LBUTTON, long_position)
+
+def click_global(hwnd, x, y):
+    if hwnd is not None:
+        rect = win32gui.GetWindowRect(hwnd)
+        x += rect[0]
+        y += rect[1]
+        win32api.SetCursorPos((x, y))
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+
+def is_window_maximized(hwnd):
+    window_info = win32gui.GetWindowPlacement(hwnd)
+    is_maximized = window_info[1] == win32con.SW_MAXIMIZE    
+    return is_maximized

@@ -16,7 +16,7 @@ import pandas
 from helper_net import get_with_random_agent
 from tool_rect import Rect
 from tool_env import is_string
-
+import numpy as np
 # import matplotlib.pyplot as plt
 
 
@@ -141,6 +141,35 @@ def add_head_tail(img, span=3):
 
 def rotate_90(img):
     return img.T[..., ::-1]
+
+def rotate_90_clockwise(image: np.ndarray) -> np.ndarray:
+    """顺时针90度旋转（宽高轴转置后反转宽度轴）"""
+    return np.transpose(image, (1, 0, 2))[:, ::-1, :]
+
+def rotate_180(image: np.ndarray) -> np.ndarray:
+    """180度旋转（分别反转高度轴和宽度轴）"""
+    return image[::-1, ::-1, :]  # 先反转高度轴，再反转宽度轴
+
+def rotate_270_clockwise(image: np.ndarray) -> np.ndarray:
+    """顺时针270度旋转（等价于逆时针90度，宽高轴转置后反转高度轴）"""
+    return np.transpose(image, (1, 0, 2))[::-1, :, :]
+
+# 统一接口：支持指定旋转角度（90/180/270）和旋转方向
+def rotate_image(image: np.ndarray, angle: int) -> np.ndarray:
+    """
+    通用旋转函数，支持90/180/270度顺时针旋转
+    :param image: (H,W,C)格式的RGB图片数组
+    :param angle: 旋转角度，可选90/180/270
+    :return: 旋转后的图片数组
+    """
+    if angle == 90:
+        return rotate_90_clockwise(image)
+    elif angle == 180:
+        return rotate_180(image)
+    elif angle == 270:
+        return rotate_270_clockwise(image)
+    else:
+        raise ValueError("angle must be 90, 180, or 270")
 
 
 def bgr2rgb(img):
@@ -613,6 +642,13 @@ def get_template_points(img, template, threshold=0.8):
     points = list(zip(*loc[::-1][-2:]))
     return points
 
+def find_template_first_center(img, template, threshold=0.8):
+    points = get_template_points(img, template, threshold)
+    if len(points) > 0:
+        h, w, _ = template.shape
+        pos = points[0]
+        return pos[0] + w//2, pos[1] + h//2
+    return None
 
 def has_tempate(img, template, threshold=0.8):
     return len(get_template_points(img, template, threshold)) > 0
@@ -1250,6 +1286,7 @@ class FracContours(object):
         canvas = get_canvas(w, h, mono=True)
         cv2.drawContours(canvas, c, -1, 255, 1)
         return canvas
+
 
 
 if __name__ == "__main__":
