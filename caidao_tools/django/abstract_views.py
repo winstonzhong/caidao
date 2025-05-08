@@ -5,18 +5,14 @@ from django.http.response import JsonResponse
 
 
 class 基础任务视图(APIView):
-    
-    @property
-    def key_name(self):
-        raise NotImplementedError
-    
     @property
     def model(self):
         raise NotImplementedError
     
-    
     def get(self, request):
-        obj = self.model.objects.filter(**{self.key_name: request.GET.get('id')}).first()
+        d = self.model.筛选出数据库字段(request.GET)
+        obj = self.model.objects.filter(**d).first()
+
         if obj is not None:
             return JsonResponse(obj.json)
         else:

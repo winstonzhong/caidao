@@ -24,7 +24,8 @@ from .tool_task import calculate_rtn
 from tool_static import 存储字典到文件
 
 from django.utils import timezone
-
+import requests
+from helper_hash import get_hash_jsonable
 
 
 NEW_RECORD = 0
@@ -82,6 +83,11 @@ class BaseModel(models.Model):
         if not cls.FIELDS:
             cls.FIELDS = list(map(lambda x: x.get_attname(), cls._meta.fields))
         return cls.FIELDS
+    
+    @classmethod
+    def 筛选出数据库字段(cls, d):
+        fields = cls.get_fields()
+        return {k:v for k, v in d.items() if k in fields}
 
     @classmethod
     def has_field(cls, name):
@@ -177,12 +183,14 @@ class 抽象任务(AbstractModel):
 
 class 抽象定时任务(BaseModel):
     # 类名 = models.CharField(max_length=50)
+    任务服务url = models.URLField(null=True, blank=True)
+    任务下载参数 = models.JSONField(default=dict)
     优先级 = models.PositiveSmallIntegerField(default=0)
     执行函数 =  models.CharField(max_length=50, default="单步执行")
     任务描述 = models.TextField(null=True, blank=True)
     定时表达式 = models.CharField(max_length=50, default="every 1 second")
     间隔秒 = models.IntegerField(null=True, blank=True)
-    超时秒 = models.PositiveBigIntegerField(default=0)
+    # 超时秒 = models.PositiveBigIntegerField(default=0)
     设定时间 = models.DateTimeField()
     一次执行 = models.BooleanField(default=False)
     任务数据 = models.JSONField(default=dict)
@@ -198,6 +206,9 @@ class 抽象定时任务(BaseModel):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+    def __str__(self):
+        return self.执行函数
 
 
     def save(self, *args, **kwargs):
@@ -210,8 +221,8 @@ class 抽象定时任务(BaseModel):
             self.update_time = calculate_rtn(update_time, self.间隔秒, shanghai_time_now())
         super().save(*args, **kwargs)
 
-    def 是否任务超时(self):
-        return self.超时秒 > 0 and (shanghai_time_now() - self.update_time).total_seconds()>=self.超时秒
+    # def 是否任务超时(self):
+    #     return self.超时秒 > 0 and (shanghai_time_now() - self.update_time).total_seconds()>=self.超时秒
     
     @property
     def 执行函数实例(self):
@@ -230,21 +241,6 @@ class 抽象定时任务(BaseModel):
     @classmethod
     def 得到所有待执行的任务(cls, **kwargs):
         raise NotImplementedError
-        kwargs['update_time__lte'] = timezone.now() - ExpressionWrapper(
-                Value(datetime.timedelta(seconds=1)) * F('间隔秒'),
-                output_field=DurationField()
-            )
-        kwargs['激活'] = True
-        return cls.objects.filter(**kwargs)
-
-        # queryset = cls.objects.filter(
-        #     激活=True,
-        #     update_time__lte=timezone.now() - ExpressionWrapper(
-        #         Value(datetime.timedelta(seconds=1)) * F('间隔秒'),
-        #         output_field=DurationField()
-        #     )
-        # )
-        # return queryset
 
     @classmethod
     def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False):
@@ -252,11 +248,25 @@ class 抽象定时任务(BaseModel):
             q = cls.得到所有待执行的任务().order_by("优先级", "update_time")
             for obj in q:
                 print(f'开始执行任务:{obj.执行函数}')
-                obj.执行函数实例()
+                obj.任务数据 = obj.下载任务数据()
+                if not obj.任务数据:
+                    print("==========没有新任务")
+                else:
+                    obj.执行函数实例()
                 obj.save()
             if 单步:
                 break
             time.sleep(每轮间隔秒数)
+
+    def 组建下载参数(self):
+        return self.任务下载参数
+    
+    def 下载任务数据(self):
+        return requests.get(self.任务服务url, params=self.组建下载参数()).json()
+    
+    def 是否任务数据变更(self):
+        return get_hash_jsonable(self.任务数据) == get_hash_jsonable(self.下载任务数据())
+
 
 class 抽象定时任务日志(AbstractModel):
     定时任务_id = models.BigIntegerField()
