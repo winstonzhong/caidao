@@ -1107,6 +1107,7 @@ class RectImage(Rect):
         self,
         min_gap=3,
         min_len=20,
+        max_len=None,
     ):
         y = self.mask.sum(axis=1) > 0
         x = self.mask.sum(axis=0) > 0
@@ -1126,9 +1127,10 @@ class RectImage(Rect):
                     if flag_final:
                         r = rect.cut_empty_margin()
                         if r is not None and r.width > min_len and r.height > min_len:
-                            yield r
+                            if max_len is None or (r.width <= max_len and r.height <= max_len):
+                                yield r
                     else:
-                        for x in rect.split_zeros_ext(min_gap, min_len):
+                        for x in rect.split_zeros_ext(min_gap, min_len, max_len):
                             yield x
 
     @property

@@ -44,6 +44,22 @@ ACTION_PENG = 42
 ACTION_TING = 43
 ACTION_GUO = 44
 READY = 45
+未知类型 = -1
+FLOWER_HUA = 46
+FLOWER_X = 47
+    
+
+花X上下左右 = {
+    '未知':未知类型,
+    '下':TIMER_DOWN,
+    '右':TIMER_RIGHT,
+    '上':TIMER_UP,
+    '左':TIMER_LEFT,
+    '花':FLOWER_HUA,
+    'X':FLOWER_X,
+    }
+
+
 OTHERS = {
     '未知':UNKONWN,
     '下':TIMER_DOWN,
