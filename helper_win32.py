@@ -294,20 +294,35 @@ def SCREENSHOT(hwnd):
 
 
 
-def click_inside(hwnd, x, y):
+def click_inside(hwnd, x, y, left_button=True):
     if hwnd is not None:
+        if left_button:
+            bd = win32con.WM_LBUTTONDOWN
+            bu = win32con.WM_LBUTTONUP
+            bmk = win32con.MK_LBUTTON
+        else:
+            bd = win32con.WM_RBUTTONDOWN
+            bu = win32con.WM_RBUTTONUP
+            bmk = win32con.MK_RBUTTON
         long_position = win32api.MAKELONG(x, y)
-        win32api.SendMessage(hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, long_position)
-        win32api.SendMessage(hwnd, win32con.WM_LBUTTONUP, win32con.MK_LBUTTON, long_position)
+        win32api.SendMessage(hwnd, bd, bmk, long_position)
+        win32api.SendMessage(hwnd, bu, bmk, long_position)
 
-def click_global(hwnd, x, y):
+def click_global(hwnd, x, y, left_button=True):
     if hwnd is not None:
+        if left_button:
+            bd = win32con.MOUSEEVENTF_LEFTDOWN
+            bu = win32con.MOUSEEVENTF_LEFTUP
+        else:
+            bd = win32con.MOUSEEVENTF_RIGHTDOWN
+            bu = win32con.MOUSEEVENTF_RIGHTUP
+
         rect = win32gui.GetWindowRect(hwnd)
         x += rect[0]
         y += rect[1]
         win32api.SetCursorPos((x, y))
-        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
-        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+        win32api.mouse_event(bd, 0, 0, 0, 0)
+        win32api.mouse_event(bu, 0, 0, 0, 0)
 
 def is_window_maximized(hwnd):
     window_info = win32gui.GetWindowPlacement(hwnd)
