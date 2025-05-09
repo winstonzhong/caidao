@@ -551,6 +551,9 @@ class BaseAdb(object):
 
     def volume_down(self):
         self.ua2.keyevent("KEYCODE_VOLUME_DOWN")
+        
+    def backspace(self):
+        self.ua2.keyevent("KEYCODE_DEL")
 
     @classmethod
     def get_device_d_by_name(cls, name):

@@ -19,7 +19,22 @@ class 基础任务视图(APIView):
             return JsonResponse({})
 
 
-
+    def post(self, request):
+        d = request.POST.dict()
+        print('==============>', d)
+        pk_name = d.get('pk_name')
+        pk_value = d.get('pk_value') 
+        
+        assert pk_name and pk_value, 'pk_name or pk_value is None'
+        
+        d = self.model.筛选出数据库字段(d)
+        
+        q = self.model.objects.filter(**{pk_name:pk_value})
+        
+        assert q.count() ==1, 'query result count != 1'
+        
+        print(q.update(**d))
+        return JsonResponse({'message':'ok'})
 
 class 抽象任务制作接口(APIView):
     def get(self, request, cls):

@@ -248,21 +248,27 @@ class 抽象定时任务(BaseModel):
             q = cls.得到所有待执行的任务().order_by("优先级", "update_time")
             for obj in q:
                 print(f'开始执行任务:{obj.执行函数}')
-                obj.任务数据 = obj.下载任务数据()
-                if not obj.任务数据:
-                    print("==========没有新任务")
-                else:
-                    obj.执行函数实例()
-                obj.save()
+                obj.step()
             if 单步:
                 break
             time.sleep(每轮间隔秒数)
 
+    def step(self):
+        self.任务数据 = self.下载任务数据()
+        if not self.任务数据:
+            print("==========没有新任务")
+        else:
+            self.执行函数实例()
+        self.save()
+    
     def 组建下载参数(self):
         return self.任务下载参数
     
     def 下载任务数据(self):
         return requests.get(self.任务服务url, params=self.组建下载参数()).json()
+    
+    def 上传任务执行结果(self, **kwargs):
+        return requests.post(self.任务服务url, data=kwargs).json()
     
     def 是否任务数据变更(self):
         return get_hash_jsonable(self.任务数据) == get_hash_jsonable(self.下载任务数据())
