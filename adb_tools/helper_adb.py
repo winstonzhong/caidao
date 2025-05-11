@@ -678,7 +678,7 @@ class BaseAdb(object):
                 return local
             print(f"waiting {remote}:", new_size, old_size)
             old_size = new_size
-            time.sleep(0.01)
+            time.sleep(0.5)
 
     def pull_lastest_file_until(
         self,
