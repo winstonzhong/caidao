@@ -45,7 +45,7 @@ def calculate_rtn(a, b, x):
     True
     """
     if x < a + datetime.timedelta(seconds=b):
-        raise ValueError("输入的 x 必须大于等于 a + b")
+        raise ValueError("输入的 x 必须大于等于 a + b", f'{a}, {b}, {x}')
     assert b > 0, "间隔时间不能为负或零"
     delta_seconds = (x - a).total_seconds()
     return a + datetime.timedelta(seconds=(delta_seconds // b) * b)

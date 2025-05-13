@@ -12,6 +12,7 @@ from numpy.lib._iotools import _is_string_like
 import pandas
 
 from tool_rect import Rect
+import os
 
 
 IPV4_PAT = '(?:[0-9]{1,3}\\.){3}[0-9]{1,3}'
@@ -34,6 +35,7 @@ ptn_emoji = re.compile(u'[\U00010000-\U0010ffff]')
 
 ptn_not_number = re.compile('[^\d^\.^\s]+')
 
+MAIN_HOST_J_ONE = os.environ.get('MAIN_HOST_J_ONE', 'https://coco.j1.sale')
 
 class cached_property_for_cls:
     def __init__(self, method):

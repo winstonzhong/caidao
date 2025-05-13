@@ -83,11 +83,11 @@ class BaseModel(models.Model):
         if not cls.FIELDS:
             cls.FIELDS = list(map(lambda x: x.get_attname(), cls._meta.fields))
         return cls.FIELDS
-    
+
     @classmethod
     def 筛选出数据库字段(cls, d):
         fields = cls.get_fields()
-        return {k:v for k, v in d.items() if k in fields}
+        return {k: v for k, v in d.items() if k in fields}
 
     @classmethod
     def has_field(cls, name):
@@ -149,6 +149,7 @@ class AbstractModel(BaseModel):
     def json(self):
         return model_to_dict(self)
 
+
 class 抽象任务(AbstractModel):
 
     class Meta:
@@ -184,16 +185,16 @@ class 抽象任务(AbstractModel):
 class 抽象定时任务(BaseModel):
     # 类名 = models.CharField(max_length=50)
     任务服务url = models.URLField(null=True, blank=True)
-    任务下载参数 = models.JSONField(default=dict)
+    任务下载参数 = models.JSONField(default=dict, blank=True)
     优先级 = models.PositiveSmallIntegerField(default=0)
-    执行函数 =  models.CharField(max_length=50, default="单步执行")
+    执行函数 = models.CharField(max_length=50, default="单步执行")
     任务描述 = models.TextField(null=True, blank=True)
     定时表达式 = models.CharField(max_length=50, default="every 1 second")
     间隔秒 = models.IntegerField(null=True, blank=True)
     # 超时秒 = models.PositiveBigIntegerField(default=0)
     设定时间 = models.DateTimeField()
     一次执行 = models.BooleanField(default=False)
-    任务数据 = models.JSONField(default=dict)
+    任务数据 = models.JSONField(default=dict, blank=True)
     激活 = models.BooleanField(default=True)
     update_time = models.DateTimeField(verbose_name="更新时间", null=True, blank=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
@@ -201,53 +202,60 @@ class 抽象定时任务(BaseModel):
     class Meta:
         abstract = True
         indexes = [
-            models.Index(fields=["激活", "优先级","update_time"]),
+            models.Index(fields=["激活", "优先级", "update_time"]),
         ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
     def __str__(self):
         return self.执行函数
 
-
-    def save(self, *args, **kwargs):
-        if self.一次执行:
-            self.激活 = False
-        else:
-            # print(self.update_time, self.间隔秒, shanghai_time_now())
+    def 刷新任务更新时间(self):
+        self.激活 = not self.一次执行
+        if self.是否到了执行时间():
             update_time = timezone.localtime(self.update_time)
-            # print(update_time, self.间隔秒, shanghai_time_now())
-            self.update_time = calculate_rtn(update_time, self.间隔秒, shanghai_time_now())
+            self.update_time = calculate_rtn(
+                update_time, self.间隔秒, shanghai_time_now()
+            )
+    
+    def save(self, *args, **kwargs):
+        # if self.一次执行:
+        #     self.激活 = False
+        # else:
+        #     update_time = timezone.localtime(self.update_time)
+        #     self.update_time = calculate_rtn(
+        #         update_time, self.间隔秒, shanghai_time_now()
+        #     )
+        self.刷新任务更新时间()
         super().save(*args, **kwargs)
 
-    # def 是否任务超时(self):
-    #     return self.超时秒 > 0 and (shanghai_time_now() - self.update_time).total_seconds()>=self.超时秒
-    
+    def 是否到了执行时间(self):
+        return not self.id or self.得到所有待执行的任务().filter(id__in=[self.id]).exists()
+
     @property
     def 执行函数实例(self):
         return getattr(self, self.执行函数)
 
     @classmethod
     def 构建所有待执行的任务查询字典(cls, **kwargs):
-        kwargs['update_time__lte'] = timezone.now() - ExpressionWrapper(
-                Value(datetime.timedelta(seconds=1)) * F('间隔秒'),
-                output_field=DurationField()
-            )
-        kwargs['激活'] = True
+        kwargs["update_time__lte"] = timezone.now() - ExpressionWrapper(
+            Value(datetime.timedelta(seconds=1)) * F("间隔秒"),
+            output_field=DurationField(),
+        )
+        kwargs["激活"] = True
         return kwargs
-
 
     @classmethod
     def 得到所有待执行的任务(cls, **kwargs):
-        raise NotImplementedError
+        return cls.objects.filter(**cls.构建所有待执行的任务查询字典(**kwargs))
 
     @classmethod
     def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False):
         while 1:
             q = cls.得到所有待执行的任务().order_by("优先级", "update_time")
             for obj in q:
-                print(f'开始执行任务:{obj.执行函数}')
+                print(f"开始执行任务:{obj.执行函数}")
                 obj.step()
             if 单步:
                 break
@@ -260,18 +268,23 @@ class 抽象定时任务(BaseModel):
         else:
             self.执行函数实例()
         self.save()
-    
+
     def 组建下载参数(self):
         return self.任务下载参数
-    
+
     def 下载任务数据(self):
         return requests.get(self.任务服务url, params=self.组建下载参数()).json()
-    
+
     def 上传任务执行结果(self, **kwargs):
         return requests.post(self.任务服务url, data=kwargs).json()
-    
+
     def 是否任务数据变更(self):
-        return get_hash_jsonable(self.任务数据) == get_hash_jsonable(self.下载任务数据())
+        return get_hash_jsonable(self.任务数据) == get_hash_jsonable(
+            self.下载任务数据()
+        )
+
+    def 执行任务(self):
+        self.step()
 
 
 class 抽象定时任务日志(AbstractModel):
@@ -284,6 +297,7 @@ class 抽象定时任务日志(AbstractModel):
         indexes = [
             models.Index(fields=["定时任务_id", "数据_id"]),
         ]
+
 
 class StatusModel(AbstractModel):
     status = models.SmallIntegerField(default=NEW_RECORD, choices=STATUS)
@@ -505,68 +519,70 @@ class AbstractDna(models.Model):
     def book(cls):
         return cls.redis_conn.rpop(cls.cache_key)
 
+
 # {
 #   "output": "\n\n你是一个贴标签的专家，你现在需要使用如下标签“儿童”去匹配输入内容，判断内容是否涉及儿童相关主题（包括但不限于小孩、孩子、幼儿、少年、青少年、小朋友、未成年人等近义词）。请严格按以下规则输出JSON：若相关则{'标签匹配结果':'是'}，否则{'标签匹配结果':'否'}。仅输出结果，不要解释。"
 # }
+
 
 # {
 #   "output": "你是一个贴标签的专家，你现在需要使用如下标签“儿童”去匹配输入内容，判断内容是否与该标签相关。标签“儿童”的近义词包括但不限于：小孩、孩子、幼儿、少年、小朋友等。请根据输入内容判断是否匹配该标签或其近义词，并以JSON格式输出结果。如果是，输出{'标签匹配结果':'是'}；如果否，输出{'标签匹配结果':'否'}。"
 # }
 class 抽象标签组(AbstractModel):
     初始化表 = [
-            ('儿童','青少年','青年','中年','老年','未知_年龄段'),
-            ('体重不足', '超重', '肥胖','未知_体重','正常体重'),
-            ('男性','女性','未知_性别'),
-            ('哮喘','高血压', '心脏病', '糖尿病', '未知_疾病')
-        ]
+        ("儿童", "青少年", "青年", "中年", "老年", "未知_年龄段"),
+        ("体重不足", "超重", "肥胖", "未知_体重", "正常体重"),
+        ("男性", "女性", "未知_性别"),
+        ("哮喘", "高血压", "心脏病", "糖尿病", "未知_疾病"),
+    ]
 
     健康档案字段名choices = (
-        ('gender', '性别'),
-        ('bmi', 'bmi'),
-        ('age', '年龄'),
-        ('chronic_disease', '慢性病'),
+        ("gender", "性别"),
+        ("bmi", "bmi"),
+        ("age", "年龄"),
+        ("chronic_disease", "慢性病"),
     )
-    
 
     列表 = models.JSONField(default=list)
-    健康档案字段名 = models.CharField(max_length=64, null=True, choices=健康档案字段名choices)
+    健康档案字段名 = models.CharField(
+        max_length=64, null=True, choices=健康档案字段名choices
+    )
     # 抽取提示词 = models.TextField(blank=True, null=True)
-
 
     class Meta:
         abstract = True
-    
+
     @classmethod
     def 初始化标签组(cls):
         for i, y in enumerate(cls.初始化表):
             y = sorted(list(y))
-            cls.objects.get_or_create(列表=y,
-                                      健康档案字段名=cls.健康档案字段名choices[i][0],
-                                      )
+            cls.objects.get_or_create(
+                列表=y,
+                健康档案字段名=cls.健康档案字段名choices[i][0],
+            )
 
 
 class 抽象原子标签(AbstractModel):
     # 组_id = models.PositiveBigIntegerField(null=True)
     名称 = models.CharField(max_length=100)
     提示词 = models.CharField(blank=True, null=True, max_length=255)
-    
-    
+
     class Meta:
         abstract = True
 
     def __str__(self):
         return self.名称
-    
+
     @classmethod
     def 初始化原子标签(cls):
         for y in 抽象标签组.初始化表:
             for z in y:
-                if not z.startswith('未知_'):
+                if not z.startswith("未知_"):
                     cls.objects.get_or_create(名称=z)
 
     @classmethod
     def 生成提示词的提示词(cls):
-        return '''我目前有一个词汇标签：“{名称}”，我希望使用这个标签：“{名称}”去匹配一段文字，这个匹配能够输出该段内容是否匹配成功的结果。
+        return """我目前有一个词汇标签：“{名称}”，我希望使用这个标签：“{名称}”去匹配一段文字，这个匹配能够输出该段内容是否匹配成功的结果。
     通常这个过程是通过大模型提示词完成的，我希望你能写出这个标签匹配过程的提示词：
 1，提示词和“{名称}”这个标签相关，是否也能匹配它的各类近义词，并在提示词中举例一些近义词，同时也强调不限于这些近义词。
 2，界定输出的格式，为json格式。{{'标签匹配结果':‘是’}}
@@ -574,27 +590,29 @@ class 抽象原子标签(AbstractModel):
 4, 请以如下开头编写：你是一个贴标签的专家，你现在需要使用如下标签“{名称}”去匹配输入内容，。。。。
 5， 请直接输出结果，不要再加前后说明性解释和其他内容。
 
-'''
+"""
+
     @classmethod
     def 未生成提示词的提示词的字典(cls):
-        q = cls.objects.filter(提示词__isnull=True).exclude(名称='其他')
+        q = cls.objects.filter(提示词__isnull=True).exclude(名称="其他")
         if q.exists():
-            d = {'名称': [x.名称 for x in q]}
-            d['模版'] = cls.生成提示词的提示词()
+            d = {"名称": [x.名称 for x in q]}
+            d["模版"] = cls.生成提示词的提示词()
             return d
 
-    
     @property
     def 集成提示词(self):
-        return self.提示词.replace('标签匹配结果',f'{self.名称}') if self.提示词 else None
-    
+        return (
+            self.提示词.replace("标签匹配结果", f"{self.名称}") if self.提示词 else None
+        )
+
     @classmethod
     def 得到标签抽取集成提示词(cls):
-        l = map(lambda x:x.集成提示词, cls.objects.all())
-        l = filter(lambda x:x, l)
+        l = map(lambda x: x.集成提示词, cls.objects.all())
+        l = filter(lambda x: x, l)
         # prompt_list = '\n'.join([x.集成提示词 for x in cls.objects.all()])
-        prompt_list = '\n'.join(l)
-        return f'''
+        prompt_list = "\n".join(l)
+        return f"""
         你是一个贴标签的专家，以下是一些标签抽取的列表：
         ******标签抽取列表：开始******
         {prompt_list}
@@ -605,7 +623,7 @@ class 抽象原子标签(AbstractModel):
         2， 列表中的每个元素都是一个字典，只含一个键，举例如：{{"糖尿病":"是"}} 或 {{"糖尿病":"否"}}
         3， 值只有两种结果："是"或"否"
         请严格按以下规则输出JSON：仅输出结果，不要解释。
-    '''
+    """
 
 
 class 抽象微信组合标签(models.Model):
@@ -621,10 +639,10 @@ class 抽象微信组合标签(models.Model):
     def 名称(self):
         return self.原子标签列表
 
-
     @classmethod
     def 初始化微信组合标签(cls):
         import itertools
+
         for y in itertools.product(*抽象标签组.初始化表, repeat=1):
             y = sorted(list(y))
             cls.objects.get_or_create(原子标签列表=y)

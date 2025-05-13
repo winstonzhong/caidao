@@ -725,6 +725,9 @@ class BaseAdb(object):
         self.ua2.shell(f"rm -rf {base_dir}")
         time.sleep(0.1)
         self.ua2.shell(f"mkdir {base_dir}")
+    
+    def delete_all_files(self, base_dir):
+        self.ua2.shell(f"find {base_dir} -maxdepth 1 -type f -delete")
 
     def clear_pdd_goods_dir(self):
         self.clear_temp_dir(base_dir="/sdcard/DCIM/Pindd/goods")
