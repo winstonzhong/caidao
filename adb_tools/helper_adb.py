@@ -551,6 +551,9 @@ class BaseAdb(object):
 
     def volume_down(self):
         self.ua2.keyevent("KEYCODE_VOLUME_DOWN")
+        
+    def backspace(self):
+        self.ua2.keyevent("KEYCODE_DEL")
 
     @classmethod
     def get_device_d_by_name(cls, name):
@@ -675,7 +678,7 @@ class BaseAdb(object):
                 return local
             print(f"waiting {remote}:", new_size, old_size)
             old_size = new_size
-            time.sleep(0.01)
+            time.sleep(0.5)
 
     def pull_lastest_file_until(
         self,
@@ -722,6 +725,9 @@ class BaseAdb(object):
         self.ua2.shell(f"rm -rf {base_dir}")
         time.sleep(0.1)
         self.ua2.shell(f"mkdir {base_dir}")
+    
+    def delete_all_files(self, base_dir):
+        self.ua2.shell(f"find {base_dir} -maxdepth 1 -type f -delete")
 
     def clear_pdd_goods_dir(self):
         self.clear_temp_dir(base_dir="/sdcard/DCIM/Pindd/goods")

@@ -110,6 +110,9 @@ def get_driver_new(
     user_data_dir=USER_DATA_DIR,
 ):
     option = webdriver.ChromeOptions()
+    
+    # --remote-debugging-port=9222
+    
     if headless:
         option.add_argument("headless")
     option.add_argument("--log-level=3")
@@ -131,6 +134,7 @@ def get_driver_new(
     option.add_argument("--disable-extensions")
     option.add_argument("--disable-gpu")
     option.add_argument("--disable-features=VizDisplayCompositor")
+    # option.add_argument("--remote-debugging-port=9222")
     option.set_capability("goog:loggingPrefs", {"performance": "ALL"})
 
     # option.add_experimental_option('excludeSwitches', ['enable-logging'])
