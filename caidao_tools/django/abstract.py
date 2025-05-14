@@ -87,10 +87,7 @@ class BaseModel(models.Model):
     @classmethod
     def 筛选出数据库字段(cls, d):
         fields = cls.get_fields()
-        # print(d)
-        # print(fields)
         rtn = {k: v for k, v in d.items() if  k.split('__',maxsplit=1)[0] in fields}
-        print(rtn)
         return rtn
 
     @classmethod
