@@ -45,8 +45,14 @@ ACTION_TING = 43
 ACTION_GUO = 44
 READY = 45
 未知类型 = -1
-FLOWER_HUA = 46
+FLOWER_WORD = 46
 FLOWER_X = 47
+FLOWER_0 = 48
+FLOWER_1 = 49
+FLOWER_2 = 50
+FLOWER_3 = 51
+FLOWER_4 = 52
+FLOWER_5 = 53
     
 
 花X上下左右 = {
@@ -55,9 +61,23 @@ FLOWER_X = 47
     '右':TIMER_RIGHT,
     '上':TIMER_UP,
     '左':TIMER_LEFT,
-    '花':FLOWER_HUA,
+    '花文字':FLOWER_WORD,
     'X':FLOWER_X,
+    '花0':FLOWER_0,
+    '花1':FLOWER_1,
+    '花2':FLOWER_2,
+    '花3':FLOWER_3,
+    '花4':FLOWER_4,
+    '花5':FLOWER_5,
     }
+
+操作 = {
+    '胡':ACTION_HU,
+    '杠':ACTION_GANG,
+    '碰':ACTION_PENG,
+    '吃':ACTION_CHI,
+    '听':ACTION_TING,
+}
 
 
 OTHERS = {
