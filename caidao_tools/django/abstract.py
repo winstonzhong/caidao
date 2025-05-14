@@ -87,7 +87,11 @@ class BaseModel(models.Model):
     @classmethod
     def 筛选出数据库字段(cls, d):
         fields = cls.get_fields()
-        return {k: v for k, v in d.items() if k in fields}
+        # print(d)
+        # print(fields)
+        rtn = {k: v for k, v in d.items() if  k.split('__',maxsplit=1)[0] in fields}
+        print(rtn)
+        return rtn
 
     @classmethod
     def has_field(cls, name):
@@ -194,7 +198,7 @@ class 抽象定时任务(BaseModel):
     # 超时秒 = models.PositiveBigIntegerField(default=0)
     设定时间 = models.DateTimeField()
     一次执行 = models.BooleanField(default=False)
-    任务数据 = models.JSONField(default=dict, blank=True)
+    任务数据 = models.JSONField(default=dict, blank=True, null=True)
     激活 = models.BooleanField(default=True)
     update_time = models.DateTimeField(verbose_name="更新时间", null=True, blank=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
@@ -263,7 +267,7 @@ class 抽象定时任务(BaseModel):
 
     def step(self):
         self.任务数据 = self.下载任务数据()
-        if not self.任务数据:
+        if not self.任务数据 and self.任务服务url:
             print("==========没有新任务")
         else:
             self.执行函数实例()
@@ -273,7 +277,8 @@ class 抽象定时任务(BaseModel):
         return self.任务下载参数
 
     def 下载任务数据(self):
-        return requests.get(self.任务服务url, params=self.组建下载参数()).json()
+        if self.任务服务url:
+            return requests.get(self.任务服务url, params=self.组建下载参数()).json()
 
     def 上传任务执行结果(self, **kwargs):
         return requests.post(self.任务服务url, data=kwargs).json()

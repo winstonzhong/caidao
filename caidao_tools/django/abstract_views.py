@@ -11,16 +11,27 @@ class 基础任务视图(APIView):
 
     def get(self, request):
         d = self.model.筛选出数据库字段(request.GET)
+        for k, v in d.items():
+            if v in ('False', 'True'):
+                d[k] = eval(v)
         obj = self.model.objects.filter(**d).first()
+        
+        self.after_get(request, obj)
 
         if obj is not None:
             return JsonResponse(obj.json)
         else:
             return JsonResponse({})
 
+    def after_get(self, request, obj):
+        pass
+    
+    def after_post(self, request, obj):
+        pass
+    
     def post(self, request):
         d = request.POST.dict()
-        print("==============>", d)
+        # print("==============>", d)
         pk_name = d.get("pk_name")
         pk_value = d.get("pk_value")
 
@@ -32,7 +43,11 @@ class 基础任务视图(APIView):
 
         assert q.count() == 1, "query result count != 1"
 
-        print(q.update(**d))
+        q.update(**d)
+        
+        self.after_post(request, q.first())
+        
+        # print(q.update(**d))
         return JsonResponse({"message": "ok"})
 
 
