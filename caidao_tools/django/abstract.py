@@ -87,7 +87,7 @@ class BaseModel(models.Model):
     @classmethod
     def 筛选出数据库字段(cls, d):
         fields = cls.get_fields()
-        rtn = {k: v for k, v in d.items() if  k.split('__',maxsplit=1)[0] in fields}
+        rtn = {k: v for k, v in d.items() if k.split("__", maxsplit=1)[0] in fields}
         return rtn
 
     @classmethod
@@ -219,7 +219,7 @@ class 抽象定时任务(BaseModel):
             self.update_time = calculate_rtn(
                 update_time, self.间隔秒, shanghai_time_now()
             )
-    
+
     def save(self, *args, **kwargs):
         # if self.一次执行:
         #     self.激活 = False
@@ -232,7 +232,9 @@ class 抽象定时任务(BaseModel):
         super().save(*args, **kwargs)
 
     def 是否到了执行时间(self):
-        return not self.id or self.得到所有待执行的任务().filter(id__in=[self.id]).exists()
+        return (
+            not self.id or self.得到所有待执行的任务().filter(id__in=[self.id]).exists()
+        )
 
     @property
     def 执行函数实例(self):
@@ -275,7 +277,10 @@ class 抽象定时任务(BaseModel):
 
     def 下载任务数据(self):
         if self.任务服务url:
-            return requests.get(self.任务服务url, params=self.组建下载参数()).json()
+            try:
+                return requests.get(self.任务服务url, params=self.组建下载参数()).json()
+            except requests.exceptions.JSONDecodeError as e:
+                print(e)
 
     def 上传任务执行结果(self, **kwargs):
         return requests.post(self.任务服务url, data=kwargs).json()

@@ -1,36 +1,46 @@
 import pandas as pd
 
-from typing import Callable, Dict
+from typing import Dict, Protocol, TypeVar
+
+T = TypeVar("T", bound="DataFrameProvider")
+
+
+# 定义接口协议
+class DataFrameProvider(Protocol):
+    @property
+    def id(self) -> int:  # 修改为int类型
+        ...
+
+    def get(self, key: int) -> pd.DataFrame:  # 修改为int类型
+        ...
 
 
 class DataFrameCacheManager:
-    def __init__(
-        self, df_factory: Callable[[str], pd.DataFrame], max_memory_mb: int = 500
-    ):
+    def __init__(self, max_memory_mb: int = 500):
         """
         初始化缓存管理器
 
         参数:
-            df_factory: 创建DataFrame的工厂函数，接收id参数，返回DataFrame
             max_memory_mb: 允许的最大内存使用量（MB），默认500MB
         """
-        self.df_factory = df_factory
         self.max_memory_bytes = max_memory_mb * 1024 * 1024  # 转换为字节
         self.current_memory_bytes = 0
 
         # 缓存结构: {id: (DataFrame, 引用计数, 内存大小)}
-        self.cache: Dict[str, tuple[pd.DataFrame, int, int]] = {}
+        self.cache: Dict[int, tuple[pd.DataFrame, int, int]] = {}  # key类型改为int
 
-    def get(self, df_id: str) -> pd.DataFrame:
+    def get(self, obj: T) -> pd.DataFrame:
         """
-        通过ID获取DataFrame
+        通过对象获取DataFrame
 
         参数:
-            df_id: DataFrame的唯一标识
+            obj: 实现了id属性和get方法的对象
 
         返回:
             pd.DataFrame: 对应的DataFrame
         """
+        df_id = obj.id
+
         # 检查缓存中是否存在
         if df_id in self.cache:
             df, count, size = self.cache[df_id]
@@ -38,8 +48,8 @@ class DataFrameCacheManager:
             self.cache[df_id] = (df, count + 1, size)
             return df
 
-        # 不存在则创建
-        df = self.df_factory(df_id)
+        # 不存在则通过对象方法获取
+        df = obj.get(df_id)
         # 计算内存使用
         df_size = self._get_df_memory_usage(df)
 
@@ -81,7 +91,7 @@ class DataFrameCacheManager:
             "total_memory_mb": round(self.current_memory_bytes / (1024 * 1024), 2),
             "max_memory_mb": round(self.max_memory_bytes / (1024 * 1024), 2),
             "items": {
-                df_id: {
+                str(df_id): {  # 将key转为字符串以便JSON序列化
                     "reference_count": count,
                     "memory_mb": round(size / (1024 * 1024), 2),
                 }
