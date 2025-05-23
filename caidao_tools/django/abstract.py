@@ -148,8 +148,13 @@ class AbstractModel(BaseModel):
 
     @property
     def json(self):
-        return model_to_dict(self)
+        if not hasattr(self, "_json"):
+            return model_to_dict(self)
+        return self._json
 
+    @json.setter
+    def json(self, value):
+        self._json = value
 
 class 抽象任务(AbstractModel):
 
@@ -192,11 +197,14 @@ class 抽象定时任务(BaseModel):
     任务描述 = models.TextField(null=True, blank=True)
     定时表达式 = models.CharField(max_length=50, default="every 1 second")
     间隔秒 = models.IntegerField(null=True, blank=True)
-    # 超时秒 = models.PositiveBigIntegerField(default=0)
+    超时秒 = models.PositiveBigIntegerField(default=0)
     设定时间 = models.DateTimeField()
     一次执行 = models.BooleanField(default=False)
     任务数据 = models.JSONField(default=dict, blank=True, null=True)
     激活 = models.BooleanField(default=True)
+    输出调试信息 = models.BooleanField(default=True)
+    
+    
     update_time = models.DateTimeField(verbose_name="更新时间", null=True, blank=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
 
@@ -212,6 +220,10 @@ class 抽象定时任务(BaseModel):
     def __str__(self):
         return self.执行函数
 
+    def 是否超时(self):
+        return (timezone.now() - self.update_time).seconds >= self.超时秒
+
+
     def 刷新任务更新时间(self):
         self.激活 = not self.一次执行
         if self.是否到了执行时间():
@@ -221,13 +233,6 @@ class 抽象定时任务(BaseModel):
             )
 
     def save(self, *args, **kwargs):
-        # if self.一次执行:
-        #     self.激活 = False
-        # else:
-        #     update_time = timezone.localtime(self.update_time)
-        #     self.update_time = calculate_rtn(
-        #         update_time, self.间隔秒, shanghai_time_now()
-        #     )
         self.刷新任务更新时间()
         super().save(*args, **kwargs)
 
@@ -258,19 +263,49 @@ class 抽象定时任务(BaseModel):
         while 1:
             q = cls.得到所有待执行的任务().order_by("优先级", "update_time")
             for obj in q:
-                print(f"开始执行任务:{obj.执行函数}")
+                # print(f"开始执行任务:{obj.执行函数}")
                 obj.step()
             if 单步:
                 break
             time.sleep(每轮间隔秒数)
 
+    def print_info(self, *a):
+        if self.输出调试信息:
+            print(*a)
+
+    def 是否任务数据变更(self, 任务数据):
+        assert 任务数据, "任务数据不能为空"
+
+        if not self.任务数据:
+            return True
+
+        return self.任务数据 != 任务数据
+    
+    def 运行任务(self):
+        self.执行函数实例()
+    
     def step(self):
-        self.任务数据 = self.下载任务数据()
-        if not self.任务数据 and self.任务服务url:
-            print("==========没有新任务")
+        self.print_info(f"开始执行任务:{self.执行函数}")
+        if not self.任务服务url:
+            self.运行任务()
         else:
-            self.执行函数实例()
+            任务数据 = self.下载任务数据()
+            if not 任务数据:
+                self.任务数据 = 任务数据
+                self.print_info("==========没有新任务")
+            else:
+                if self.是否任务数据变更(任务数据):
+                    self.任务数据 = 任务数据
+                    self.运行任务()
+                elif self.是否超时():
+                    self.任务数据 = 任务数据
+                    self.运行任务()
+                else:
+                    self.print_info("==========任务数据没变化， 继续等待。。。")
+                    return
         self.save()
+
+        
 
     def 组建下载参数(self):
         return self.任务下载参数
@@ -285,10 +320,10 @@ class 抽象定时任务(BaseModel):
     def 上传任务执行结果(self, **kwargs):
         return requests.post(self.任务服务url, data=kwargs).json()
 
-    def 是否任务数据变更(self):
-        return get_hash_jsonable(self.任务数据) == get_hash_jsonable(
-            self.下载任务数据()
-        )
+    # def 是否任务数据变更(self):
+    #     return get_hash_jsonable(self.任务数据) == get_hash_jsonable(
+    #         self.下载任务数据()
+    #     )
 
     def 执行任务(self):
         self.step()

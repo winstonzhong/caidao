@@ -1,3 +1,4 @@
+import json
 from rest_framework.views import APIView
 from django.http.response import JsonResponse
 
@@ -16,7 +17,7 @@ class 基础任务视图(APIView):
                 d[k] = eval(v)
         obj = self.model.objects.filter(**d).first()
         
-        self.after_get(request, obj)
+        obj = self.after_get(request, obj)
 
         if obj is not None:
             return JsonResponse(obj.json)
@@ -24,15 +25,25 @@ class 基础任务视图(APIView):
             return JsonResponse({})
 
     def after_get(self, request, obj):
-        pass
+        return obj
     
     def after_post(self, request, obj):
         pass
     
+    # def get_post_dict(self, request):
+    #     print(request.POST)
+    #     # d = len(request.POST)
+    #     # if not d:
+    #         # d = json.loads(request.body)
+    #     # return d        
+    #     return json.loads(request.body)
+    
     def post(self, request):
+        # d = self.get_post_dict(request)
         d = request.POST.dict()
         # print("==============>", d)
         pk_name = d.get("pk_name")
+        
         pk_value = d.get("pk_value")
 
         assert pk_name and pk_value, "pk_name or pk_value is None"
@@ -43,11 +54,12 @@ class 基础任务视图(APIView):
 
         assert q.count() == 1, "query result count != 1"
 
-        q.update(**d)
+        q.update(**d) if d else None
         
-        self.after_post(request, q.first())
+        obj = q.first()
         
-        # print(q.update(**d))
+        self.after_post(request, obj)
+
         return JsonResponse({"message": "ok"})
 
 

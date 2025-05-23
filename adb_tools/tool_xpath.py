@@ -108,7 +108,7 @@ class SteadyDevice(DummyDevice):
         key = get_hash(xml)
         return key
 
-    def refresh(self):
+    def refresh(self, debug=False):
         old_key = None
         max_try = 6
         for i in range(max_try):
@@ -116,7 +116,7 @@ class SteadyDevice(DummyDevice):
             # key = get_hash(xml_dumped)
             key = self.get_hash_key(xml_dumped)
             if old_key != key and i < max_try - 1:
-                print(f"waiting xml tobe steady:...{i}")
+                print(f"waiting xml tobe steady:...{i}") if debug else None
                 old_key = key
                 time.sleep(0.1)
             else:

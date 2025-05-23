@@ -357,6 +357,10 @@ class BaseAdb(object):
     def __repr__(self):
         return str(self.device)
 
+    @cached_property
+    def serialno(self):
+        return self.execute('getprop ro.serialno')[0].strip()
+    
     @property
     def device_name(self):
         return self.dict.get("name")
@@ -1777,7 +1781,12 @@ class BaseAdb(object):
         return self
 
     def send_text_chinese(self, txt):
-        self.execute(f'am broadcast -a ADB_INPUT_TEXT --es msg "{txt}"')
+        # ['am', 'broadcast', '-a', cmd, '--es', 'text', base64text])
+        # cmd = "ADB_SET_TEXT" if clear else "ADB_INPUT_TEXT"
+        import base64
+        btext = txt.encode('utf-8')
+        base64text = base64.b64encode(btext).decode()
+        self.execute(f'am broadcast -a ADB_INPUT_TEXT --es text "{base64text}"')
         return self
 
     @retry(3)
