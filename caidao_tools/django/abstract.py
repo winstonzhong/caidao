@@ -278,8 +278,7 @@ class 抽象定时任务(BaseModel):
     def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
         while 1:
             q = cls.得到所有待执行的任务(**kwargs).order_by("优先级", "update_time")
-            # for i, x in enumerate(q):
-            #     print(i, x)
+            # print(q)
             # break
             for obj in q:
                 obj.step()
