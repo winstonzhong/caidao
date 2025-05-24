@@ -98,6 +98,22 @@ class BaseModel(models.Model):
     def get_fields_without_id(cls):
         return filter(lambda x: x != "id", cls.get_fields())
 
+    @classmethod
+    def get_field_type(cls, field_name):
+        return cls._meta.get_field(field_name).get_internal_type()
+
+    def clone(self):
+        cls = self.__class__
+        d = model_to_dict(self)
+        data = {}
+        for k, v in d.items():
+            if k == "id":
+                continue
+            if cls.get_field_type(k) == "ForeignKey":
+                k = f"{k}_id"
+            data[k] = v
+        return cls(**data).save()
+
     @retry(10, True)
     def save_safe(self):
         self.save()
@@ -156,6 +172,7 @@ class AbstractModel(BaseModel):
     def json(self, value):
         self._json = value
 
+
 class 抽象任务(AbstractModel):
 
     class Meta:
@@ -203,8 +220,8 @@ class 抽象定时任务(BaseModel):
     任务数据 = models.JSONField(default=dict, blank=True, null=True)
     激活 = models.BooleanField(default=True)
     输出调试信息 = models.BooleanField(default=True)
-    
-    
+    group_name = models.CharField(max_length=50, null=True, blank=True, verbose_name="任务组")
+
     update_time = models.DateTimeField(verbose_name="更新时间", null=True, blank=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
 
@@ -222,7 +239,6 @@ class 抽象定时任务(BaseModel):
 
     def 是否超时(self):
         return (timezone.now() - self.update_time).seconds >= self.超时秒
-
 
     def 刷新任务更新时间(self):
         self.激活 = not self.一次执行
@@ -259,15 +275,17 @@ class 抽象定时任务(BaseModel):
         return cls.objects.filter(**cls.构建所有待执行的任务查询字典(**kwargs))
 
     @classmethod
-    def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False):
+    def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
         while 1:
-            q = cls.得到所有待执行的任务().order_by("优先级", "update_time")
+            q = cls.得到所有待执行的任务(**kwargs).order_by("优先级", "update_time")
+            # for i, x in enumerate(q):
+            #     print(i, x)
+            # break
             for obj in q:
-                # print(f"开始执行任务:{obj.执行函数}")
                 obj.step()
             if 单步:
                 break
-            time.sleep(每轮间隔秒数)
+            time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
 
     def print_info(self, *a):
         if self.输出调试信息:
@@ -280,10 +298,10 @@ class 抽象定时任务(BaseModel):
             return True
 
         return self.任务数据 != 任务数据
-    
+
     def 运行任务(self):
         self.执行函数实例()
-    
+
     def step(self):
         self.print_info(f"开始执行任务:{self.执行函数}")
         if not self.任务服务url:
@@ -304,8 +322,6 @@ class 抽象定时任务(BaseModel):
                     self.print_info("==========任务数据没变化， 继续等待。。。")
                     return
         self.save()
-
-        
 
     def 组建下载参数(self):
         return self.任务下载参数
