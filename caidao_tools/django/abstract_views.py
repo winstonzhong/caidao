@@ -1,9 +1,9 @@
 import json
 from rest_framework.views import APIView
 from django.http.response import JsonResponse
-
+from django.utils import timezone
 # Create your views here.
-
+import tool_env
 
 class 基础任务视图(APIView):
     @property
@@ -15,7 +15,14 @@ class 基础任务视图(APIView):
         for k, v in d.items():
             if v in ('False', 'True'):
                 d[k] = eval(v)
-        obj = self.model.objects.filter(**d).first()
+        
+        q = self.model.objects.filter(**d)
+
+        if q.filter(due_time__gt=timezone.now()).first() is not None:
+            obj = None
+        else:
+            obj = q.first()
+        # obj = self.model.objects.filter(**d).filter(due_time__gt=timezone.now()).first()
         
         obj = self.after_get(request, obj)
 
@@ -39,9 +46,8 @@ class 基础任务视图(APIView):
     #     return json.loads(request.body)
     
     def post(self, request):
-        # d = self.get_post_dict(request)
         d = request.POST.dict()
-        # print("==============>", d)
+
         pk_name = d.get("pk_name")
         
         pk_value = d.get("pk_value")
@@ -53,11 +59,25 @@ class 基础任务视图(APIView):
         q = self.model.objects.filter(**{pk_name: pk_value})
 
         assert q.count() == 1, "query result count != 1"
-
-        q.update(**d) if d else None
         
+        assert tool_env.is_int(d.get('due_time', 0)), "due_time is not int"
+
         obj = q.first()
         
+        if d:
+            # if 'due_time' in d:
+            #     d['due_time'] = timezone.now() + timezone.timedelta(seconds=int(d['due_time']))
+            # else:
+            #     d['due_time'] = None
+            
+            # d['cnt_saved'] 
+            # q.update(**d)
+            # if 'due_time' not in d:
+            #     d['due_time'] = None
+            for k, v in d.items():
+                setattr(obj, k, v)
+            obj.save()
+
         self.after_post(request, obj)
 
         return JsonResponse({"message": "ok"})
