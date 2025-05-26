@@ -10,15 +10,19 @@ class 基础任务视图(APIView):
     def model(self):
         raise NotImplementedError
 
-    def get(self, request):
+    def before_get(self, request):
         d = self.model.筛选出数据库字段(request.GET)
         for k, v in d.items():
             if v in ('False', 'True'):
                 d[k] = eval(v)
+        return d
+    
+    def get(self, request):
+        d = self.before_get(request)
         
         q = self.model.objects.filter(**d)
 
-        if q.filter(due_time__gt=timezone.now()).first() is not None:
+        if request.GET.get('query_only') is None and q.filter(due_time__gt=timezone.now()).first() is not None:
             obj = None
         else:
             obj = q.first()
@@ -52,31 +56,26 @@ class 基础任务视图(APIView):
         
         pk_value = d.get("pk_value")
 
-        assert pk_name and pk_value, "pk_name or pk_value is None"
-
-        d = self.model.筛选出数据库字段(d)
-
-        q = self.model.objects.filter(**{pk_name: pk_value})
-
-        assert q.count() == 1, "query result count != 1"
+        # assert pk_name and pk_value, "pk_name or pk_value is None"
         
-        assert tool_env.is_int(d.get('due_time', 0)), "due_time is not int"
+        if pk_name and pk_value:
+            d = self.model.筛选出数据库字段(d)
 
-        obj = q.first()
-        
-        if d:
-            # if 'due_time' in d:
-            #     d['due_time'] = timezone.now() + timezone.timedelta(seconds=int(d['due_time']))
-            # else:
-            #     d['due_time'] = None
+            q = self.model.objects.filter(**{pk_name: pk_value})
+
+            assert q.count() == 1, "query result count != 1"
             
-            # d['cnt_saved'] 
-            # q.update(**d)
-            # if 'due_time' not in d:
-            #     d['due_time'] = None
-            for k, v in d.items():
-                setattr(obj, k, v)
-            obj.save()
+            assert tool_env.is_int(d.get('due_time', 0)), "due_time is not int"
+
+            obj = q.first()
+            
+            if d:
+                for k, v in d.items():
+                    setattr(obj, k, v)
+                obj.save()
+        else:
+            obj = None
+            print("pk_name or pk_value is None")
 
         self.after_post(request, obj)
 

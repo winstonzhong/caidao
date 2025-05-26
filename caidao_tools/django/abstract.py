@@ -13,7 +13,7 @@ from evovle.helper_store import compute, get_train_test_df, compute_group
 from helper_net import retry
 from caidao_tools.django.tool_django import get_filters
 import time
-from tool_time import convert_time_description_to_seconds
+
 from django.utils import timezone
 import datetime
 
@@ -21,12 +21,13 @@ from django.db.models import F, ExpressionWrapper, Value
 from django.db.models.fields import DurationField
 from tool_time import shanghai_time_now
 from .tool_task import calculate_rtn
-from tool_static import 存储字典到文件
+
 
 
 import requests
-from helper_hash import get_hash_jsonable
-import requests
+
+
+from urllib.parse import urlencode
 
 NEW_RECORD = 0
 DOWNLOADED_RECORD = 1
@@ -194,7 +195,8 @@ class BaseModel(models.Model):
         abstract = True
 
 class 抽象任务数据(BaseModel):
-    due_time = models.DateTimeField(verbose_name="到期时间(小于等于当前时间被选中)", null=True)
+    due_time = models.DateTimeField(verbose_name="到期时间(小于等于当前时间被选中)", null=True, blank=True)
+    update_time = models.DateTimeField(verbose_name="更新时间", auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
     cnt_saved = models.IntegerField(verbose_name="保存次数", default=0)
 
@@ -397,21 +399,16 @@ class 抽象定时任务(BaseModel):
     def 组建下载参数(self):
         return self.任务下载参数
 
+    
+    def 获取完整任务数据下载链接(self, **kwargs):
+        d = self.组建下载参数()
+        d.update(**kwargs)
+        return f"{self.任务服务url}?{urlencode(d)}"
+
+    
     def 下载任务数据(self):
         return RemoteModel(self.任务服务url, pk_name='id', **self.组建下载参数()) if self.任务服务url else None
-        # if self.任务服务url:
-        #     try:
-        #         return requests.get(self.任务服务url, params=self.组建下载参数()).json()
-        #     except requests.exceptions.JSONDecodeError as e:
-        #         print(e)
 
-    # def 上传任务执行结果(self, **kwargs):
-    #     return requests.post(self.任务服务url, data=kwargs).json()
-
-    # def 是否任务数据变更(self):
-    #     return get_hash_jsonable(self.任务数据) == get_hash_jsonable(
-    #         self.下载任务数据()
-    #     )
 
     def 执行任务(self):
         self.step()
