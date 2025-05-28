@@ -23,6 +23,7 @@ from tool_time import shanghai_time_now
 from .tool_task import calculate_rtn
 from tool_remote_orm_model import RemoteModel
 from urllib.parse import urlencode
+import requests
 
 NEW_RECORD = 0
 DOWNLOADED_RECORD = 1
@@ -403,7 +404,10 @@ class 抽象定时任务(BaseModel):
 
     
     def 下载任务数据(self):
-        return RemoteModel(self.任务服务url, pk_name='id', **self.组建下载参数()) if self.任务服务url else None
+        try:
+            return RemoteModel(self.任务服务url, pk_name='id', **self.组建下载参数()) if self.任务服务url else None
+        except requests.exceptions.HTTPError as e:
+            print(e)
 
 
     def 执行任务(self):
