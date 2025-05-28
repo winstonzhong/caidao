@@ -24,6 +24,7 @@ from .tool_task import calculate_rtn
 from tool_remote_orm_model import RemoteModel
 from urllib.parse import urlencode
 import requests
+import copy
 
 NEW_RECORD = 0
 DOWNLOADED_RECORD = 1
@@ -394,12 +395,15 @@ class 抽象定时任务(BaseModel):
 
 
     def 组建下载参数(self):
-        return self.任务下载参数
+        return copy.copy(self.任务下载参数)
 
     
-    def 获取完整任务数据下载链接(self, **kwargs):
-        d = self.组建下载参数()
-        d.update(**kwargs)
+    def 获取完整任务数据下载链接(self, clear=False, **kwargs):
+        if not clear:
+            d = self.组建下载参数()
+            d.update(**kwargs)
+        else:
+            d = kwargs
         return f"{self.任务服务url}?{urlencode(d)}"
 
     
