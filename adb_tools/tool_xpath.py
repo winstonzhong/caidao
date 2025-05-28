@@ -7,8 +7,6 @@ Created on 2023年12月21日
 import os
 import time
 
-from PIL import Image
-from cached_property import cached_property
 import cv2
 from uiautomator2.xpath import XPath
 
@@ -16,7 +14,33 @@ from helper_hash import get_hash
 from tool_env import bounds_to_rect
 from tool_img import get_template_points, show, pil2cv2, cv2pil
 from lxml import etree
-import uiautomator2
+
+import functools
+
+
+def retrying(tries):
+    """
+    重试装饰器，允许指定重试次数
+    
+    参数:
+        tries: 重试次数
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(1, tries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_exception = e
+                    print(f"尝试 {attempt}/{tries} 失败: {str(e)}")
+                    if attempt < tries:
+                        time.sleep(1)  # 避免立即重试
+            raise last_exception  # 所有尝试均失败后抛出最后一个异常
+        return wrapper
+    return decorator
+
 
 class NoTemplatePopupException(Exception):
     pass
@@ -26,6 +50,8 @@ class DummyWatcher(object):
     def run(self, xml_content):
         return False
 
+class XpathNotFoundException(Exception):
+    pass
 
 class DummyDevice(object):
     def __init__(self, fpath=None, adb=None, xml=None):
@@ -45,7 +71,6 @@ class DummyDevice(object):
         return self.source
 
     def __getattr__(self, name):
-        # print('==================getting attr:',name)
         pass
 
     def click(self, *a, **k):
@@ -124,27 +149,29 @@ class SteadyDevice(DummyDevice):
                 self.source = xml_dumped
                 break
 
-    def find_xpath_safe(self, x):
-        return find_by_xpath(self, x)
-        # try:
-        #     return find_by_xpath(self, x)
-        # except uiautomator2.exceptions.UiObjectNotFoundError:
-        #     self.refresh()
-        #     return find_by_xpath(self, x)
+    def find_xpath_safe(self, x, wait=False, retries=3):
+        for i in range(retries):
+            e = find_by_xpath(self, x)
+            if wait and not e.all():
+                print(f'not found:{x}, retry {i}/{retries}')
+                self.refresh()
+            else:
+                return e
+        raise XpathNotFoundException(f'xpath not found:{x}')
 
-    def find_xpath_all(self, x):
-        return self.find_xpath_safe(x).all()
+    def find_xpath_all(self, x, wait=False, retries=3):
+        return self.find_xpath_safe(x, wait, retries).all()
 
-    def find_xpath_first(self, x):
-        l = self.find_xpath_safe(x).all()
+    def find_xpath_first(self, x, wait=False, retries=3):
+        l = self.find_xpath_safe(x, wait, retries).all()
         return l[0] if l else None
 
-    def find_xpath_last(self, x):
-        l = self.find_xpath_safe(x).all()
+    def find_xpath_last(self, x, wait=False, retries=3):
+        l = self.find_xpath_safe(x, wait, retries).all()
         return l[-1] if l else None
 
-    def has_xpath(self, x):
-        return bool(self.find_xpath_safe(x).all())
+    def has_xpath(self, x, wait=False, retries=3):
+        return bool(self.find_xpath_safe(x, wait, retries).all())
 
 
 class TaskSnapShotDevice(SnapShotDevice):

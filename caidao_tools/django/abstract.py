@@ -21,12 +21,7 @@ from django.db.models import F, ExpressionWrapper, Value
 from django.db.models.fields import DurationField
 from tool_time import shanghai_time_now
 from .tool_task import calculate_rtn
-
-
-
-import requests
-
-
+from tool_remote_orm_model import RemoteModel
 from urllib.parse import urlencode
 
 NEW_RECORD = 0
@@ -59,49 +54,50 @@ STATUS = (
 
 
 
-class RemoteModel:
-    def __init__(self, url, pk_name='id', **kwargs):
-        self.url = url
-        self.pk_name = pk_name
-        response = requests.get(url, params=kwargs)
-        response.raise_for_status()
-        data = response.json()
-        self._initial_data = data.copy()
-        self._changed_data = {}
-        for key, value in data.items():
-            setattr(self, key, value)
+# class RemoteModel:
+#     def __init__(self, url, pk_name='id', **kwargs):
+#         self.url = url
+#         self.pk_name = pk_name
+#         response = requests.get(url, params=kwargs)
+#         response.raise_for_status()
+#         data = response.json()
+#         self._initial_data = data.copy()
+#         self._changed_data = {}
+#         for key, value in data.items():
+#             setattr(self, key, value)
 
-    def __setattr__(self, name, value):
-        if hasattr(self, '_initial_data') and name in self._initial_data:
-            if self._initial_data.get(name) != value:
-                self._changed_data[name] = value
-        super().__setattr__(name, value)
+#     def __setattr__(self, name, value):
+#         if hasattr(self, '_initial_data') and name in self._initial_data:
+#             if self._initial_data.get(name) != value:
+#                 self._changed_data[name] = value
+#         super().__setattr__(name, value)
 
-    @property
-    def data(self):
-        return self._initial_data
+#     @property
+#     def data(self):
+#         return self._initial_data
 
 
-    def is_empty(self):
-        return not bool(len(self._initial_data))
+#     def is_empty(self):
+#         return not bool(len(self._initial_data))
 
-    def save(self):
-        if not self._changed_data:
-            return
+#     def save(self):
+#         if not self._changed_data:
+#             print('no data changed')
+#             return
 
-        pk_value = getattr(self, self.pk_name, None)
-        if pk_value is None:
-            raise ValueError(f"Primary key value for '{self.pk_name}' is not set.")
+#         pk_value = getattr(self, self.pk_name, None)
+#         if pk_value is None:
+#             raise ValueError(f"Primary key value for '{self.pk_name}' is not set.")
 
-        payload = {
-            'pk_name': self.pk_name,
-            'pk_value': pk_value,
-            **self._changed_data
-        }
-        response = requests.post(self.url, data=payload)
-        response.raise_for_status()
-        self._initial_data.update(self._changed_data)
-        self._changed_data = {}
+#         payload = {
+#             'pk_name': self.pk_name,
+#             'pk_value': pk_value,
+#             **self._changed_data
+#         }
+#         response = requests.post(self.url, data=payload)
+#         response.raise_for_status()
+#         self._initial_data.update(self._changed_data)
+#         self._changed_data = {}
 
 class FullTextField(models.TextField):
     def __init__(self, *args, **kwargs):
