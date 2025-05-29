@@ -354,40 +354,11 @@ class 抽象定时任务(BaseModel):
         if self.输出调试信息:
             print(*a)
 
-    # def 是否任务数据变更(self, 任务数据):
-    #     assert 任务数据, "任务数据不能为空"
-
-    #     if not self.任务数据:
-    #         return True
-
-    #     return self.任务数据 != 任务数据
-
     def 运行任务(self):
         self.执行函数实例()
 
-    # def step(self):
-    #     self.print_info(f"开始执行任务:{self.执行函数}")
-    #     if not self.任务服务url:
-    #         self.运行任务()
-    #     else:
-    #         任务数据 = self.下载任务数据()
-    #         if not 任务数据:
-    #             self.任务数据 = 任务数据
-    #             self.print_info("==========没有新任务")
-    #         else:
-    #             if self.是否任务数据变更(任务数据):
-    #                 self.任务数据 = 任务数据
-    #                 self.运行任务()
-    #             elif self.是否超时():
-    #                 self.任务数据 = 任务数据
-    #                 self.运行任务()
-    #             else:
-    #                 self.print_info("==========任务数据没变化， 继续等待。。。")
-    #                 return
-    #     self.save()
-
     def step(self):
-        self.远程数据记录 = self.下载任务数据()
+        self.下载任务数据()
         if self.远程数据记录 is None or not self.远程数据记录.is_empty():
             self.print_info(f"开始执行任务:{self.执行函数}")
             self.运行任务()
@@ -409,7 +380,8 @@ class 抽象定时任务(BaseModel):
     
     def 下载任务数据(self):
         try:
-            return RemoteModel(self.任务服务url, pk_name='id', **self.组建下载参数()) if self.任务服务url else None
+            self.远程数据记录 = RemoteModel(self.任务服务url, pk_name='id', **self.组建下载参数()) if self.任务服务url else None
+            return self.远程数据记录
         except requests.exceptions.HTTPError as e:
             print(e)
 

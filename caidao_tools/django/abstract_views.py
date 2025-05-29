@@ -47,14 +47,6 @@ class 基础任务视图(APIView):
     def after_post(self, request, obj):
         pass
 
-    # def get_post_dict(self, request):
-    #     print(request.POST)
-    #     # d = len(request.POST)
-    #     # if not d:
-    #         # d = json.loads(request.body)
-    #     # return d
-    #     return json.loads(request.body)
-
     def post(self, request):
         d = request.POST.dict()
 
@@ -81,7 +73,7 @@ class 基础任务视图(APIView):
                 obj.save()
         else:
             obj = None
-            print("pk_name or pk_value is None")
+            # print("pk_name or pk_value is None")
 
         self.after_post(request, obj)
 
