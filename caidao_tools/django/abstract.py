@@ -352,8 +352,8 @@ class 抽象定时任务(BaseModel):
         if self.输出调试信息:
             print(*a)
 
-    def 运行任务(self):
-        self.执行函数实例()
+    # def 运行任务(self):
+    #     self.执行函数实例()
 
     def step(self):
         self.下载任务数据()
@@ -384,8 +384,8 @@ class 抽象定时任务(BaseModel):
             print(e)
 
 
-    def 执行任务(self):
-        self.step()
+    # def 执行任务(self):
+    #     self.step()
 
 
 class 抽象定时任务日志(AbstractModel):
