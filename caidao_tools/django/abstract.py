@@ -13,7 +13,7 @@ from evovle.helper_store import compute, get_train_test_df, compute_group
 from helper_net import retry
 from caidao_tools.django.tool_django import get_filters
 import time
-from tool_time import convert_time_description_to_seconds
+
 from django.utils import timezone
 import datetime
 
@@ -21,12 +21,10 @@ from django.db.models import F, ExpressionWrapper, Value
 from django.db.models.fields import DurationField
 from tool_time import shanghai_time_now
 from .tool_task import calculate_rtn
-from tool_static import 存储字典到文件
-
-
+from tool_remote_orm_model import RemoteModel
+from urllib.parse import urlencode
 import requests
-from helper_hash import get_hash_jsonable
-import requests
+import copy
 
 NEW_RECORD = 0
 DOWNLOADED_RECORD = 1
@@ -58,49 +56,50 @@ STATUS = (
 
 
 
-class RemoteModel:
-    def __init__(self, url, pk_name='id', **kwargs):
-        self.url = url
-        self.pk_name = pk_name
-        response = requests.get(url, params=kwargs)
-        response.raise_for_status()
-        data = response.json()
-        self._initial_data = data.copy()
-        self._changed_data = {}
-        for key, value in data.items():
-            setattr(self, key, value)
+# class RemoteModel:
+#     def __init__(self, url, pk_name='id', **kwargs):
+#         self.url = url
+#         self.pk_name = pk_name
+#         response = requests.get(url, params=kwargs)
+#         response.raise_for_status()
+#         data = response.json()
+#         self._initial_data = data.copy()
+#         self._changed_data = {}
+#         for key, value in data.items():
+#             setattr(self, key, value)
 
-    def __setattr__(self, name, value):
-        if hasattr(self, '_initial_data') and name in self._initial_data:
-            if self._initial_data.get(name) != value:
-                self._changed_data[name] = value
-        super().__setattr__(name, value)
+#     def __setattr__(self, name, value):
+#         if hasattr(self, '_initial_data') and name in self._initial_data:
+#             if self._initial_data.get(name) != value:
+#                 self._changed_data[name] = value
+#         super().__setattr__(name, value)
 
-    @property
-    def data(self):
-        return self._initial_data
+#     @property
+#     def data(self):
+#         return self._initial_data
 
 
-    def is_empty(self):
-        return not bool(len(self._initial_data))
+#     def is_empty(self):
+#         return not bool(len(self._initial_data))
 
-    def save(self):
-        if not self._changed_data:
-            return
+#     def save(self):
+#         if not self._changed_data:
+#             print('no data changed')
+#             return
 
-        pk_value = getattr(self, self.pk_name, None)
-        if pk_value is None:
-            raise ValueError(f"Primary key value for '{self.pk_name}' is not set.")
+#         pk_value = getattr(self, self.pk_name, None)
+#         if pk_value is None:
+#             raise ValueError(f"Primary key value for '{self.pk_name}' is not set.")
 
-        payload = {
-            'pk_name': self.pk_name,
-            'pk_value': pk_value,
-            **self._changed_data
-        }
-        response = requests.post(self.url, data=payload)
-        response.raise_for_status()
-        self._initial_data.update(self._changed_data)
-        self._changed_data = {}
+#         payload = {
+#             'pk_name': self.pk_name,
+#             'pk_value': pk_value,
+#             **self._changed_data
+#         }
+#         response = requests.post(self.url, data=payload)
+#         response.raise_for_status()
+#         self._initial_data.update(self._changed_data)
+#         self._changed_data = {}
 
 class FullTextField(models.TextField):
     def __init__(self, *args, **kwargs):
@@ -194,7 +193,8 @@ class BaseModel(models.Model):
         abstract = True
 
 class 抽象任务数据(BaseModel):
-    due_time = models.DateTimeField(verbose_name="到期时间(小于等于当前时间被选中)", null=True)
+    due_time = models.DateTimeField(verbose_name="到期时间(小于等于当前时间被选中)", null=True, blank=True)
+    update_time = models.DateTimeField(verbose_name="更新时间", auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
     cnt_saved = models.IntegerField(verbose_name="保存次数", default=0)
 
@@ -352,11 +352,11 @@ class 抽象定时任务(BaseModel):
         if self.输出调试信息:
             print(*a)
 
-    # def 运行任务(self):
-    #     self.执行函数实例()
+    def 运行任务(self):
+        self.执行函数实例()
 
     def step(self):
-        self.远程数据记录 = self.下载任务数据()
+        self.下载任务数据()
         if self.远程数据记录 is None or not self.远程数据记录.is_empty():
             self.print_info(f"开始执行任务:{self.执行函数}")
             getattr(self, self.执行函数)()
@@ -364,13 +364,28 @@ class 抽象定时任务(BaseModel):
 
 
     def 组建下载参数(self):
-        return self.任务下载参数
+        return copy.copy(self.任务下载参数)
 
+    
+    def 获取完整任务数据下载链接(self, clear=False, **kwargs):
+        if not clear:
+            d = self.组建下载参数()
+            d.update(**kwargs)
+        else:
+            d = kwargs
+        return f"{self.任务服务url}?{urlencode(d)}"
+
+    
     def 下载任务数据(self):
-        return RemoteModel(self.任务服务url, pk_name='id', **self.组建下载参数()) if self.任务服务url else None
+        try:
+            self.远程数据记录 = RemoteModel(self.任务服务url, pk_name='id', **self.组建下载参数()) if self.任务服务url else None
+            return self.远程数据记录
+        except requests.exceptions.HTTPError as e:
+            print(e)
 
-    # def 执行任务(self):
-    #     self.step()
+
+    def 执行任务(self):
+        self.step()
 
 
 class 抽象定时任务日志(AbstractModel):
