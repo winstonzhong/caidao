@@ -321,9 +321,9 @@ class 抽象定时任务(BaseModel):
             not self.id or self.得到所有待执行的任务().filter(id__in=[self.id]).exists()
         )
 
-    @property
-    def 执行函数实例(self):
-        return getattr(self, self.执行函数)
+    # @property
+    # def 执行函数实例(self):
+    #     return getattr(self, self.执行函数)
 
     @classmethod
     def 构建所有待执行的任务查询字典(cls, **kwargs):
@@ -342,8 +342,6 @@ class 抽象定时任务(BaseModel):
     def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
         while 1:
             q = cls.得到所有待执行的任务(**kwargs).order_by("优先级", "update_time")
-            # print(q)
-            # break
             for obj in q:
                 obj.step()
             if 单步:
@@ -354,43 +352,14 @@ class 抽象定时任务(BaseModel):
         if self.输出调试信息:
             print(*a)
 
-    # def 是否任务数据变更(self, 任务数据):
-    #     assert 任务数据, "任务数据不能为空"
-
-    #     if not self.任务数据:
-    #         return True
-
-    #     return self.任务数据 != 任务数据
-
-    def 运行任务(self):
-        self.执行函数实例()
-
-    # def step(self):
-    #     self.print_info(f"开始执行任务:{self.执行函数}")
-    #     if not self.任务服务url:
-    #         self.运行任务()
-    #     else:
-    #         任务数据 = self.下载任务数据()
-    #         if not 任务数据:
-    #             self.任务数据 = 任务数据
-    #             self.print_info("==========没有新任务")
-    #         else:
-    #             if self.是否任务数据变更(任务数据):
-    #                 self.任务数据 = 任务数据
-    #                 self.运行任务()
-    #             elif self.是否超时():
-    #                 self.任务数据 = 任务数据
-    #                 self.运行任务()
-    #             else:
-    #                 self.print_info("==========任务数据没变化， 继续等待。。。")
-    #                 return
-    #     self.save()
+    # def 运行任务(self):
+    #     self.执行函数实例()
 
     def step(self):
         self.远程数据记录 = self.下载任务数据()
         if self.远程数据记录 is None or not self.远程数据记录.is_empty():
             self.print_info(f"开始执行任务:{self.执行函数}")
-            self.运行任务()
+            getattr(self, self.执行函数)()
         self.save()
 
 
@@ -399,22 +368,9 @@ class 抽象定时任务(BaseModel):
 
     def 下载任务数据(self):
         return RemoteModel(self.任务服务url, pk_name='id', **self.组建下载参数()) if self.任务服务url else None
-        # if self.任务服务url:
-        #     try:
-        #         return requests.get(self.任务服务url, params=self.组建下载参数()).json()
-        #     except requests.exceptions.JSONDecodeError as e:
-        #         print(e)
 
-    # def 上传任务执行结果(self, **kwargs):
-    #     return requests.post(self.任务服务url, data=kwargs).json()
-
-    # def 是否任务数据变更(self):
-    #     return get_hash_jsonable(self.任务数据) == get_hash_jsonable(
-    #         self.下载任务数据()
-    #     )
-
-    def 执行任务(self):
-        self.step()
+    # def 执行任务(self):
+    #     self.step()
 
 
 class 抽象定时任务日志(AbstractModel):
