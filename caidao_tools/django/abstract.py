@@ -352,9 +352,6 @@ class 抽象定时任务(BaseModel):
         if self.输出调试信息:
             print(*a)
 
-    # def 运行任务(self):
-    #     self.执行函数实例()
-
     def step(self):
         self.下载任务数据()
         if self.远程数据记录 is None or not self.远程数据记录.is_empty():
@@ -382,10 +379,6 @@ class 抽象定时任务(BaseModel):
             return self.远程数据记录
         except requests.exceptions.HTTPError as e:
             print(e)
-
-
-    # def 执行任务(self):
-    #     self.step()
 
 
 class 抽象定时任务日志(AbstractModel):
