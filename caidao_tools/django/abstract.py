@@ -354,9 +354,11 @@ class 抽象定时任务(BaseModel):
 
     def step(self):
         self.下载任务数据()
-        if self.远程数据记录 is None or not self.远程数据记录.is_empty():
-            self.print_info(f"开始执行任务:{self.执行函数}")
-            getattr(self, self.执行函数)()
+        # if hasattr(self, "远程数据记录") and self.远程数据记录 is None or not self.远程数据记录.is_empty():
+        if hasattr(self, "远程数据记录"):
+            if self.远程数据记录 is None or not self.远程数据记录.is_empty():
+                self.print_info(f"开始执行任务:{self.执行函数}")
+                getattr(self, self.执行函数)()
         self.save()
 
 
