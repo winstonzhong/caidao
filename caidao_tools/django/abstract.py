@@ -13,7 +13,7 @@ from evovle.helper_store import compute, get_train_test_df, compute_group
 from helper_net import retry
 from caidao_tools.django.tool_django import get_filters
 import time
-from tool_time import convert_time_description_to_seconds
+
 from django.utils import timezone
 import datetime
 
@@ -21,12 +21,10 @@ from django.db.models import F, ExpressionWrapper, Value
 from django.db.models.fields import DurationField
 from tool_time import shanghai_time_now
 from .tool_task import calculate_rtn
-from tool_static import 存储字典到文件
-
-from django.utils import timezone
+from tool_remote_orm_model import RemoteModel
+from urllib.parse import urlencode
 import requests
-from helper_hash import get_hash_jsonable
-
+import copy
 
 NEW_RECORD = 0
 DOWNLOADED_RECORD = 1
@@ -56,6 +54,53 @@ STATUS = (
 )
 
 
+
+
+# class RemoteModel:
+#     def __init__(self, url, pk_name='id', **kwargs):
+#         self.url = url
+#         self.pk_name = pk_name
+#         response = requests.get(url, params=kwargs)
+#         response.raise_for_status()
+#         data = response.json()
+#         self._initial_data = data.copy()
+#         self._changed_data = {}
+#         for key, value in data.items():
+#             setattr(self, key, value)
+
+#     def __setattr__(self, name, value):
+#         if hasattr(self, '_initial_data') and name in self._initial_data:
+#             if self._initial_data.get(name) != value:
+#                 self._changed_data[name] = value
+#         super().__setattr__(name, value)
+
+#     @property
+#     def data(self):
+#         return self._initial_data
+
+
+#     def is_empty(self):
+#         return not bool(len(self._initial_data))
+
+#     def save(self):
+#         if not self._changed_data:
+#             print('no data changed')
+#             return
+
+#         pk_value = getattr(self, self.pk_name, None)
+#         if pk_value is None:
+#             raise ValueError(f"Primary key value for '{self.pk_name}' is not set.")
+
+#         payload = {
+#             'pk_name': self.pk_name,
+#             'pk_value': pk_value,
+#             **self._changed_data
+#         }
+#         response = requests.post(self.url, data=payload)
+#         response.raise_for_status()
+#         self._initial_data.update(self._changed_data)
+#         self._changed_data = {}
+
 class FullTextField(models.TextField):
     def __init__(self, *args, **kwargs):
         kwargs["null"] = True
@@ -78,6 +123,17 @@ class Base(object):
 class BaseModel(models.Model):
     FIELDS = None
 
+    @property
+    def json(self):
+        if not hasattr(self, "_json"):
+            return model_to_dict(self)
+        return self._json
+
+    @json.setter
+    def json(self, value):
+        self._json = value
+
+
     @classmethod
     def get_fields(cls):
         if not cls.FIELDS:
@@ -97,6 +153,22 @@ class BaseModel(models.Model):
     @classmethod
     def get_fields_without_id(cls):
         return filter(lambda x: x != "id", cls.get_fields())
+
+    @classmethod
+    def get_field_type(cls, field_name):
+        return cls._meta.get_field(field_name).get_internal_type()
+
+    def clone(self):
+        cls = self.__class__
+        d = model_to_dict(self)
+        data = {}
+        for k, v in d.items():
+            if k == "id":
+                continue
+            if cls.get_field_type(k) == "ForeignKey":
+                k = f"{k}_id"
+            data[k] = v
+        return cls(**data).save()
 
     @retry(10, True)
     def save_safe(self):
@@ -120,6 +192,23 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
+class 抽象任务数据(BaseModel):
+    due_time = models.DateTimeField(verbose_name="到期时间(小于等于当前时间被选中)", null=True, blank=True)
+    update_time = models.DateTimeField(verbose_name="更新时间", auto_now=True)
+    create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
+    cnt_saved = models.IntegerField(verbose_name="保存次数", default=0)
+
+    class Meta:
+        abstract = True
+
+    def save(self, *a, **kw):
+        self.cnt_saved += 1
+        if self.due_time is not None:
+            if not isinstance(self.due_time, datetime.datetime):
+                self.due_time = timezone.now() + datetime.timedelta(seconds=int(self.due_time))
+            else:
+                self.due_time = None
+        return super().save(*a, **kw)
 
 class AbstractModel(BaseModel):
     update_time = models.DateTimeField(verbose_name="更新时间", auto_now=True)
@@ -146,9 +235,6 @@ class AbstractModel(BaseModel):
         setattr(self, f"{name}_完成", True)
         self.save()
 
-    @property
-    def json(self):
-        return model_to_dict(self)
 
 
 class 抽象任务(AbstractModel):
@@ -192,11 +278,14 @@ class 抽象定时任务(BaseModel):
     任务描述 = models.TextField(null=True, blank=True)
     定时表达式 = models.CharField(max_length=50, default="every 1 second")
     间隔秒 = models.IntegerField(null=True, blank=True)
-    # 超时秒 = models.PositiveBigIntegerField(default=0)
+    # 超时秒 = models.PositiveBigIntegerField(default=60)
     设定时间 = models.DateTimeField()
     一次执行 = models.BooleanField(default=False)
-    任务数据 = models.JSONField(default=dict, blank=True, null=True)
+    # 任务数据 = models.JSONField(default=dict, blank=True, null=True)
     激活 = models.BooleanField(default=True)
+    输出调试信息 = models.BooleanField(default=True)
+    group_name = models.CharField(max_length=50, null=True, blank=True, verbose_name="任务组")
+
     update_time = models.DateTimeField(verbose_name="更新时间", null=True, blank=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
 
@@ -212,6 +301,9 @@ class 抽象定时任务(BaseModel):
     def __str__(self):
         return self.执行函数
 
+    # def 是否超时(self):
+    #     return (timezone.now() - self.update_time).seconds >= self.超时秒
+
     def 刷新任务更新时间(self):
         self.激活 = not self.一次执行
         if self.是否到了执行时间():
@@ -221,13 +313,6 @@ class 抽象定时任务(BaseModel):
             )
 
     def save(self, *args, **kwargs):
-        # if self.一次执行:
-        #     self.激活 = False
-        # else:
-        #     update_time = timezone.localtime(self.update_time)
-        #     self.update_time = calculate_rtn(
-        #         update_time, self.间隔秒, shanghai_time_now()
-        #     )
         self.刷新任务更新时间()
         super().save(*args, **kwargs)
 
@@ -236,9 +321,9 @@ class 抽象定时任务(BaseModel):
             not self.id or self.得到所有待执行的任务().filter(id__in=[self.id]).exists()
         )
 
-    @property
-    def 执行函数实例(self):
-        return getattr(self, self.执行函数)
+    # @property
+    # def 执行函数实例(self):
+    #     return getattr(self, self.执行函数)
 
     @classmethod
     def 构建所有待执行的任务查询字典(cls, **kwargs):
@@ -254,44 +339,48 @@ class 抽象定时任务(BaseModel):
         return cls.objects.filter(**cls.构建所有待执行的任务查询字典(**kwargs))
 
     @classmethod
-    def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False):
+    def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
         while 1:
-            q = cls.得到所有待执行的任务().order_by("优先级", "update_time")
+            q = cls.得到所有待执行的任务(**kwargs).order_by("优先级", "update_time")
             for obj in q:
-                print(f"开始执行任务:{obj.执行函数}")
                 obj.step()
             if 单步:
                 break
-            time.sleep(每轮间隔秒数)
+            time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
+
+    def print_info(self, *a):
+        if self.输出调试信息:
+            print(*a)
 
     def step(self):
-        self.任务数据 = self.下载任务数据()
-        if not self.任务数据 and self.任务服务url:
-            print("==========没有新任务")
-        else:
-            self.执行函数实例()
+        self.下载任务数据()
+        # if hasattr(self, "远程数据记录") and self.远程数据记录 is None or not self.远程数据记录.is_empty():
+        if hasattr(self, "远程数据记录"):
+            if self.远程数据记录 is None or not self.远程数据记录.is_empty():
+                self.print_info(f"开始执行任务:{self.执行函数}")
+                getattr(self, self.执行函数)()
         self.save()
 
+
     def 组建下载参数(self):
-        return self.任务下载参数
+        return copy.copy(self.任务下载参数)
 
+    
+    def 获取完整任务数据下载链接(self, clear=False, **kwargs):
+        if not clear:
+            d = self.组建下载参数()
+            d.update(**kwargs)
+        else:
+            d = kwargs
+        return f"{self.任务服务url}?{urlencode(d)}"
+
+    
     def 下载任务数据(self):
-        if self.任务服务url:
-            try:
-                return requests.get(self.任务服务url, params=self.组建下载参数()).json()
-            except requests.exceptions.JSONDecodeError as e:
-                print(e)
-
-    def 上传任务执行结果(self, **kwargs):
-        return requests.post(self.任务服务url, data=kwargs).json()
-
-    def 是否任务数据变更(self):
-        return get_hash_jsonable(self.任务数据) == get_hash_jsonable(
-            self.下载任务数据()
-        )
-
-    def 执行任务(self):
-        self.step()
+        try:
+            self.远程数据记录 = RemoteModel(self.任务服务url, pk_name='id', **self.组建下载参数()) if self.任务服务url else None
+            return self.远程数据记录
+        except requests.exceptions.HTTPError as e:
+            print(e)
 
 
 class 抽象定时任务日志(AbstractModel):
