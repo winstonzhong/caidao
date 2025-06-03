@@ -30,12 +30,14 @@ class 基础任务视图(APIView):
         ):
             obj = None
         else:
-            obj = q.first()
+            obj = q.order_by("update_time").first()
 
         obj = self.after_get(request, obj)
 
         if isinstance(obj, str):
             return HttpResponse(obj)
+        elif isinstance(obj, list) or isinstance(obj, dict):
+            return JsonResponse(obj)
         elif obj is not None:
             return JsonResponse(obj.json)
         else:

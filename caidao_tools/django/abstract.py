@@ -321,9 +321,9 @@ class 抽象定时任务(BaseModel):
             not self.id or self.得到所有待执行的任务().filter(id__in=[self.id]).exists()
         )
 
-    @property
-    def 执行函数实例(self):
-        return getattr(self, self.执行函数)
+    # @property
+    # def 执行函数实例(self):
+    #     return getattr(self, self.执行函数)
 
     @classmethod
     def 构建所有待执行的任务查询字典(cls, **kwargs):
@@ -342,8 +342,6 @@ class 抽象定时任务(BaseModel):
     def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
         while 1:
             q = cls.得到所有待执行的任务(**kwargs).order_by("优先级", "update_time")
-            # print(q)
-            # break
             for obj in q:
                 obj.step()
             if 单步:
@@ -354,14 +352,13 @@ class 抽象定时任务(BaseModel):
         if self.输出调试信息:
             print(*a)
 
-    def 运行任务(self):
-        self.执行函数实例()
-
     def step(self):
         self.下载任务数据()
-        if self.远程数据记录 is None or not self.远程数据记录.is_empty():
-            self.print_info(f"开始执行任务:{self.执行函数}")
-            self.运行任务()
+        # if hasattr(self, "远程数据记录") and self.远程数据记录 is None or not self.远程数据记录.is_empty():
+        if hasattr(self, "远程数据记录"):
+            if self.远程数据记录 is None or not self.远程数据记录.is_empty():
+                self.print_info(f"开始执行任务:{self.执行函数}")
+                getattr(self, self.执行函数)()
         self.save()
 
 
@@ -384,10 +381,6 @@ class 抽象定时任务(BaseModel):
             return self.远程数据记录
         except requests.exceptions.HTTPError as e:
             print(e)
-
-
-    def 执行任务(self):
-        self.step()
 
 
 class 抽象定时任务日志(AbstractModel):
