@@ -341,9 +341,10 @@ class 抽象定时任务(BaseModel):
     @classmethod
     def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
         while 1:
-            q = cls.得到所有待执行的任务(**kwargs).order_by("优先级", "update_time")
-            for obj in q:
-                obj.step()
+            q = cls.得到所有待执行的任务(**kwargs).order_by("-优先级", "update_time")
+            for obj in q.iterator():
+                if obj.step() and obj.优先级 > 0:
+                    break
             if 单步:
                 break
             time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
@@ -354,12 +355,12 @@ class 抽象定时任务(BaseModel):
 
     def step(self):
         self.下载任务数据()
-        # if hasattr(self, "远程数据记录") and self.远程数据记录 is None or not self.远程数据记录.is_empty():
-        if hasattr(self, "远程数据记录"):
-            if self.远程数据记录 is None or not self.远程数据记录.is_empty():
-                self.print_info(f"开始执行任务:{self.执行函数}")
-                getattr(self, self.执行函数)()
+        executed = False
+        if self.远程数据记录 is None or not self.远程数据记录.is_empty():
+            self.print_info(f"开始执行任务:{self.执行函数}")
+            executed = getattr(self, self.执行函数)()
         self.save()
+        return executed
 
 
     def 组建下载参数(self):
@@ -378,15 +379,16 @@ class 抽象定时任务(BaseModel):
     def 下载任务数据(self):
         try:
             self.远程数据记录 = RemoteModel(self.任务服务url, pk_name='id', **self.组建下载参数()) if self.任务服务url else None
-            return self.远程数据记录
         except requests.exceptions.HTTPError as e:
             print(e)
+            self.远程数据记录 = None
+        return self.远程数据记录
 
 
 class 抽象定时任务日志(AbstractModel):
     定时任务_id = models.BigIntegerField()
     数据_id = models.BigIntegerField(null=True)
-    异常日志 = models.TextField(null=True, blank=True)
+    异常日志 = models.JSONField(default=dict)
 
     class Meta:
         abstract = True
