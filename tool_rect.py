@@ -241,6 +241,30 @@ class Rect(object):
             return None
         return self
 
+    def expand_majiang_table_safe(self, left, right, top, bottom, width, height, first_page, last_page):
+        self.left -= left
+        self.top -= top
+        self.right += right
+        self.bottom += bottom
+
+        if last_page:
+            safe = True
+        elif first_page and self.top < 0:
+            safe = True
+        else:
+            safe = False
+
+        if safe:
+            self.left = max(self.left, 0)  
+            self.top = max(self.top, 0)
+            self.right = min(self.right, width)
+            self.bottom = min(self.bottom, height)
+            return self
+
+        if self.left < 0  or self.top < 0 or self.right > width or self.bottom > height:
+            return None
+        return self
+
     def change(self, width=None, height=None, shape=None, safe=True):
         """
         >>> Rect(100,200,200,400).change(150, 250, (1000,900))
