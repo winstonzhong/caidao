@@ -340,11 +340,17 @@ class 抽象定时任务(BaseModel):
 
     @classmethod
     def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
+        seconds_sleep_when_exception = 10
         while 1:
             q = cls.得到所有待执行的任务(**kwargs).order_by("-优先级", "update_time")
-            for obj in q.iterator():
-                if obj.step() and obj.优先级 > 0:
-                    break
+            try:
+                for obj in q.iterator():
+                    if obj.step() and obj.优先级 > 0:
+                        break
+            except Exception as e:
+                print(traceback.format_exc())
+                print(f'发生异常, 等待{seconds_sleep_when_exception}秒后继续执行')
+                time.sleep(seconds_sleep_when_exception)
             if 单步:
                 break
             time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
