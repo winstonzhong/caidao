@@ -453,6 +453,23 @@ def convert_time_description_to_seconds(description):
         raise ValueError(f"不支持的时间单位: {unit}")
     return number * conversion[unit]
 
+def 岁数转生日(年龄):
+    return datetime.date.today() - datetime.timedelta(days=365*年龄)
+
+def 生日转岁数(生日, today=None):
+    '''
+    >>> 生日转岁数(datetime.date(2000, 1, 1), today='2025-06-06')
+    25
+    >>> 生日转岁数(datetime.date(2200, 1, 1), today='2025-06-05')
+    0
+    >>> 生日转岁数('1975-06-25', today='2025-06-05')
+    50
+    >>> 生日转岁数('1975-06-25') > 0
+    True
+    '''
+    today = datetime.date.today() if today is None else to_date(today)
+    age = today.year - to_date(生日).year
+    return age if age >= 0 else 0
 
 if __name__ == '__main__':
     import doctest

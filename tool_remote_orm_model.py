@@ -1,5 +1,5 @@
 import requests
-
+import json
 
 class RemoteModel:
     """
@@ -90,7 +90,15 @@ class RemoteModel:
         if pk_value is None:
             raise ValueError(f"Primary key value for '{self.pk_name}' is not set.")
 
-        payload = {"pk_name": self.pk_name, "pk_value": pk_value, **self.changed_data}
+
+        processed_data = {}
+        for key, value in self.changed_data.items():
+            if isinstance(value, (dict, list)):
+                processed_data[key] = json.dumps(value)
+            else:
+                processed_data[key] = value
+
+        payload = {"pk_name": self.pk_name, "pk_value": pk_value, **processed_data}
         response = requests.post(self.url, data=payload)
         response.raise_for_status()
         self.changed_data.clear()
