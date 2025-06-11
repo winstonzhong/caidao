@@ -17,14 +17,17 @@ from lxml import etree
 
 import functools
 
+import json
+
 
 def retrying(tries):
     """
     重试装饰器，允许指定重试次数
-    
+
     参数:
         tries: 重试次数
     """
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -38,7 +41,9 @@ def retrying(tries):
                     if attempt < tries:
                         time.sleep(1)  # 避免立即重试
             raise last_exception  # 所有尝试均失败后抛出最后一个异常
+
         return wrapper
+
     return decorator
 
 
@@ -50,8 +55,10 @@ class DummyWatcher(object):
     def run(self, xml_content):
         return False
 
+
 class XpathNotFoundException(Exception):
     pass
+
 
 class DummyDevice(object):
     def __init__(self, fpath=None, adb=None, xml=None):
@@ -81,7 +88,7 @@ class DummyDevice(object):
 
     # def long_click(self, x, y, duration: float = .5):
     #     pass
-    
+
     def move_to(self, *a, **k):
         print(a, k)
 
@@ -116,6 +123,13 @@ class SteadyDevice(DummyDevice):
         self.key = None
         self.refresh()
 
+    @classmethod
+    def from_ip_port(cls, ip_port=None):
+        from adb_tools.helper_adb import BaseAdb
+
+        adb = BaseAdb.first_adb() if ip_port is None else BaseAdb.from_ip_port(ip_port)
+        return cls(adb)
+
     def 拷贝环境(self, other):
         self.key = other.key
         self.source = other.source
@@ -133,14 +147,14 @@ class SteadyDevice(DummyDevice):
         key = get_hash(xml)
         return key
 
-    def refresh(self, debug=False):
+    def refresh(self, debug=False, wait_steady=True):
         old_key = None
         max_try = 6
         for i in range(max_try):
             xml_dumped = self.adb.ua2.dump_hierarchy()
             # key = get_hash(xml_dumped)
             key = self.get_hash_key(xml_dumped)
-            if old_key != key and i < max_try - 1:
+            if wait_steady and old_key != key and i < max_try - 1:
                 print(f"waiting xml tobe steady:...{i}") if debug else None
                 old_key = key
                 time.sleep(0.1)
@@ -153,11 +167,11 @@ class SteadyDevice(DummyDevice):
         for i in range(retries):
             e = find_by_xpath(self, x)
             if wait and not e.all():
-                print(f'not found:{x}, retry {i}/{retries}')
+                print(f"not found:{x}, retry {i}/{retries}")
                 self.refresh()
             else:
                 return e
-        raise XpathNotFoundException(f'xpath not found:{x}')
+        raise XpathNotFoundException(f"xpath not found:{x}")
 
     def find_xpath_all(self, x, wait=False, retries=3):
         return self.find_xpath_safe(x, wait, retries).all()
@@ -172,6 +186,65 @@ class SteadyDevice(DummyDevice):
 
     def has_xpath(self, x, wait=False, retries=3):
         return bool(self.find_xpath_safe(x, wait, retries).all())
+
+
+class 基本输入字段对象(object):
+    def __init__(self, d):
+        self.d = d
+
+
+class 基本界面元素(基本输入字段对象):
+    @classmethod
+    def from_dict(cls, d):
+        if d.get("tpl_type") == 1:
+            return Xml界面元素(d)
+        else:
+            return Screen界面元素(d)
+
+    def match(self, job):
+        raise NotImplementedError
+
+    def execute(self, job):
+        exec(self.d.get("lines"))
+
+
+class Xml界面元素(基本界面元素):
+    def match(self, job):
+        raise NotImplementedError
+
+
+class Screen界面元素(基本界面元素):
+    pass
+
+
+class 操作块(基本输入字段对象):
+    def __init__(self, d):
+        super().__init__(d)
+        self.tpls = [基本界面元素.from_dict(x) for x in d.get("tpls")]
+
+
+class 基本任务(object):
+    def __init__(self, fpath):
+        with open(fpath, "r", encoding="utf8") as fp:
+            self.d = json.load(fp)
+        self.blocks = [操作块(x) for x in self.d.get("blocks")]
+
+    @property
+    def name(self):
+        return self.d.get("name")
+
+    @property
+    def package(self):
+        return self.d.get("package")
+
+    @property
+    def resource_id(self):
+        return self.d.get("activity")
+
+
+class 任务快照设备(SteadyDevice):
+    def __init__(self, ip_port, json):
+        pass
 
 
 class TaskSnapShotDevice(SnapShotDevice):
