@@ -223,6 +223,17 @@ class 操作块(基本输入字段对象):
         self.tpls = [基本界面元素.from_dict(x) for x in d.get("tpls")]
 
 
+class 基本设备(基本输入字段对象):
+    pass
+
+
+class 端设备(基本设备):
+    pass
+
+class 脑设备(基本设备):
+    pass
+
+
 class 基本任务(object):
     def __init__(self, fpath):
         with open(fpath, "r", encoding="utf8") as fp:
