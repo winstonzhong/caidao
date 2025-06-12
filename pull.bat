@@ -1,1 +1,1 @@
-git pull origin
+git pull origin main
