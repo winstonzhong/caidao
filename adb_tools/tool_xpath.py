@@ -19,6 +19,8 @@ import functools
 
 import json
 
+import pandas
+
 
 def retrying(tries):
     """
@@ -115,13 +117,22 @@ class SnapShotDevice(DummyDevice):
 
 
 class SteadyDevice(DummyDevice):
-    def __init__(self, adb, old_key=None):
+    def __init__(self, adb, old_key=None, need_screen=False, need_xml=True):
         self.adb = adb
         self.settings = {"xpath_debug": False}
         self.watcher = DummyWatcher()
         self.wait_timeout = 0
         self.key = None
+        self.need_screen = need_screen
+        self.need_xml = need_xml
+        self.img = None
+        self.source = None
         self.refresh()
+
+    def snapshot(self, wait_steady=False):
+        if self.need_screen:
+            self.img = self.adb.screenshot()
+        self.refresh(wait_steady=wait_steady)
 
     @classmethod
     def from_ip_port(cls, ip_port=None):
@@ -148,20 +159,21 @@ class SteadyDevice(DummyDevice):
         return key
 
     def refresh(self, debug=False, wait_steady=True):
-        old_key = None
-        max_try = 6
-        for i in range(max_try):
-            xml_dumped = self.adb.ua2.dump_hierarchy()
-            # key = get_hash(xml_dumped)
-            key = self.get_hash_key(xml_dumped)
-            if wait_steady and old_key != key and i < max_try - 1:
-                print(f"waiting xml tobe steady:...{i}") if debug else None
-                old_key = key
-                time.sleep(0.1)
-            else:
-                self.key = key
-                self.source = xml_dumped
-                break
+        if self.need_xml:
+            old_key = None
+            max_try = 6
+            for i in range(max_try):
+                xml_dumped = self.adb.ua2.dump_hierarchy()
+                # key = get_hash(xml_dumped)
+                key = self.get_hash_key(xml_dumped)
+                if wait_steady and old_key != key and i < max_try - 1:
+                    print(f"waiting xml tobe steady:...{i}") if debug else None
+                    old_key = key
+                    time.sleep(0.1)
+                else:
+                    self.key = key
+                    self.source = xml_dumped
+                    break
 
     def find_xpath_safe(self, x, wait=False, retries=3):
         for i in range(retries):
@@ -187,16 +199,31 @@ class SteadyDevice(DummyDevice):
     def has_xpath(self, x, wait=False, retries=3):
         return bool(self.find_xpath_safe(x, wait, retries).all())
 
+    def send_keys(self, keys, clear=True):
+        self.adb.ua2.send_keys(keys, clear)
+
 
 class 基本输入字段对象(object):
     def __init__(self, d):
         self.d = d
 
+    @property
+    def id(self):
+        return self.d.get("id")
+
 
 class 基本界面元素(基本输入字段对象):
+    def __init__(self, d):
+        super().__init__(d)
+        self.matched = False
+
+    @property
+    def inverse(self):
+        return self.d.get("inverse")
+
     @classmethod
     def from_dict(cls, d):
-        if d.get("tpl_type") == 1:
+        if d.get("type") == 1:
             return Xml界面元素(d)
         else:
             return Screen界面元素(d)
@@ -204,13 +231,25 @@ class 基本界面元素(基本输入字段对象):
     def match(self, job):
         raise NotImplementedError
 
-    def execute(self, job):
-        exec(self.d.get("lines"))
+    def execute(self, job, lines):
+        try:
+            exec(lines)
+        except Exception as e:
+            print(f"error when executing:{self.id}:{e}")
+            return False
+        return True
 
 
 class Xml界面元素(基本界面元素):
+    @property
+    def xpath(self):
+        return self.d.get("xpath")
+
     def match(self, job):
-        raise NotImplementedError
+        self.results = find_by_xpath(job.device, self.xpath).all()
+        self.matched = (
+            bool(self.results) if not self.inverse else not bool(self.results)
+        )
 
 
 class Screen界面元素(基本界面元素):
@@ -221,25 +260,84 @@ class 操作块(基本输入字段对象):
     def __init__(self, d):
         super().__init__(d)
         self.tpls = [基本界面元素.from_dict(x) for x in d.get("tpls")]
+        self.num_executed = 0
+        self.num_conti_repeated = 0
 
+    @property
+    def lines(self):
+        return self.d.get("lines")
 
-class 基本设备(基本输入字段对象):
-    pass
+    def execute(self, job):
+        for tpl in self.tpls:
+            if not tpl.matched:
+                continue
+            if tpl.execute(job, self.lines):
+                self.num_executed += 1
+                self.num_conti_repeated += bool(job.last_executed_block_id == self.id)
+                job.last_executed_block_id = self.id
+                return True
 
+    def match(self, job):
+        状态正确 = True if not self.only_when else job.status == self.only_when
+        for tpl in self.tpls:
+            if 状态正确:
+                tpl.match(job)
+            else:
+                tpl.matched = False
 
-class 端设备(基本设备):
-    pass
+    @property
+    def matched(self):
+        return any([tpl.matched for tpl in self.tpls])
 
-class 脑设备(基本设备):
-    pass
+    @property
+    def priority(self):
+        return self.d.get("priority")
 
+    @property
+    def only_when(self):
+        return self.d.get("only_when") or ""
 
-class 基本任务(object):
+    @property
+    def name(self):
+        return self.d.get("name")
+
+    @property
+    def index(self):
+        return self.d.get("index")
+
+    @property
+    def max_num(self):
+        return self.d.get("max_num")
+
+class 基本任务(基本输入字段对象):
     def __init__(self, fpath):
-        with open(fpath, "r", encoding="utf8") as fp:
-            self.d = json.load(fp)
-        self.blocks = [操作块(x) for x in self.d.get("blocks")]
+        if isinstance(fpath, str):
+            assert os.path.exists(fpath)
+            with open(fpath, "r", encoding="utf8") as fp:
+                self.init(json.load(fp))
+        elif isinstance(fpath, dict):
+            self.init(fpath)
+        else:
+            raise ValueError(f"invalid type of fpath:{type(fpath)}")
+        self.status = None
+        self.last_executed_block_id = None
 
+    def init(self, d):
+        self.d = d
+        self.blocks = [操作块(x) for x in self.d.get("blocks")]
+        if self.d.get("device").get("is_window"):
+            raise NotImplementedError
+        else:
+            self.device = SteadyDevice.from_ip_port(self.d.get("device").get("ip_port"))
+
+    def 打开应用(self):
+        script = f"am start -n {self.package}/{self.activity}"
+        return self.device.adb.execute(script)
+
+    def 关闭应用(self):
+        script = f"am force-stop {self.package}"
+        return self.device.adb.execute(script)
+    
     @property
     def name(self):
         return self.d.get("name")
@@ -249,8 +347,61 @@ class 基本任务(object):
         return self.d.get("package")
 
     @property
-    def resource_id(self):
+    def activity(self):
         return self.d.get("activity")
+    
+
+    def 执行操作块(self, block_id):
+        self.match()
+        block = next(filter(lambda b: b.id == block_id, self.blocks))
+        block.execute(self)
+            
+
+    def match(self):
+        self.device.snapshot(wait_steady=False)
+        for block in self.blocks:
+            block.match(self)
+
+    def get_df(self):
+        df = pandas.DataFrame(
+            [
+                {
+                    "id": b.id,
+                    "index": b.index,
+                    "matched": b.matched,
+                    "priority": b.priority,
+                    "only_when": b.only_when,
+                    "num": b.num_executed,
+                    "repeated": b.num_conti_repeated,
+                    "max_num": b.max_num,
+                    "name": b.name,
+                }
+                for b in self.blocks
+            ],
+        )
+        return df.sort_values(
+            ["matched", "priority", "index"], ascending=[False, False, True]
+        )
+
+    def 执行任务(self, 单步=True):
+        while 1:
+            self.match()
+            df = self.get_df()
+            print("job status:", self.status)
+            print(df)
+            tmp = df[df["matched"]]
+            匹配成功 = not tmp.empty
+            if 匹配成功:
+                s = tmp.iloc[0]
+                if s.repeated >= s.max_num:
+                    print('达到最大重复次数，停止执行：{}'.format(s.name))
+                    break
+                self.执行操作块(s.id)
+            if 单步:
+                break
+
+            if self.status == '完成' and not 匹配成功:
+                break
 
 
 class 任务快照设备(SteadyDevice):

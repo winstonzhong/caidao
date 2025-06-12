@@ -1,24 +1,3 @@
-'''
-Created on 2023年12月20日
-
-@author: lenovo
-'''
-'''
-Created on 2023年7月23日
-
-@author: lenovo
-'''
-# def wait_window_open(game, hwnd, try_times=TRY_TIMES):
-#     """根据句柄尝试获取窗口"""
-#     time.sleep(WAIT_WINDOW_TIME)
-#     # print('1111', win32gui.IsWindow(hwnd))
-#
-#     while not win32gui.IsWindow(game.__getattribute__(hwnd)) and try_times:
-#         try_times -= 1
-#         print(f'wait hwnd {hwnd}, times: {try_times}')
-#         # print(f'wait hwnd {hwnd}')
-#         time.sleep(WAIT_WINDOW_TIME)
-
 import ctypes
 import os
 import subprocess
