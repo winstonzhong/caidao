@@ -12,7 +12,7 @@ from uiautomator2.xpath import XPath
 
 from helper_hash import get_hash
 from tool_env import bounds_to_rect
-from tool_img import get_template_points, show, pil2cv2, cv2pil
+from tool_img import get_template_points, show, pil2cv2, cv2pil, b642cv2
 from lxml import etree
 
 import functools
@@ -21,6 +21,7 @@ import json
 
 import pandas
 
+from functools import cached_property
 
 def retrying(tries):
     """
@@ -253,7 +254,40 @@ class Xml界面元素(基本界面元素):
 
 
 class Screen界面元素(基本界面元素):
-    pass
+    @cached_property
+    def img(self):
+        return b642cv2(self.d.get("img"))
+
+
+
+class Windows窗口设备(基本输入字段对象):
+    def __init__(self, d):
+        super().__init__(d)
+        self.hwnd = 0
+    
+    @property
+    def title(self):
+        return self.d.get("title")
+    
+    @property
+    def clsname(self):
+        return self.d.get("clsname")
+    
+    def get_hwnd(self):
+        import win32gui
+        from helper_win32 import SEARCH_WINDOWS
+        if not win32gui.IsWindow(self.hwnd):
+            l = SEARCH_WINDOWS(title=self.title, clsname=self.clsname)
+            self.hwnd = l[0] if l else 0
+        return self.hwnd
+
+    
+    def snapshot(self, wait_steady=False):
+        from helper_win32 import SCREENSHOT
+        print(f"snapshot window:{self.get_hwnd()}")
+        self.img = pil2cv2(SCREENSHOT(self.get_hwnd()))
+
+
 
 
 class 操作块(基本输入字段对象):
@@ -325,8 +359,8 @@ class 基本任务(基本输入字段对象):
     def init(self, d):
         self.d = d
         self.blocks = [操作块(x) for x in self.d.get("blocks")]
-        if self.d.get("device").get("is_window"):
-            raise NotImplementedError
+        if self.d.get("device").get("is_windows"):
+            self.device = Windows窗口设备(self.d.get("device"))
         else:
             self.device = SteadyDevice.from_ip_port(self.d.get("device").get("ip_port"))
 
