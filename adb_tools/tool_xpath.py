@@ -394,7 +394,7 @@ class 基本任务(基本输入字段对象):
     def 执行操作块(self, block_id):
         self.match(block_id)
         block = next(filter(lambda b: b.id == block_id, self.blocks))
-        block.execute(self)
+        return block.execute(self)
 
     def match(self, block_id=None):
         self.device.snapshot(wait_steady=False)
@@ -425,6 +425,7 @@ class 基本任务(基本输入字段对象):
 
     def 执行任务(self, 单步=True):
         num_empty_repeated = 0
+        executed = 0
         while 1:
             if self.status == "完成":
                 break
@@ -443,7 +444,7 @@ class 基本任务(基本输入字段对象):
             匹配成功 = not tmp.empty
 
             if 匹配成功:
-                self.执行操作块(tmp.iloc[0].id)
+                executed += bool(self.执行操作块(tmp.iloc[0].id))
                 num_empty_repeated = 0
             else:
                 num_empty_repeated += 1
@@ -453,12 +454,9 @@ class 基本任务(基本输入字段对象):
 
             if 单步:
                 break
+        return executed
 
 
-
-class 任务快照设备(SteadyDevice):
-    def __init__(self, ip_port, json):
-        pass
 
 
 class TaskSnapShotDevice(SnapShotDevice):
