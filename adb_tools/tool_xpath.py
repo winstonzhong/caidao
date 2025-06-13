@@ -426,6 +426,9 @@ class 基本任务(基本输入字段对象):
     def 执行任务(self, 单步=True):
         num_empty_repeated = 0
         while 1:
+            if self.status == "完成":
+                break
+
             self.match()
             df = self.get_df()
             print("job status:", self.status)
@@ -451,8 +454,6 @@ class 基本任务(基本输入字段对象):
             if 单步:
                 break
 
-            if self.status == "完成" and not 匹配成功:
-                break
 
 
 class 任务快照设备(SteadyDevice):
