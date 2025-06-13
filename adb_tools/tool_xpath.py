@@ -23,6 +23,7 @@ import pandas
 
 from functools import cached_property
 
+
 def retrying(tries):
     """
     重试装饰器，允许指定重试次数
@@ -233,12 +234,12 @@ class 基本界面元素(基本输入字段对象):
         raise NotImplementedError
 
     def execute(self, job, lines):
-        try:
-            exec(lines)
-        except Exception as e:
-            print(f"error when executing:{self.id}:{e}")
-            return False
-        return True
+        if self.matched:
+            try:
+                exec(lines)
+                return True
+            except Exception as e:
+                print(f"error when executing:{self.id}:{e}")
 
 
 class Xml界面元素(基本界面元素):
@@ -259,35 +260,33 @@ class Screen界面元素(基本界面元素):
         return b642cv2(self.d.get("img"))
 
 
-
 class Windows窗口设备(基本输入字段对象):
     def __init__(self, d):
         super().__init__(d)
         self.hwnd = 0
-    
+
     @property
     def title(self):
         return self.d.get("title")
-    
+
     @property
     def clsname(self):
         return self.d.get("clsname")
-    
+
     def get_hwnd(self):
         import win32gui
         from helper_win32 import SEARCH_WINDOWS
+
         if not win32gui.IsWindow(self.hwnd):
             l = SEARCH_WINDOWS(title=self.title, clsname=self.clsname)
             self.hwnd = l[0] if l else 0
         return self.hwnd
 
-    
     def snapshot(self, wait_steady=False):
         from helper_win32 import SCREENSHOT
+
         print(f"snapshot window:{self.get_hwnd()}")
         self.img = pil2cv2(SCREENSHOT(self.get_hwnd()))
-
-
 
 
 class 操作块(基本输入字段对象):
@@ -312,7 +311,10 @@ class 操作块(基本输入字段对象):
                 return True
 
     def match(self, job):
-        状态正确 = True if not self.only_when else job.status == self.only_when
+        if not job.status and not self.only_when:
+            状态正确 = True
+        else:
+            状态正确 = job.status == self.only_when
         for tpl in self.tpls:
             if 状态正确:
                 tpl.match(job)
@@ -343,6 +345,7 @@ class 操作块(基本输入字段对象):
     def max_num(self):
         return self.d.get("max_num")
 
+
 class 基本任务(基本输入字段对象):
     def __init__(self, fpath):
         if isinstance(fpath, str):
@@ -371,7 +374,7 @@ class 基本任务(基本输入字段对象):
     def 关闭应用(self):
         script = f"am force-stop {self.package}"
         return self.device.adb.execute(script)
-    
+
     @property
     def name(self):
         return self.d.get("name")
@@ -383,18 +386,21 @@ class 基本任务(基本输入字段对象):
     @property
     def activity(self):
         return self.d.get("activity")
-    
+
+    @property
+    def max_empty(self):
+        return self.d.get("max_empty", 3)
 
     def 执行操作块(self, block_id):
-        self.match()
+        self.match(block_id)
         block = next(filter(lambda b: b.id == block_id, self.blocks))
         block.execute(self)
-            
 
-    def match(self):
+    def match(self, block_id=None):
         self.device.snapshot(wait_steady=False)
         for block in self.blocks:
-            block.match(self)
+            if block_id is None or block.id == block_id:
+                block.match(self)
 
     def get_df(self):
         df = pandas.DataFrame(
@@ -418,23 +424,34 @@ class 基本任务(基本输入字段对象):
         )
 
     def 执行任务(self, 单步=True):
+        num_empty_repeated = 0
         while 1:
             self.match()
             df = self.get_df()
             print("job status:", self.status)
             print(df)
+
             tmp = df[df["matched"]]
+
+            if not tmp[tmp.repeated >= tmp.max_num].empty:
+                print("达到最大重复次数，停止执行")
+                break
+
             匹配成功 = not tmp.empty
+
             if 匹配成功:
-                s = tmp.iloc[0]
-                if s.repeated >= s.max_num:
-                    print('达到最大重复次数，停止执行：{}'.format(s.name))
+                self.执行操作块(tmp.iloc[0].id)
+                num_empty_repeated = 0
+            else:
+                num_empty_repeated += 1
+                if num_empty_repeated > self.max_empty:
+                    print("达到最大空白屏次数，停止执行")
                     break
-                self.执行操作块(s.id)
+
             if 单步:
                 break
 
-            if self.status == '完成' and not 匹配成功:
+            if self.status == "完成" and not 匹配成功:
                 break
 
 
