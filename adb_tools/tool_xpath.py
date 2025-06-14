@@ -346,16 +346,27 @@ class 操作块(基本输入字段对象):
         return self.d.get("max_num")
 
 
-class 基本任务(基本输入字段对象):
-    def __init__(self, fpath):
-        if isinstance(fpath, str):
-            assert os.path.exists(fpath)
-            with open(fpath, "r", encoding="utf8") as fp:
+class 抽象持久序列(基本输入字段对象):
+    def __init__(self, fpath_or_dict):
+        if isinstance(fpath_or_dict, str):
+            assert os.path.exists(fpath_or_dict)
+            with open(fpath_or_dict, "r", encoding="utf8") as fp:
                 self.init(json.load(fp))
-        elif isinstance(fpath, dict):
-            self.init(fpath)
+        elif isinstance(fpath_or_dict, dict) or isinstance(fpath_or_dict, list):
+            self.init(fpath_or_dict)
         else:
-            raise ValueError(f"invalid type of fpath:{type(fpath)}")
+            raise ValueError(f"invalid type of fpath:{type(fpath_or_dict)}")
+    
+    def init(self, d):
+        raise NotImplementedError
+    
+    def 执行任务(self, 单步=True):
+        raise NotImplementedError
+    
+    
+class 基本任务(抽象持久序列):
+    def __init__(self, fpath_or_dict):
+        super().__init__(fpath_or_dict)
         self.status = None
         self.last_executed_block_id = None
 
@@ -456,8 +467,16 @@ class 基本任务(基本输入字段对象):
                 break
         return executed
 
+class 基本任务列表(抽象持久序列):
+    def init(self, list_of_dict):
+        self.jobs = [基本任务(d) for d in list_of_dict]
 
-
+    def 执行任务(self, 单步=False):
+        if 单步:
+            self.jobs[-1].执行任务(单步=单步)
+        else:
+            for job in self.jobs:
+                job.执行任务(单步=False)
 
 class TaskSnapShotDevice(SnapShotDevice):
     def __init__(self, adb, task, base_dir):
