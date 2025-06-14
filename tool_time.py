@@ -7,7 +7,7 @@ from datetime import timedelta
 import datetime
 import re
 from time import strptime, mktime
-from zoneinfo import ZoneInfo
+
 
 from django.utils import timezone
 import pandas
@@ -364,6 +364,7 @@ def 解析一般格式日期时间(time_str):
     >>> 解析一般格式日期时间('Sat, 29 Mar 2025 11:16:00 GMT')
     datetime.datetime(2025, 3, 29, 11, 16, tzinfo=zoneinfo.ZoneInfo(key='GMT'))
     '''
+    from zoneinfo import ZoneInfo
     try:
         # 定义时间格式
         time_format = "%a, %d %b %Y %H:%M:%S %Z"

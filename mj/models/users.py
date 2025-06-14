@@ -53,6 +53,7 @@ class AbstractUser(models.Model):
     expired_at = models.DateTimeField(verbose_name='过期时间', null=True)
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+    open_id = models.CharField(max_length=50, verbose_name='openid', blank=True, null=True)
 
     class Meta:
         abstract = True

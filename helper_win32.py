@@ -1,28 +1,8 @@
-'''
-Created on 2023年12月20日
-
-@author: lenovo
-'''
-'''
-Created on 2023年7月23日
-
-@author: lenovo
-'''
-# def wait_window_open(game, hwnd, try_times=TRY_TIMES):
-#     """根据句柄尝试获取窗口"""
-#     time.sleep(WAIT_WINDOW_TIME)
-#     # print('1111', win32gui.IsWindow(hwnd))
-#
-#     while not win32gui.IsWindow(game.__getattribute__(hwnd)) and try_times:
-#         try_times -= 1
-#         print(f'wait hwnd {hwnd}, times: {try_times}')
-#         # print(f'wait hwnd {hwnd}')
-#         time.sleep(WAIT_WINDOW_TIME)
-
 import ctypes
 import os
 import subprocess
 import time
+import re
 
 from PIL import Image, ImageGrab
 import psutil
@@ -164,6 +144,24 @@ def GET_WINDOWS(clsname=None, title=None, pid=None, visible=None, clsname_starts
     
 def FIND_WINDOW(clsname=None, title=None, pid=None, visible=None):
     return GET_WINDOWS(clsname, title, pid, visible)[0]
+
+
+def SEARCH_WINDOWS(clsname=None, title=None, pid=None, visible=None, debug=False):
+    hWndList = []  
+    win32gui.EnumWindows(lambda hWnd, param: param.append(hWnd), hWndList)
+    
+    rtn = []
+    for hwnd  in hWndList:
+        if win32gui.IsWindow(hwnd):
+            if clsname is None or re.match(clsname, win32gui.GetClassName(hwnd)):
+                if title is None or re.match(title, win32gui.GetWindowText(hwnd)) is not None:
+                    if pid is None or pid == GetWindowThreadProcessId(hwnd)[1]:
+                        if visible is None or visible == win32gui.IsWindowVisible(hwnd):
+                            if debug:
+                                print([win32gui.GetWindowText(hwnd)], win32gui.GetClassName(hwnd), hwnd)
+                            rtn.append(hwnd)
+    return rtn
+
 
 
 def SET_TOPMOST(hwnd):

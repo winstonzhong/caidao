@@ -12,19 +12,26 @@ from uiautomator2.xpath import XPath
 
 from helper_hash import get_hash
 from tool_env import bounds_to_rect
-from tool_img import get_template_points, show, pil2cv2, cv2pil
+from tool_img import get_template_points, show, pil2cv2, cv2pil, b642cv2
 from lxml import etree
 
 import functools
+
+import json
+
+import pandas
+
+from functools import cached_property
 
 
 def retrying(tries):
     """
     重试装饰器，允许指定重试次数
-    
+
     参数:
         tries: 重试次数
     """
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -38,7 +45,9 @@ def retrying(tries):
                     if attempt < tries:
                         time.sleep(1)  # 避免立即重试
             raise last_exception  # 所有尝试均失败后抛出最后一个异常
+
         return wrapper
+
     return decorator
 
 
@@ -50,8 +59,10 @@ class DummyWatcher(object):
     def run(self, xml_content):
         return False
 
+
 class XpathNotFoundException(Exception):
     pass
+
 
 class DummyDevice(object):
     def __init__(self, fpath=None, adb=None, xml=None):
@@ -81,7 +92,7 @@ class DummyDevice(object):
 
     # def long_click(self, x, y, duration: float = .5):
     #     pass
-    
+
     def move_to(self, *a, **k):
         print(a, k)
 
@@ -108,13 +119,29 @@ class SnapShotDevice(DummyDevice):
 
 
 class SteadyDevice(DummyDevice):
-    def __init__(self, adb, old_key=None):
+    def __init__(self, adb, old_key=None, need_screen=False, need_xml=True):
         self.adb = adb
         self.settings = {"xpath_debug": False}
         self.watcher = DummyWatcher()
         self.wait_timeout = 0
         self.key = None
+        self.need_screen = need_screen
+        self.need_xml = need_xml
+        self.img = None
+        self.source = None
         self.refresh()
+
+    def snapshot(self, wait_steady=False):
+        if self.need_screen:
+            self.img = self.adb.screenshot()
+        self.refresh(wait_steady=wait_steady)
+
+    @classmethod
+    def from_ip_port(cls, ip_port=None):
+        from adb_tools.helper_adb import BaseAdb
+
+        adb = BaseAdb.first_adb() if ip_port is None else BaseAdb.from_ip_port(ip_port)
+        return cls(adb)
 
     def 拷贝环境(self, other):
         self.key = other.key
@@ -133,31 +160,32 @@ class SteadyDevice(DummyDevice):
         key = get_hash(xml)
         return key
 
-    def refresh(self, debug=False):
-        old_key = None
-        max_try = 6
-        for i in range(max_try):
-            xml_dumped = self.adb.ua2.dump_hierarchy()
-            # key = get_hash(xml_dumped)
-            key = self.get_hash_key(xml_dumped)
-            if old_key != key and i < max_try - 1:
-                print(f"waiting xml tobe steady:...{i}") if debug else None
-                old_key = key
-                time.sleep(0.1)
-            else:
-                self.key = key
-                self.source = xml_dumped
-                break
+    def refresh(self, debug=False, wait_steady=True):
+        if self.need_xml:
+            old_key = None
+            max_try = 6
+            for i in range(max_try):
+                xml_dumped = self.adb.ua2.dump_hierarchy()
+                # key = get_hash(xml_dumped)
+                key = self.get_hash_key(xml_dumped)
+                if wait_steady and old_key != key and i < max_try - 1:
+                    print(f"waiting xml tobe steady:...{i}") if debug else None
+                    old_key = key
+                    time.sleep(0.1)
+                else:
+                    self.key = key
+                    self.source = xml_dumped
+                    break
 
     def find_xpath_safe(self, x, wait=False, retries=3):
         for i in range(retries):
             e = find_by_xpath(self, x)
             if wait and not e.all():
-                print(f'not found:{x}, retry {i}/{retries}')
+                print(f"not found:{x}, retry {i}/{retries}")
                 self.refresh()
             else:
                 return e
-        raise XpathNotFoundException(f'xpath not found:{x}')
+        raise XpathNotFoundException(f"xpath not found:{x}")
 
     def find_xpath_all(self, x, wait=False, retries=3):
         return self.find_xpath_safe(x, wait, retries).all()
@@ -173,6 +201,282 @@ class SteadyDevice(DummyDevice):
     def has_xpath(self, x, wait=False, retries=3):
         return bool(self.find_xpath_safe(x, wait, retries).all())
 
+    def send_keys(self, keys, clear=True):
+        self.adb.ua2.send_keys(keys, clear)
+
+
+class 基本输入字段对象(object):
+    def __init__(self, d):
+        self.d = d
+
+    @property
+    def id(self):
+        return self.d.get("id")
+
+
+class 基本界面元素(基本输入字段对象):
+    def __init__(self, d):
+        super().__init__(d)
+        self.matched = False
+
+    @property
+    def inverse(self):
+        return self.d.get("inverse")
+
+    @classmethod
+    def from_dict(cls, d):
+        if d.get("type") == 1:
+            return Xml界面元素(d)
+        else:
+            return Screen界面元素(d)
+
+    def match(self, job):
+        raise NotImplementedError
+
+    def execute(self, job, lines):
+        if self.matched:
+            try:
+                exec(lines)
+                return True
+            except Exception as e:
+                print(f"error when executing:{self.id}:{e}")
+
+
+class Xml界面元素(基本界面元素):
+    @property
+    def xpath(self):
+        return self.d.get("xpath")
+
+    def match(self, job):
+        self.results = find_by_xpath(job.device, self.xpath).all()
+        self.matched = (
+            bool(self.results) if not self.inverse else not bool(self.results)
+        )
+
+
+class Screen界面元素(基本界面元素):
+    @cached_property
+    def img(self):
+        return b642cv2(self.d.get("img"))
+
+
+class Windows窗口设备(基本输入字段对象):
+    def __init__(self, d):
+        super().__init__(d)
+        self.hwnd = 0
+
+    @property
+    def title(self):
+        return self.d.get("title")
+
+    @property
+    def clsname(self):
+        return self.d.get("clsname")
+
+    def get_hwnd(self):
+        import win32gui
+        from helper_win32 import SEARCH_WINDOWS
+
+        if not win32gui.IsWindow(self.hwnd):
+            l = SEARCH_WINDOWS(title=self.title, clsname=self.clsname)
+            self.hwnd = l[0] if l else 0
+        return self.hwnd
+
+    def snapshot(self, wait_steady=False):
+        from helper_win32 import SCREENSHOT
+
+        print(f"snapshot window:{self.get_hwnd()}")
+        self.img = pil2cv2(SCREENSHOT(self.get_hwnd()))
+
+
+class 操作块(基本输入字段对象):
+    def __init__(self, d):
+        super().__init__(d)
+        self.tpls = [基本界面元素.from_dict(x) for x in d.get("tpls")]
+        self.num_executed = 0
+        self.num_conti_repeated = 0
+
+    @property
+    def lines(self):
+        return self.d.get("lines")
+
+    def execute(self, job):
+        for tpl in self.tpls:
+            if not tpl.matched:
+                continue
+            if tpl.execute(job, self.lines):
+                self.num_executed += 1
+                self.num_conti_repeated += bool(job.last_executed_block_id == self.id)
+                job.last_executed_block_id = self.id
+                return True
+
+    def match(self, job):
+        if not job.status and not self.only_when:
+            状态正确 = True
+        else:
+            状态正确 = job.status == self.only_when
+        for tpl in self.tpls:
+            if 状态正确:
+                tpl.match(job)
+            else:
+                tpl.matched = False
+
+    @property
+    def matched(self):
+        return any([tpl.matched for tpl in self.tpls])
+
+    @property
+    def priority(self):
+        return self.d.get("priority")
+
+    @property
+    def only_when(self):
+        return self.d.get("only_when") or ""
+
+    @property
+    def name(self):
+        return self.d.get("name")
+
+    @property
+    def index(self):
+        return self.d.get("index")
+
+    @property
+    def max_num(self):
+        return self.d.get("max_num")
+
+
+class 抽象持久序列(基本输入字段对象):
+    def __init__(self, fpath_or_dict):
+        if isinstance(fpath_or_dict, str):
+            assert os.path.exists(fpath_or_dict)
+            with open(fpath_or_dict, "r", encoding="utf8") as fp:
+                self.init(json.load(fp))
+        elif isinstance(fpath_or_dict, dict) or isinstance(fpath_or_dict, list):
+            self.init(fpath_or_dict)
+        else:
+            raise ValueError(f"invalid type of fpath:{type(fpath_or_dict)}")
+    
+    def init(self, d):
+        raise NotImplementedError
+    
+    def 执行任务(self, 单步=True):
+        raise NotImplementedError
+    
+    
+class 基本任务(抽象持久序列):
+    def __init__(self, fpath_or_dict):
+        super().__init__(fpath_or_dict)
+        self.status = None
+        self.last_executed_block_id = None
+
+    def init(self, d):
+        self.d = d
+        self.blocks = [操作块(x) for x in self.d.get("blocks")]
+        if self.d.get("device").get("is_windows"):
+            self.device = Windows窗口设备(self.d.get("device"))
+        else:
+            self.device = SteadyDevice.from_ip_port(self.d.get("device").get("ip_port"))
+
+    def 打开应用(self):
+        script = f"am start -n {self.package}/{self.activity}"
+        return self.device.adb.execute(script)
+
+    def 关闭应用(self):
+        script = f"am force-stop {self.package}"
+        return self.device.adb.execute(script)
+
+    @property
+    def name(self):
+        return self.d.get("name")
+
+    @property
+    def package(self):
+        return self.d.get("package")
+
+    @property
+    def activity(self):
+        return self.d.get("activity")
+
+    @property
+    def max_empty(self):
+        return self.d.get("max_empty", 3)
+
+    def 执行操作块(self, block_id):
+        self.match(block_id)
+        block = next(filter(lambda b: b.id == block_id, self.blocks))
+        return block.execute(self)
+
+    def match(self, block_id=None):
+        self.device.snapshot(wait_steady=False)
+        for block in self.blocks:
+            if block_id is None or block.id == block_id:
+                block.match(self)
+
+    def get_df(self):
+        df = pandas.DataFrame(
+            [
+                {
+                    "id": b.id,
+                    "index": b.index,
+                    "matched": b.matched,
+                    "priority": b.priority,
+                    "only_when": b.only_when,
+                    "num": b.num_executed,
+                    "repeated": b.num_conti_repeated,
+                    "max_num": b.max_num,
+                    "name": b.name,
+                }
+                for b in self.blocks
+            ],
+        )
+        return df.sort_values(
+            ["matched", "priority", "index"], ascending=[False, False, True]
+        )
+
+    def 执行任务(self, 单步=True):
+        num_empty_repeated = 0
+        executed = 0
+        while 1:
+            if self.status == "完成":
+                break
+
+            self.match()
+            df = self.get_df()
+            print("job status:", self.status)
+            print(df)
+
+            tmp = df[df["matched"]]
+
+            if not tmp[tmp.repeated >= tmp.max_num].empty:
+                print("达到最大重复次数，停止执行")
+                break
+
+            匹配成功 = not tmp.empty
+
+            if 匹配成功:
+                executed += bool(self.执行操作块(tmp.iloc[0].id))
+                num_empty_repeated = 0
+            else:
+                num_empty_repeated += 1
+                if num_empty_repeated > self.max_empty:
+                    print("达到最大空白屏次数，停止执行")
+                    break
+
+            if 单步:
+                break
+        return executed
+
+class 基本任务列表(抽象持久序列):
+    def init(self, list_of_dict):
+        self.jobs = [基本任务(d) for d in list_of_dict]
+
+    def 执行任务(self, 单步=False):
+        if 单步:
+            self.jobs[-1].执行任务(单步=单步)
+        else:
+            for job in self.jobs:
+                job.执行任务(单步=False)
 
 class TaskSnapShotDevice(SnapShotDevice):
     def __init__(self, adb, task, base_dir):
