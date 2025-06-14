@@ -217,10 +217,10 @@ def b642bin(b64):
     return base64.b64decode(b64)
 
 
-def bin2img(b):
+def bin2img(b, flag=cv2.IMREAD_ANYCOLOR):
     if b is not None and b:
         img = numpy.frombuffer(b, numpy.uint8)
-        return cv2.imdecode(img, cv2.IMREAD_ANYCOLOR)
+        return cv2.imdecode(img, flag)
 
 
 def base642cv2(b64):
@@ -1156,6 +1156,51 @@ def get_bounding_dict_list_by_group(a, gap, x, y, max_width, max_height):
         }
         for i in range(a.shape[0])
     ]
+
+
+
+def img2rgb_with_alpha(img, bgr=True, background=(255, 255, 255)):
+    """
+    将RGBA图像合成到指定背景上，生成RGB图像
+    
+    参数:
+    rgba: 输入的RGBA图像
+    background: 背景颜色，默认为白色 (R,G,B)
+    
+    返回:
+    rgb: 合成后的RGB图像
+    """
+    # 分离通道
+    # r, g, b, a = cv2.split(rgba)
+    if not bgr:
+        r, g, b, a = cv2.split(img)
+    else:
+        b, g, r, a = cv2.split(img)
+    
+    # 创建背景
+    bg = np.full_like(img[:, :, :3], background, dtype=np.uint8)
+    
+    # 将Alpha通道归一化到0-1范围
+    alpha = a.astype(np.float32) / 255.0
+    
+    # 应用Alpha合成公式: result = foreground * alpha + background * (1-alpha)
+    r = (r.astype(np.float32) * alpha + bg[:, :, 0].astype(np.float32) * (1 - alpha)).astype(np.uint8)
+    g = (g.astype(np.float32) * alpha + bg[:, :, 1].astype(np.float32) * (1 - alpha)).astype(np.uint8)
+    b = (b.astype(np.float32) * alpha + bg[:, :, 2].astype(np.float32) * (1 - alpha)).astype(np.uint8)
+    
+    # 合并RGB通道
+    rgb = cv2.merge([r, g, b])
+    return rgb
+
+def show_max_contour(mask):
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        print('No contours found')
+        return
+    largest_contour = max(contours, key=lambda c: cv2.contourArea(c))
+    canvas = get_canvas(img=mask, mono=True)
+    cv2.drawContours(canvas, [largest_contour], -1, 255, 1)
+    show_in_plt(canvas)
 
 
 class FracContours(object):
