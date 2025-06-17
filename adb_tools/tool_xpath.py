@@ -365,18 +365,23 @@ class 抽象持久序列(基本输入字段对象):
     
     
 class 基本任务(抽象持久序列):
-    def __init__(self, fpath_or_dict):
+    def __init__(self, fpath_or_dict, device_pointed=None):
+        self.device_pointed=device_pointed
         super().__init__(fpath_or_dict)
         self.status = None
         self.last_executed_block_id = None
+        self.cache = {}
+
 
     def init(self, d):
         self.d = d
         self.blocks = [操作块(x) for x in self.d.get("blocks")]
-        if self.d.get("device").get("is_windows"):
-            self.device = Windows窗口设备(self.d.get("device"))
+        
+        device_pointed = self.device_pointed or self.d.get("device")
+        if device_pointed.get("is_windows"):
+            self.device = Windows窗口设备(device_pointed)
         else:
-            self.device = SteadyDevice.from_ip_port(self.d.get("device").get("ip_port"))
+            self.device = SteadyDevice.from_ip_port(device_pointed.get("ip_port"))
 
     def 打开应用(self):
         script = f"am start -n {self.package}/{self.activity}"
@@ -448,7 +453,7 @@ class 基本任务(抽象持久序列):
 
             tmp = df[df["matched"]]
 
-            if not tmp[tmp.repeated >= tmp.max_num].empty:
+            if not tmp[(tmp.repeated >= tmp.max_num) & (tmp.max_num > 0)].empty:
                 print("达到最大重复次数，停止执行")
                 break
 
@@ -468,15 +473,22 @@ class 基本任务(抽象持久序列):
         return executed
 
 class 基本任务列表(抽象持久序列):
+    def __init__(self, fpath_or_dict, device_pointed=None):
+        self.device_pointed = device_pointed
+        super().__init__(fpath_or_dict)
+
+
     def init(self, list_of_dict):
-        self.jobs = [基本任务(d) for d in list_of_dict]
+        self.jobs = [基本任务(d, self.device_pointed) for d in list_of_dict]
 
     def 执行任务(self, 单步=False):
         if 单步:
-            self.jobs[-1].执行任务(单步=单步)
+            return self.jobs[-1].执行任务(单步=单步)
         else:
+            num_executed = 0
             for job in self.jobs:
-                job.执行任务(单步=False)
+                num_executed += job.执行任务(单步=False)
+            return num_executed > 0
 
 class TaskSnapShotDevice(SnapShotDevice):
     def __init__(self, adb, task, base_dir):

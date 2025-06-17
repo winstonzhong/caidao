@@ -12,6 +12,8 @@ from helper_net import rget
 import random
 from tool_env import OS_WIN
 import json
+import string
+import requests
 
 BASE_URL_56T = "https://file.j1.sale/api/file"
 
@@ -24,6 +26,34 @@ else:
 
 # BASE_DIR_56T = "v:/file" if OS_WIN else "/mnt/56T/file"
 
+def upload_file(content, token, fname=None, project_name="default"):
+    if fname is None or not fname.rsplit('.', maxsplit=1)[0].strip():
+        service_url = BASE_URL_56T
+        url = None
+    else:
+        service_url = "https://file.j1.sale/api/set"
+        url = f'{BASE_URL_56T}/{project_name}/{fname}'
+
+    form_data = {"file": (fname, content)}
+    data = {"project": project_name, 
+            "token": token,
+            "url":url,
+            }
+    data = requests.post(service_url, data=data, files=form_data).json()
+    return f'''https://file.j1.sale{data["data"]["url"]}'''
+
+
+def generate_password():
+    password_characters = string.ascii_letters + string.digits + '_'
+    password = [
+        random.choice(string.ascii_uppercase),  # 大写字母
+        random.choice(string.ascii_lowercase),  # 小写字母
+        random.choice(string.digits),  # 数字
+        random.choice('_')  # 下划线
+    ]
+    password += random.choices(password_characters, k=8)
+    random.shuffle(password)
+    return ''.join(password)
 
 def 当前路径(base_dir=None, sub_dir=None):
     base_dir = BASE_DIR_56T if base_dir is None else base_dir

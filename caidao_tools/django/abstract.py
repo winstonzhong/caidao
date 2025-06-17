@@ -54,8 +54,6 @@ STATUS = (
 )
 
 
-
-
 # class RemoteModel:
 #     def __init__(self, url, pk_name='id', **kwargs):
 #         self.url = url
@@ -101,6 +99,7 @@ STATUS = (
 #         self._initial_data.update(self._changed_data)
 #         self._changed_data = {}
 
+
 class FullTextField(models.TextField):
     def __init__(self, *args, **kwargs):
         kwargs["null"] = True
@@ -132,7 +131,6 @@ class BaseModel(models.Model):
     @json.setter
     def json(self, value):
         self._json = value
-
 
     @classmethod
     def get_fields(cls):
@@ -192,8 +190,11 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
+
 class 抽象任务数据(BaseModel):
-    due_time = models.DateTimeField(verbose_name="到期时间(小于等于当前时间被选中)", null=True, blank=True)
+    due_time = models.DateTimeField(
+        verbose_name="到期时间(小于等于当前时间被选中)", null=True, blank=True
+    )
     update_time = models.DateTimeField(verbose_name="更新时间", auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
     cnt_saved = models.IntegerField(verbose_name="保存次数", default=0)
@@ -205,10 +206,13 @@ class 抽象任务数据(BaseModel):
         self.cnt_saved += 1
         if self.due_time is not None:
             if not isinstance(self.due_time, datetime.datetime):
-                self.due_time = timezone.now() + datetime.timedelta(seconds=int(self.due_time))
+                self.due_time = timezone.now() + datetime.timedelta(
+                    seconds=int(self.due_time)
+                )
             else:
                 self.due_time = None
         return super().save(*a, **kw)
+
 
 class AbstractModel(BaseModel):
     update_time = models.DateTimeField(verbose_name="更新时间", auto_now=True)
@@ -234,7 +238,6 @@ class AbstractModel(BaseModel):
         setattr(self, f"{name}", value)
         setattr(self, f"{name}_完成", True)
         self.save()
-
 
 
 class 抽象任务(AbstractModel):
@@ -270,11 +273,11 @@ class 抽象任务(AbstractModel):
 
 
 class 抽象定时任务(BaseModel):
-    # 类名 = models.CharField(max_length=50)
+    名称 = models.CharField(max_length=50, null=True)
     任务服务url = models.URLField(null=True, blank=True)
     任务下载参数 = models.JSONField(default=dict, blank=True)
     优先级 = models.PositiveSmallIntegerField(default=0)
-    执行函数 = models.CharField(max_length=50, default="单步执行")
+    执行函数 = models.CharField(max_length=50, default="加载配置执行")
     任务描述 = models.TextField(null=True, blank=True)
     定时表达式 = models.CharField(max_length=50, default="every 1 second")
     间隔秒 = models.IntegerField(null=True, blank=True)
@@ -284,7 +287,9 @@ class 抽象定时任务(BaseModel):
     # 任务数据 = models.JSONField(default=dict, blank=True, null=True)
     激活 = models.BooleanField(default=True)
     输出调试信息 = models.BooleanField(default=True)
-    group_name = models.CharField(max_length=50, null=True, blank=True, verbose_name="任务组")
+    group_name = models.CharField(
+        max_length=50, null=True, blank=True, verbose_name="任务组"
+    )
 
     update_time = models.DateTimeField(verbose_name="更新时间", null=True, blank=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
@@ -299,7 +304,7 @@ class 抽象定时任务(BaseModel):
         super().__init__(*args, **kwargs)
 
     def __str__(self):
-        return self.执行函数
+        return f"{self.名称} - {self.执行函数}"
 
     # def 是否超时(self):
     #     return (timezone.now() - self.update_time).seconds >= self.超时秒
@@ -349,7 +354,7 @@ class 抽象定时任务(BaseModel):
                         break
             except Exception as e:
                 print(traceback.format_exc())
-                print(f'发生异常, 等待{seconds_sleep_when_exception}秒后继续执行')
+                print(f"发生异常, 等待{seconds_sleep_when_exception}秒后继续执行")
                 time.sleep(seconds_sleep_when_exception)
             if 单步:
                 break
@@ -368,11 +373,9 @@ class 抽象定时任务(BaseModel):
         self.save()
         return executed
 
-
     def 组建下载参数(self):
         return copy.copy(self.任务下载参数)
 
-    
     def 获取完整任务数据下载链接(self, clear=False, **kwargs):
         if not clear:
             d = self.组建下载参数()
@@ -381,10 +384,13 @@ class 抽象定时任务(BaseModel):
             d = kwargs
         return f"{self.任务服务url}?{urlencode(d)}"
 
-    
     def 下载任务数据(self):
         try:
-            self.远程数据记录 = RemoteModel(self.任务服务url, pk_name='id', **self.组建下载参数()) if self.任务服务url else None
+            self.远程数据记录 = (
+                RemoteModel(self.任务服务url, pk_name="id", **self.组建下载参数())
+                if self.任务服务url
+                else None
+            )
         except requests.exceptions.HTTPError as e:
             print(e)
             self.远程数据记录 = None
