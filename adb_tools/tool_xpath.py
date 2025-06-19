@@ -23,6 +23,9 @@ import pandas
 
 from functools import cached_property
 
+from tool_exceptions import 任务预检查不通过异常
+
+
 
 def retrying(tries):
     """
@@ -234,6 +237,7 @@ class 基本界面元素(基本输入字段对象):
         raise NotImplementedError
 
     def execute(self, job, lines):
+        from tool_remote_orm_model import RemoteModel
         if self.matched:
             try:
                 exec(lines)
@@ -296,6 +300,9 @@ class 操作块(基本输入字段对象):
         self.num_executed = 0
         self.num_conti_repeated = 0
 
+    def is_precheck(self):
+        return not bool(self.tpls)
+    
     @property
     def lines(self):
         return self.d.get("lines")
@@ -372,10 +379,17 @@ class 基本任务(抽象持久序列):
         self.last_executed_block_id = None
         self.cache = {}
 
-
+    @property
+    def blocks(self):
+        return list(filter(lambda x:not x.is_precheck(), self._blocks))
+    
+    @property
+    def blocks_precheck(self):
+        return list(filter(lambda x:x.is_precheck(), self._blocks))
+    
     def init(self, d):
         self.d = d
-        self.blocks = [操作块(x) for x in self.d.get("blocks")]
+        self._blocks = [操作块(x) for x in self.d.get("blocks")]
         
         device_pointed = self.device_pointed or self.d.get("device")
         if device_pointed.get("is_windows"):
@@ -471,6 +485,9 @@ class 基本任务(抽象持久序列):
             if 单步:
                 break
         return executed
+
+class 前置预检查任务(基本任务):
+    pass
 
 class 基本任务列表(抽象持久序列):
     def __init__(self, fpath_or_dict, device_pointed=None):
