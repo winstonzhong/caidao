@@ -25,6 +25,7 @@ from tool_remote_orm_model import RemoteModel
 from urllib.parse import urlencode
 import requests
 import copy
+from django.db import OperationalError
 
 NEW_RECORD = 0
 DOWNLOADED_RECORD = 1
@@ -214,6 +215,16 @@ class 抽象任务数据(BaseModel):
             else:
                 self.due_time = None
         return super().save(*a, **kw)
+
+    @classmethod
+    def select_for_processing(cls, pk):
+        try:
+            if cls.objects.filter(pk=pk, processing=False).update(processing=1):
+                return cls.objects.get(pk=pk)
+        except OperationalError:
+            pass
+
+
 
 
 class AbstractModel(BaseModel):
