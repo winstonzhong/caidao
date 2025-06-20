@@ -26,15 +26,15 @@ from functools import cached_property
 from tool_exceptions import 任务预检查不通过异常
 
 
-def execute_lines(job, lines, tpl=None):
+def execute_lines(job, lines, self=None):
     from tool_remote_orm_model import RemoteModel
-    if tpl is not None:
-        if tpl.matched:
+    if self is not None:
+        if self.matched:
             try:
                 exec(lines)
                 return True
             except Exception as e:
-                print(f"error when executing:{tpl.id}:{e}")
+                print(f"error when executing:{self.id}:{e}")
     else:
         exec(lines)
 
@@ -427,11 +427,19 @@ class 基本任务(抽象持久序列):
         # print('==========================', self.paras)
         self._blocks = [操作块(x, self.paras) for x in self.d.get("blocks")]
 
+        # device_pointed = self.device_pointed or self.d.get("device")
+        # if device_pointed.get("is_windows"):
+        #     self.device = Windows窗口设备(device_pointed)
+        # else:
+        #     self.device = SteadyDevice.from_ip_port(device_pointed.get("ip_port"))
+
+    @cached_property
+    def device(self):
         device_pointed = self.device_pointed or self.d.get("device")
         if device_pointed.get("is_windows"):
-            self.device = Windows窗口设备(device_pointed)
+            return Windows窗口设备(device_pointed)
         else:
-            self.device = SteadyDevice.from_ip_port(device_pointed.get("ip_port"))
+            return SteadyDevice.from_ip_port(device_pointed.get("ip_port"))
 
     def 刷新参数(self, paras):
         self.d['paras'] = paras
@@ -557,10 +565,13 @@ class 基本任务列表(抽象持久序列):
         if 单步:
             return self.jobs[-1].执行任务(单步=单步)
         else:
-            self.jobs[-1].执行前置检查操作块()
             num_executed = 0
-            for job in self.jobs:
-                num_executed += job.执行任务(单步=False)
+            try:
+                self.jobs[-1].执行前置检查操作块()
+                for job in self.jobs:
+                    num_executed += job.执行任务(单步=False)
+            except 任务预检查不通过异常:
+                pass
             return num_executed > 0
 
 

@@ -198,6 +198,8 @@ class 抽象任务数据(BaseModel):
     update_time = models.DateTimeField(verbose_name="更新时间", auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
     cnt_saved = models.IntegerField(verbose_name="保存次数", default=0)
+    processing = models.BooleanField(verbose_name="正在处理", default=False)
+
 
     class Meta:
         abstract = True
