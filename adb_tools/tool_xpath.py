@@ -26,6 +26,19 @@ from functools import cached_property
 from tool_exceptions import 任务预检查不通过异常
 
 
+def execute_lines(job, lines, tpl=None):
+    from tool_remote_orm_model import RemoteModel
+    if tpl is not None:
+        if tpl.matched:
+            try:
+                exec(lines)
+                return True
+            except Exception as e:
+                print(f"error when executing:{tpl.id}:{e}")
+    else:
+        exec(lines)
+
+
 
 def retrying(tries):
     """
@@ -223,11 +236,20 @@ class 基本界面元素(基本输入字段对象):
         self.matched = False
 
     @property
+    def paras(self):
+        return self.d.get("paras", {}) or {}
+    
+    @paras.setter
+    def paras(self, v):
+        self.d["paras"] = v
+
+    @property
     def inverse(self):
         return self.d.get("inverse")
 
     @classmethod
-    def from_dict(cls, d):
+    def from_dict(cls, d, paras=None):
+        d['paras'] = paras or {}
         if d.get("type") == 1:
             return Xml界面元素(d)
         else:
@@ -237,19 +259,22 @@ class 基本界面元素(基本输入字段对象):
         raise NotImplementedError
 
     def execute(self, job, lines):
-        from tool_remote_orm_model import RemoteModel
-        if self.matched:
-            try:
-                exec(lines)
-                return True
-            except Exception as e:
-                print(f"error when executing:{self.id}:{e}")
+        return execute_lines(job, lines, self)
+        # from tool_remote_orm_model import RemoteModel
+
+        # if self.matched:
+        #     try:
+        #         exec(lines)
+        #         return True
+        #     except Exception as e:
+        #         print(f"error when executing:{self.id}:{e}")
 
 
 class Xml界面元素(基本界面元素):
     @property
     def xpath(self):
-        return self.d.get("xpath")
+        # print('----------------------', self.d.get("xpath").format(**self.paras), self.paras)
+        return self.d.get("xpath").format(**self.paras)
 
     def match(self, job):
         self.results = find_by_xpath(job.device, self.xpath).all()
@@ -294,14 +319,24 @@ class Windows窗口设备(基本输入字段对象):
 
 
 class 操作块(基本输入字段对象):
-    def __init__(self, d):
+    def __init__(self, d, paras):
         super().__init__(d)
-        self.tpls = [基本界面元素.from_dict(x) for x in d.get("tpls")]
+        d['paras'] = paras
+        self.tpls = [基本界面元素.from_dict(x, self.paras) for x in d.get("tpls")]
         self.num_executed = 0
         self.num_conti_repeated = 0
 
     def is_precheck(self):
         return not bool(self.tpls)
+    
+    def 刷新参数(self, paras):
+        self.paras = paras
+        for tpl in self.tpls:
+            tpl.paras = paras
+
+    @property
+    def paras(self):
+        return self.d.get("paras", {}) or {}
     
     @property
     def lines(self):
@@ -363,17 +398,17 @@ class 抽象持久序列(基本输入字段对象):
             self.init(fpath_or_dict)
         else:
             raise ValueError(f"invalid type of fpath:{type(fpath_or_dict)}")
-    
+
     def init(self, d):
         raise NotImplementedError
-    
+
     def 执行任务(self, 单步=True):
         raise NotImplementedError
-    
-    
+
+
 class 基本任务(抽象持久序列):
     def __init__(self, fpath_or_dict, device_pointed=None):
-        self.device_pointed=device_pointed
+        self.device_pointed = device_pointed
         super().__init__(fpath_or_dict)
         self.status = None
         self.last_executed_block_id = None
@@ -381,21 +416,27 @@ class 基本任务(抽象持久序列):
 
     @property
     def blocks(self):
-        return list(filter(lambda x:not x.is_precheck(), self._blocks))
-    
+        return list(filter(lambda x: not x.is_precheck(), self._blocks))
+
     @property
     def blocks_precheck(self):
-        return list(filter(lambda x:x.is_precheck(), self._blocks))
-    
+        return list(filter(lambda x: x.is_precheck(), self._blocks))
+
     def init(self, d):
         self.d = d
-        self._blocks = [操作块(x) for x in self.d.get("blocks")]
-        
+        # print('==========================', self.paras)
+        self._blocks = [操作块(x, self.paras) for x in self.d.get("blocks")]
+
         device_pointed = self.device_pointed or self.d.get("device")
         if device_pointed.get("is_windows"):
             self.device = Windows窗口设备(device_pointed)
         else:
             self.device = SteadyDevice.from_ip_port(device_pointed.get("ip_port"))
+
+    def 刷新参数(self, paras):
+        self.d['paras'] = paras
+        for block in self._blocks:
+            block.刷新参数(paras)
 
     def 打开应用(self):
         script = f"am start -n {self.package}/{self.activity}"
@@ -404,6 +445,10 @@ class 基本任务(抽象持久序列):
     def 关闭应用(self):
         script = f"am force-stop {self.package}"
         return self.device.adb.execute(script)
+
+    @property
+    def paras(self):
+        return self.d.get("paras")
 
     @property
     def name(self):
@@ -425,6 +470,11 @@ class 基本任务(抽象持久序列):
         self.match(block_id)
         block = next(filter(lambda b: b.id == block_id, self.blocks))
         return block.execute(self)
+
+    def 执行前置检查操作块(self):
+        for block in self.blocks_precheck:
+            execute_lines(self, block.lines)
+
 
     def match(self, block_id=None):
         self.device.snapshot(wait_steady=False)
@@ -486,26 +536,33 @@ class 基本任务(抽象持久序列):
                 break
         return executed
 
+
 class 前置预检查任务(基本任务):
     pass
+
 
 class 基本任务列表(抽象持久序列):
     def __init__(self, fpath_or_dict, device_pointed=None):
         self.device_pointed = device_pointed
         super().__init__(fpath_or_dict)
 
-
     def init(self, list_of_dict):
         self.jobs = [基本任务(d, self.device_pointed) for d in list_of_dict]
+
+    def 刷新参数(self, paras):
+        for job in self.jobs:
+            job.刷新参数(paras)
 
     def 执行任务(self, 单步=False):
         if 单步:
             return self.jobs[-1].执行任务(单步=单步)
         else:
+            self.jobs[-1].执行前置检查操作块()
             num_executed = 0
             for job in self.jobs:
                 num_executed += job.执行任务(单步=False)
             return num_executed > 0
+
 
 class TaskSnapShotDevice(SnapShotDevice):
     def __init__(self, adb, task, base_dir):

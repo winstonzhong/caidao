@@ -1,3 +1,12 @@
+WALK_TYPES = ["slow", "medium", "fast", "uphill"]
+
+WALK_TYPES_MAP = {
+    "slow": "慢走",
+    "medium": "中速",
+    "fast": "快走",
+    "uphill": "爬山",
+}
+
 def calculate_step_length(
     age: int, gender: str, height: float, weight: float, walk_type: str
 ) -> float:
