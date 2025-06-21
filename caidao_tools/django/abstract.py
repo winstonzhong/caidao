@@ -27,6 +27,8 @@ import requests
 import copy
 from django.db import OperationalError
 
+from django.db.models.query_utils import Q
+
 NEW_RECORD = 0
 DOWNLOADED_RECORD = 1
 PRODUCED_RECORD = 2
@@ -201,7 +203,6 @@ class 抽象任务数据(BaseModel):
     cnt_saved = models.IntegerField(verbose_name="保存次数", default=0)
     processing = models.BooleanField(verbose_name="正在处理", default=False)
 
-
     class Meta:
         abstract = True
 
@@ -217,14 +218,27 @@ class 抽象任务数据(BaseModel):
         return super().save(*a, **kw)
 
     @classmethod
-    def select_for_processing(cls, pk):
+    def select_for_processing(cls, pk, seconds=300):
         try:
-            if cls.objects.filter(pk=pk, processing=False).update(processing=1):
+            if (
+                cls.objects.filter(pk=pk)
+                .filter(
+                    Q(processing=False)
+                    | Q(
+                        update_time__lt=(
+                            timezone.now() - datetime.timedelta(seconds=seconds)
+                        )
+                    )
+                )
+                .update(processing=1, update_time=timezone.now())
+            ):
                 return cls.objects.get(pk=pk)
         except OperationalError:
             pass
 
-
+    @classmethod
+    def 尝试获得处理权(cls, obj):
+        return cls.select_for_processing(obj.pk) if obj is not None else None
 
 
 class AbstractModel(BaseModel):

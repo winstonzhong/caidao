@@ -25,6 +25,8 @@ else:
     BASE_DIR_56T = "d:/file"
 
 # BASE_DIR_56T = "v:/file" if OS_WIN else "/mnt/56T/file"
+def is_inner():
+    return BASE_DIR_56T == "/mnt/56T/file" and  os.path.lexists(BASE_DIR_56T)
 
 def upload_file(content, token, fname=None, project_name="default"):
     if fname is None or not fname.rsplit('.', maxsplit=1)[0].strip():
@@ -134,10 +136,14 @@ def 链接到路径(url, base_dir=BASE_DIR_56T, safe=True):
     >>> 链接到路径('https://file.j1.sale/api/file/2024-11-26/1732629182.2386892.amr') == f'{BASE_DIR_56T}/2024-11-26/1732629182.2386892.amr'
     True
     """
-    if url.startswith(BASE_URL_56T):
-        return url.replace(BASE_URL_56T, base_dir)
-    elif safe:
-        raise ValueError(f"{url}不是56T的链接")
+    if is_inner():
+        if url.startswith(BASE_URL_56T):
+            return url.replace(BASE_URL_56T, base_dir)
+        elif safe:
+            raise ValueError(f"{url}不是56T的链接")
+    else:
+        print('downloading:', url)
+        return 存储链接到文件(url, 得到后缀(url), 返回路径=True)
 
 
 def 链接到相对路径(url, base_dir=BASE_DIR_56T):

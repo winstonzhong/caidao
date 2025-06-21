@@ -25,9 +25,9 @@ from functools import cached_property
 
 from tool_exceptions import 任务预检查不通过异常
 
+from tool_remote_orm_model import RemoteModel
 
 def execute_lines(job, lines, self=None):
-    from tool_remote_orm_model import RemoteModel
     if self is not None:
         if self.matched:
             try:
@@ -220,6 +220,15 @@ class SteadyDevice(DummyDevice):
     def send_keys(self, keys, clear=True):
         self.adb.ua2.send_keys(keys, clear)
 
+    def 上传到下载目录(self, url, fname=None, clean_temp=True):
+        import tool_static
+        fpath = tool_static.链接到路径(url)
+        return self.adb.push_file_to_download(
+            fpath,
+            fname=fname,
+            clean_temp=clean_temp,
+        )
+
 
 class 基本输入字段对象(object):
     def __init__(self, d):
@@ -273,7 +282,6 @@ class 基本界面元素(基本输入字段对象):
 class Xml界面元素(基本界面元素):
     @property
     def xpath(self):
-        # print('----------------------', self.d.get("xpath").format(**self.paras), self.paras)
         return self.d.get("xpath").format(**self.paras)
 
     def match(self, job):
@@ -413,6 +421,14 @@ class 基本任务(抽象持久序列):
         self.status = None
         self.last_executed_block_id = None
         self.cache = {}
+    
+    def requests_get(self, url, 带串行号=True, **kwargs):
+        if 带串行号:
+            设备串行号 = self.device.adb.serialno
+        else:
+            设备串行号 = None
+        obj = RemoteModel(url, 设备串行号=设备串行号, **kwargs)
+        return obj if obj.data else None
 
     @property
     def blocks(self):
@@ -448,7 +464,8 @@ class 基本任务(抽象持久序列):
 
     def 打开应用(self):
         script = f"am start -n {self.package}/{self.activity}"
-        return self.device.adb.execute(script)
+        self.device.adb.execute(script)
+        time.sleep(3)
 
     def 关闭应用(self):
         script = f"am force-stop {self.package}"
@@ -479,9 +496,10 @@ class 基本任务(抽象持久序列):
         block = next(filter(lambda b: b.id == block_id, self.blocks))
         return block.execute(self)
 
-    def 执行前置检查操作块(self):
+    def 执行前置检查操作块(self, block_id=None):
         for block in self.blocks_precheck:
-            execute_lines(self, block.lines)
+            if block_id is None or block.id == block_id:
+                execute_lines(self, block.lines)
 
 
     def match(self, block_id=None):
@@ -520,7 +538,7 @@ class 基本任务(抽象持久序列):
 
             self.match()
             df = self.get_df()
-            print("job status:", self.status)
+            print(f"job:{self.name} , status:{self.status}")
             print(df)
 
             tmp = df[df["matched"]]

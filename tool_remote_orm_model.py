@@ -106,5 +106,4 @@ class RemoteModel:
 
 if __name__ == "__main__":
     import doctest
-
     print(doctest.testmod(verbose=False, report=False))

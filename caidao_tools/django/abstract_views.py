@@ -32,7 +32,7 @@ class 基础任务视图(APIView):
         else:
             obj = q.order_by("update_time").first()
 
-        obj = self.after_get(request, obj)
+        obj = self.after_get(request, self.model.尝试获得处理权(obj))
 
         if isinstance(obj, str):
             return HttpResponse(obj)
