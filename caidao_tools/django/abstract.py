@@ -195,9 +195,9 @@ class BaseModel(models.Model):
 
 
 class 抽象任务数据(BaseModel):
-    due_time = models.DateTimeField(
-        verbose_name="到期时间(小于等于当前时间被选中)", null=True, blank=True
-    )
+    # due_time = models.DateTimeField(
+    #     verbose_name="到期时间(小于等于当前时间被选中)", null=True, blank=True
+    # )
     update_time = models.DateTimeField(verbose_name="更新时间", auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
     cnt_saved = models.IntegerField(verbose_name="保存次数", default=0)
@@ -208,14 +208,30 @@ class 抽象任务数据(BaseModel):
 
     def save(self, *a, **kw):
         self.cnt_saved += 1
-        if self.due_time is not None:
-            if not isinstance(self.due_time, datetime.datetime):
-                self.due_time = timezone.now() + datetime.timedelta(
-                    seconds=int(self.due_time)
-                )
-            else:
-                self.due_time = None
+        # if self.due_time is not None:
+        #     if not isinstance(self.due_time, datetime.datetime):
+        #         self.due_time = timezone.now() + datetime.timedelta(
+        #             seconds=int(self.due_time)
+        #         )
+        #     else:
+        #         self.due_time = None
+        self.processing = False
         return super().save(*a, **kw)
+
+    @classmethod
+    def get_seconds_expiring(cls):
+        return 300
+    
+    @classmethod
+    def get_task(cls, **paras):
+        return cls.objects.filter(**paras).filter(
+                    Q(processing=False)
+                    | Q(
+                        update_time__lt=(
+                            timezone.now() - datetime.timedelta(seconds=cls.get_seconds_expiring())
+                        )
+                    )
+                ).first()
 
     @classmethod
     def select_for_processing(cls, pk, seconds=300):
@@ -363,7 +379,8 @@ class 抽象定时任务(BaseModel):
             Value(datetime.timedelta(seconds=1)) * F("间隔秒"),
             output_field=DurationField(),
         )
-        kwargs["激活"] = True
+        if 'id' not in kwargs:
+            kwargs["激活"] = True
         return kwargs
 
     @classmethod
@@ -395,7 +412,7 @@ class 抽象定时任务(BaseModel):
         self.下载任务数据()
         executed = False
         if self.远程数据记录 is None or not self.远程数据记录.is_empty():
-            self.print_info(f"开始执行任务:{self.执行函数}")
+            self.print_info(f"开始执行任务:{self.名称} - {self.执行函数}")
             executed = getattr(self, self.执行函数)()
         self.save()
         return executed

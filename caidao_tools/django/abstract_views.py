@@ -18,21 +18,42 @@ class 基础任务视图(APIView):
             if v in ("False", "True"):
                 d[k] = eval(v)
         return d
+    
+    def get_order_by(self, request):
+        if request.GET.get('order_by'):
+            return [x for x in request.GET.get('order_by').strip().split(",") if x.strip()]
+        return ['id']
 
     def get(self, request):
         d = self.before_get(request)
+        
+        # print('paras:', d)
+        
+        obj = self.model.objects.filter(**d).order_by(*self.get_order_by(request)).first()
 
-        q = self.model.objects.filter(**d)
+        # obj = self.model.objects.filter(**d).first()
+        
+        # obj = cls.objects.filter(完成打标签=False).order_by("-榜单权重", "id").first()
+        
+        # obj = q.order_by("update_time").first()
 
-        if (
-            request.GET.get("query_only") is None
-            and q.filter(due_time__gt=timezone.now()).first() is not None
-        ):
-            obj = None
-        else:
-            obj = q.order_by("update_time").first()
+        # if (
+        #     request.GET.get("query_only") is None
+        #     and q.filter(due_time__gt=timezone.now()).first() is not None
+        # ):
+        #     obj = None
+        # else:
+        #     obj = q.order_by("update_time").first()
+            
+        if request.GET.get("query_only") is None:
+            obj = self.model.尝试获得处理权(obj)
+        
+        obj = self.after_get(request, obj)
 
-        obj = self.after_get(request, self.model.尝试获得处理权(obj))
+        # if request.GET.get("获取任务"):
+        #     obj = self.model.get_task()
+        # else:
+        #     obj = self.after_get(request, self.model.尝试获得处理权(obj))
 
         if isinstance(obj, str):
             return HttpResponse(obj)
@@ -65,7 +86,7 @@ class 基础任务视图(APIView):
 
             assert q.count() == 1, "query result count != 1"
 
-            assert tool_env.is_int(d.get("due_time", 0)), "due_time is not int"
+            # assert tool_env.is_int(d.get("due_time", 0)), "due_time is not int"
 
             obj = q.first()
 

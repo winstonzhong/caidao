@@ -464,6 +464,7 @@ class 基本任务(抽象持久序列):
 
     def 打开应用(self):
         script = f"am start -n {self.package}/{self.activity}"
+        print(script)
         self.device.adb.execute(script)
         time.sleep(3)
 
