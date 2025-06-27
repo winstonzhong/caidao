@@ -187,15 +187,19 @@ def to_date(date):
         return datetime.datetime.fromtimestamp(mktime(strptime(dash_date(date)[:10], "%Y-%m-%d"))).date()
     except OverflowError as e:
         raise e
-    except:
+    except Exception:
         pass
 
 def is_half_year_old(tdate):
     d = datetime.datetime.now(TIME_ZONE_SHANGHAI).date() - to_date(tdate)
     return d.days >= 180
 
+def get_date_ndays_ago(ndays):
+    return datetime.datetime.now(TIME_ZONE_SHANGHAI).date() - datetime.timedelta(days=ndays)
+
 def get_date_half_year_old():
-    return datetime.datetime.now(TIME_ZONE_SHANGHAI).date() - datetime.timedelta(days=180)
+    return get_date_ndays_ago(180)
+    # return datetime.datetime.now(TIME_ZONE_SHANGHAI).date() - datetime.timedelta(days=180)
 
 
 def isnan(v):
@@ -211,7 +215,7 @@ def isnan(v):
     '''
     try:
         return numpy.isnan(v)
-    except:
+    except Exception:
         return False    
 
 def none2nan(v):

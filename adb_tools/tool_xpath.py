@@ -27,17 +27,39 @@ from tool_exceptions import 任务预检查不通过异常
 
 from tool_remote_orm_model import RemoteModel
 
+from tool_wx_container import 解析器
+
+import itertools
+
+import tool_wx_df
+
+import tool_static
+
+import traceback
+
+import tool_wx
+
+
+# def execute_lines(job, lines, self=None):
+#     if self is not None:
+#         if self.matched:
+#             try:
+#                 exec(lines)
+#                 return True
+#             except Exception as e:
+#                 print(f"error when executing:{self.id}:{e}")
+#                 traceback.print_exc()
+#     else:
+#         exec(lines)
+
+
 def execute_lines(job, lines, self=None):
     if self is not None:
         if self.matched:
-            try:
-                exec(lines)
-                return True
-            except Exception as e:
-                print(f"error when executing:{self.id}:{e}")
+            exec(lines)
+            return True
     else:
         exec(lines)
-
 
 
 def retrying(tries):
@@ -106,8 +128,8 @@ class DummyDevice(object):
     def swipe(self, fromx, fromy, tox, toy):
         return self.adb.swipe((fromx, fromy), (tox, toy))
 
-    # def long_click(self, x, y, duration: float = .5):
-    #     pass
+    def long_click(self, *a, **k):
+        return self.adb.ua2.long_click(*a, **k)
 
     def move_to(self, *a, **k):
         print(a, k)
@@ -176,7 +198,7 @@ class SteadyDevice(DummyDevice):
         key = get_hash(xml)
         return key
 
-    def refresh(self, debug=False, wait_steady=True):
+    def refresh(self, debug=True, wait_steady=False):
         if self.need_xml:
             old_key = None
             max_try = 6
@@ -222,12 +244,59 @@ class SteadyDevice(DummyDevice):
 
     def 上传到下载目录(self, url, fname=None, clean_temp=True):
         import tool_static
+
         fpath = tool_static.链接到路径(url)
         return self.adb.push_file_to_download(
             fpath,
             fname=fname,
             clean_temp=clean_temp,
         )
+
+    @property
+    def df_wx(self):
+        df = 解析器(xml=self.source).上下文df
+        df["已处理"] = False
+        df["链接"] = None
+        df.自己 = df.自己.fillna(False).astype(bool)
+        return df
+
+    def merge_wx_df(self, upper_page, lower_page):
+        rtn = tool_wx_df.合并上下两个df(
+            上一页=upper_page, 当前页=lower_page, safe=True
+        )
+        if "自己" in rtn.columns:
+            rtn.已处理 = rtn.已处理.fillna(False).astype(bool)
+        else:
+            rtn["已处理"] = False
+
+        if "自己" in rtn.columns:
+            rtn.自己 = rtn.自己.fillna(False).astype(bool)
+        else:
+            rtn["已处理"] = False
+        return rtn
+
+
+    @property
+    def remote_fpath_wx_images(self):
+        return "/sdcard/Pictures/WeiXin"
+
+    def clear_remote_wx_images(self):
+        self.adb.clear_temp_dir(self.remote_fpath_wx_images)
+
+    def download_wx_image(self):
+        fpath = self.adb.pull_lastest_file_until(
+            base_dir=self.remote_fpath_wx_images, to_56T=True
+        )
+        return tool_static.路径到链接(fpath)
+
+    def cut_wx_df(self, df):
+        tmp = df[df.自己]
+        if not tmp.empty:
+            return df.loc[tmp.index[-1]:].copy()
+        return df
+    
+    def is_wx_group(self, name):
+        return tool_wx.is_session_name(name)
 
 
 class 基本输入字段对象(object):
@@ -247,7 +316,7 @@ class 基本界面元素(基本输入字段对象):
     @property
     def paras(self):
         return self.d.get("paras", {}) or {}
-    
+
     @paras.setter
     def paras(self, v):
         self.d["paras"] = v
@@ -258,7 +327,7 @@ class 基本界面元素(基本输入字段对象):
 
     @classmethod
     def from_dict(cls, d, paras=None):
-        d['paras'] = paras or {}
+        d["paras"] = paras or {}
         if d.get("type") == 1:
             return Xml界面元素(d)
         else:
@@ -329,14 +398,14 @@ class Windows窗口设备(基本输入字段对象):
 class 操作块(基本输入字段对象):
     def __init__(self, d, paras):
         super().__init__(d)
-        d['paras'] = paras
+        d["paras"] = paras
         self.tpls = [基本界面元素.from_dict(x, self.paras) for x in d.get("tpls")]
         self.num_executed = 0
         self.num_conti_repeated = 0
 
     def is_precheck(self):
         return not bool(self.tpls)
-    
+
     def 刷新参数(self, paras):
         self.paras = paras
         for tpl in self.tpls:
@@ -345,7 +414,7 @@ class 操作块(基本输入字段对象):
     @property
     def paras(self):
         return self.d.get("paras", {}) or {}
-    
+
     @property
     def lines(self):
         return self.d.get("lines")
@@ -421,13 +490,21 @@ class 基本任务(抽象持久序列):
         self.status = None
         self.last_executed_block_id = None
         self.cache = {}
-    
-    def requests_get(self, url, 带串行号=True, **kwargs):
+
+    def get_remote_obj(self, url, 带串行号=True, **kwargs):
         if 带串行号:
             设备串行号 = self.device.adb.serialno
         else:
             设备串行号 = None
-        obj = RemoteModel(url, 设备串行号=设备串行号, **kwargs)
+        return RemoteModel(url, 设备串行号=设备串行号, **kwargs)
+
+    def requests_get(self, url, 带串行号=True, **kwargs):
+        # if 带串行号:
+        #     设备串行号 = self.device.adb.serialno
+        # else:
+        #     设备串行号 = None
+        # obj = RemoteModel(url, 设备串行号=设备串行号, **kwargs)
+        obj = self.get_remote_obj(url, 带串行号=带串行号, **kwargs)
         return obj if obj.data else None
 
     @property
@@ -458,7 +535,7 @@ class 基本任务(抽象持久序列):
             return SteadyDevice.from_ip_port(device_pointed.get("ip_port"))
 
     def 刷新参数(self, paras):
-        self.d['paras'] = paras
+        self.d["paras"] = paras
         for block in self._blocks:
             block.刷新参数(paras)
 
@@ -492,6 +569,11 @@ class 基本任务(抽象持久序列):
     def max_empty(self):
         return self.d.get("max_empty", 3)
 
+    @property
+    def wait_steady(self):
+        # print('wait_steady is:', [self.d.get("wait_steady")])
+        return self.d.get("wait_steady", False)
+
     def 执行操作块(self, block_id):
         self.match(block_id)
         block = next(filter(lambda b: b.id == block_id, self.blocks))
@@ -502,9 +584,8 @@ class 基本任务(抽象持久序列):
             if block_id is None or block.id == block_id:
                 execute_lines(self, block.lines)
 
-
     def match(self, block_id=None):
-        self.device.snapshot(wait_steady=False)
+        self.device.snapshot(wait_steady=self.wait_steady)
         for block in self.blocks:
             if block_id is None or block.id == block_id:
                 block.match(self)
