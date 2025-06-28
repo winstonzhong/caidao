@@ -1,85 +1,64 @@
 from datetime import datetime, time
-"""
-输入:
-{'foods': [{'name': '清炒圆白菜',
-   'weight': '225g',
-   'calories': '50kcal',
-   'heat_level': '放心吃',
-   'material': '圆白菜',
-   'nutrition_list': [{'name': '碳水', 'value': '10', 'unit': 'g'},
-    {'name': '蛋白质', 'value': '2', 'unit': 'g'},
-    {'name': '脂肪', 'value': '0.2', 'unit': 'g'}]},
-  {'name': '清炒空心菜',
-   'weight': '225g',
-   'calories': '40kcal',
-   'heat_level': '放心吃',
-   'material': '空心菜',
-   'nutrition_list': [{'name': '碳水', 'value': '5', 'unit': 'g'},
-    {'name': '蛋白质', 'value': '3', 'unit': 'g'},
-    {'name': '脂肪', 'value': '0.3', 'unit': 'g'}]},
-  {'name': '蘑菇海带炖肉汤',
-   'weight': '500g',
-   'calories': '300kcal',
-   'heat_level': '适量',
-   'material': '蘑菇, 海带, 肉',
-   'nutrition_list': [{'name': '碳水', 'value': '20', 'unit': 'g'},
-    {'name': '蛋白质', 'value': '30', 'unit': 'g'},
-    {'name': '脂肪', 'value': '20', 'unit': 'g'}]},
-  {'name': '红椒炒饭',
-   'weight': '225g',
-   'calories': '300kcal',
-   'heat_level': '适量',
-   'material': '红椒, 米饭',
-   'nutrition_list': [{'name': '碳水', 'value': '40', 'unit': 'g'},
-    {'name': '蛋白质', 'value': '5', 'unit': 'g'},
-    {'name': '脂肪', 'value': '10', 'unit': 'g'}]}],
- 'summary': '热量适中，营养均衡，放心吃'}
+import re
 
 
-目标:
-{'data_list': [{'name': '碳水', 'value': '0', 'unit': 'g'},
-  {'name': '蛋白质', 'value': '0', 'unit': 'g'},
-  {'name': '脂肪', 'value': '0', 'unit': 'g'},
-  {'name': '总热量', 'value': '0', 'unit': '千卡'}],
- 'summary': '饮品热量极低，无营养摄入。',
- 'meal_data': {'total_calories': 200,
-  'dishes': [{'name': '调味包',
-    'heat_level': '放心吃',
-    'calories': 20,
-    'intake_rate': 100,
-    'is_selected': False},
-   {'name': '卤蛋',
-    'heat_level': '适量吃',
-    'calories': 30,
-    'intake_rate': 100,
-    'is_selected': False},
-   {'name': '麻辣烫',
-    'heat_level': '少吃',
-    'calories': 80,
-    'intake_rate': 100,
-    'is_selected': False},
-   {'name': '番茄炒饭',
-    'heat_level': '少吃',
-    'calories': 70,
-    'intake_rate': 100,
-    'is_selected': True}],
-  'intake_calories': 70,
-  'type': '晚餐',
-  'intake_rate': 35}}
-"""
+def extract_value(value_str):
+    """
+    从字符串中提取数值部分，去除单位后缀
 
+    参数:
+    value_str (str): 包含数值和单位的字符串，如 '15g', '123ml', '333kcal'
+
+    返回:
+    float: 提取的数值部分，如果无法提取则返回 0
+
+    >>> extract_value('15g')
+    15.0
+    >>> extract_value('123.45ml')
+    123.45
+    >>> extract_value('-333kcal')
+    -333.0
+    >>> extract_value('0.5kg')
+    0.5
+    >>> extract_value('+78.9%')
+    78.9
+    >>> extract_value('abc')
+    0
+    >>> extract_value('123.45.67')
+    123.45
+    >>> extract_value('  -25.5g ')
+    -25.5
+    >>> extract_value('1,000ml')
+    1000.0
+    >>> extract_value('15.')
+    15.0
+    >>> extract_value('0.5kg')
+    0.5
+    >>> extract_value('123')
+    123.0
+    """
+    # 使用正则表达式匹配数字部分
+    # 匹配可能的负号、整数、小数点和小数部分
+    match = re.match(r"^([-+]?\d+(?:\.\d+)?)(.*)$", value_str.replace(',','').strip())
+
+    if match:
+        try:
+            return float(match.group(1))
+        except ValueError:
+            return 0
+    return 0
 
 
 def classify_meal_time(dt: datetime) -> str:
     """
     根据输入的datetime对象判断对应的餐别
-    
+
     参数:
     dt (datetime): 需要判断的日期时间对象
-    
+
     返回:
     str: 餐别分类结果，可能为 "早餐", "午餐", "晚餐", "加餐"
-    
+
     >>> classify_meal_time(datetime(2023, 1, 1, 7, 30))
     '早餐'
     >>> classify_meal_time(datetime(2023, 1, 1, 9, 0))
@@ -98,16 +77,16 @@ def classify_meal_time(dt: datetime) -> str:
     '加餐'
     """
     # 定义三餐的时间范围（可根据实际需求调整）
-    BREAKFAST_START = time(6, 0)    # 早餐开始时间：6:00
-    BREAKFAST_END = time(9, 0)      # 早餐结束时间：9:00
-    LUNCH_START = time(11, 0)       # 午餐开始时间：11:00
-    LUNCH_END = time(14, 0)         # 午餐结束时间：14:00
-    DINNER_START = time(17, 0)      # 晚餐开始时间：17:00
-    DINNER_END = time(20, 0)        # 晚餐结束时间：20:00
-    
+    BREAKFAST_START = time(6, 0)  # 早餐开始时间：6:00
+    BREAKFAST_END = time(9, 0)  # 早餐结束时间：9:00
+    LUNCH_START = time(11, 0)  # 午餐开始时间：11:00
+    LUNCH_END = time(14, 0)  # 午餐结束时间：14:00
+    DINNER_START = time(17, 0)  # 晚餐开始时间：17:00
+    DINNER_END = time(20, 0)  # 晚餐结束时间：20:00
+
     # 获取当前时间的时间部分
     current_time = dt.time()
-    
+
     # 判断所属餐别
     if BREAKFAST_START <= current_time <= BREAKFAST_END:
         return "早餐"
@@ -117,6 +96,7 @@ def classify_meal_time(dt: datetime) -> str:
         return "晚餐"
     else:
         return "加餐"
+
 
 def transform_food_data(input_data, meal_type=None):
     # 初始化返回数据结构
@@ -166,14 +146,16 @@ def transform_food_data(input_data, meal_type=None):
             "intake_rate": 100,
             "weight": weight_value,
             "is_selected": True,  # 默认全部选中
+            "nutrition_list":[],
         }
         output_data["meal_data"]["dishes"].append(dish_data)
 
         # 处理营养成分
         for nutrient in dish.get("nutrition_list", []):
             nutrient_name = nutrient.get("name", "")
-            nutrient_value = float(nutrient.get("value", "0"))
+            nutrient_value = extract_value(nutrient.get("value", "0"))
             nutrient_unit = nutrient.get("unit", "")
+            dish_data["nutrition_list"].append({"name": nutrient_name, "value": f'{nutrient_value}', "unit": nutrient_unit})
 
             if nutrient_name in nutrient_map:
                 idx = nutrient_map[nutrient_name]
@@ -202,42 +184,62 @@ if __name__ == "__main__":
     # transformed_data = transform_food_data(input_data)
     # print(transformed_data)
     import json
-    input_data = {'foods': [{'name': '清炒圆白菜',
-   'weight': '225g',
-   'calories': '50kcal',
-   'heat_level': '放心吃',
-   'material': '圆白菜',
-   'nutrition_list': [{'name': '碳水', 'value': '10', 'unit': 'g'},
-    {'name': '蛋白质', 'value': '2', 'unit': 'g'},
-    {'name': '脂肪', 'value': '0.2', 'unit': 'g'}]},
-  {'name': '清炒空心菜',
-   'weight': '225g',
-   'calories': '40kcal',
-   'heat_level': '放心吃',
-   'material': '空心菜',
-   'nutrition_list': [{'name': '碳水', 'value': '5', 'unit': 'g'},
-    {'name': '蛋白质', 'value': '3', 'unit': 'g'},
-    {'name': '脂肪', 'value': '0.3', 'unit': 'g'}]},
-  {'name': '蘑菇海带炖肉汤',
-   'weight': '500g',
-   'calories': '300kcal',
-   'heat_level': '适量',
-   'material': '蘑菇, 海带, 肉',
-   'nutrition_list': [{'name': '碳水', 'value': '20', 'unit': 'g'},
-    {'name': '蛋白质', 'value': '30', 'unit': 'g'},
-    {'name': '脂肪', 'value': '20', 'unit': 'g'}]},
-  {'name': '红椒炒饭',
-   'weight': '225g',
-   'calories': '300kcal',
-   'heat_level': '适量',
-   'material': '红椒, 米饭',
-   'nutrition_list': [{'name': '碳水', 'value': '40', 'unit': 'g'},
-    {'name': '蛋白质', 'value': '5', 'unit': 'g'},
-    {'name': '脂肪', 'value': '10', 'unit': 'g'}]}],
- 'summary': '热量适中，营养均衡，放心吃'}
-    
-    # transformed_data = transform_food_data(input_data)
-    
-    # print(json.dumps(transformed_data, ensure_ascii=False, indent=2))
+
+    input_data = {
+        "foods": [
+            {
+                "name": "清炒圆白菜",
+                "weight": "225g",
+                "calories": "50kcal",
+                "heat_level": "放心吃",
+                "material": "圆白菜",
+                "nutrition_list": [
+                    {"name": "碳水", "value": "10", "unit": "g"},
+                    {"name": "蛋白质", "value": "2", "unit": "g"},
+                    {"name": "脂肪", "value": "0.2", "unit": "g"},
+                ],
+            },
+            {
+                "name": "清炒空心菜",
+                "weight": "225g",
+                "calories": "40kcal",
+                "heat_level": "放心吃",
+                "material": "空心菜",
+                "nutrition_list": [
+                    {"name": "碳水", "value": "5", "unit": "g"},
+                    {"name": "蛋白质", "value": "3", "unit": "g"},
+                    {"name": "脂肪", "value": "0.3", "unit": "g"},
+                ],
+            },
+            {
+                "name": "蘑菇海带炖肉汤",
+                "weight": "500g",
+                "calories": "300kcal",
+                "heat_level": "适量",
+                "material": "蘑菇, 海带, 肉",
+                "nutrition_list": [
+                    {"name": "碳水", "value": "20", "unit": "g"},
+                    {"name": "蛋白质", "value": "30", "unit": "g"},
+                    {"name": "脂肪", "value": "20", "unit": "g"},
+                ],
+            },
+            {
+                "name": "红椒炒饭",
+                "weight": "225g",
+                "calories": "300kcal",
+                "heat_level": "适量",
+                "material": "红椒, 米饭",
+                "nutrition_list": [
+                    {"name": "碳水", "value": "40", "unit": "g"},
+                    {"name": "蛋白质", "value": "5", "unit": "g"},
+                    {"name": "脂肪", "value": "10", "unit": "g"},
+                ],
+            },
+        ],
+        "summary": "热量适中，营养均衡，放心吃",
+    }
+
+    transformed_data = transform_food_data(input_data)
+    print(json.dumps(transformed_data, ensure_ascii=False, indent=2))
     import doctest
     print(doctest.testmod(verbose=False, report=False))
