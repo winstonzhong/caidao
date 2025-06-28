@@ -1,0 +1,313 @@
+import os
+import re
+import subprocess
+import pandas as pd
+from datetime import datetime
+from typing import List, Dict, Optional, Union
+
+class AndroidFileBackup:
+    def __init__(self, backup_dir: str):
+        """
+        初始化Android文件备份工具
+        
+        参数:
+            backup_dir: 本地备份目录路径
+        """
+        self.backup_dir = backup_dir
+        self.mapping_table_path = os.path.join(backup_dir, "backup_mapping.csv")
+        self.mapping_table = self._load_mapping_table()
+        
+        # 确保备份目录存在
+        if not os.path.exists(backup_dir):
+            os.makedirs(backup_dir)
+            
+        # 文件类型定义及对应的MIME类型和扩展名
+        self.file_types = {
+            'video': {
+                'mime_patterns': ['video/'],
+                'extensions': ['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv']
+            },
+            'image': {
+                'mime_patterns': ['image/'],
+                'extensions': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+            },
+            'audio': {
+                'mime_patterns': ['audio/'],
+                'extensions': ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a']
+            },
+            'document': {
+                'mime_patterns': ['application/pdf', 'application/msword', 
+                                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                                 'application/vnd.ms-excel', 
+                                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                 'application/vnd.ms-powerpoint', 
+                                 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                                 'text/plain'],
+                'extensions': ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt']
+            }
+        }
+        
+        # 安卓系统目录列表，用于判断是否为系统文件
+        self.system_dirs = [
+            '/system', '/vendor', '/product', '/odm', '/oem',
+            '/data/local', '/data/system'
+        ]
+
+    def _run_adb_command(self, command: List[str]) -> str:
+        """执行ADB命令并返回输出"""
+        try:
+            result = subprocess.run(
+                ['adb'] + command,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            return result.stdout.strip()
+        except subprocess.CalledProcessError as e:
+            print(f"ADB命令执行失败: {e.stderr}")
+            raise
+
+    def _load_mapping_table(self) -> pd.DataFrame:
+        """加载或创建备份映射表"""
+        if os.path.exists(self.mapping_table_path):
+            return pd.read_csv(self.mapping_table_path)
+        else:
+            # 创建新的数据框
+            return pd.DataFrame(columns=[
+                'android_path', 'local_path', 'file_type', 'is_system', 
+                'backup_time', 'file_size', 'md5_hash'
+            ])
+
+    def _save_mapping_table(self) -> None:
+        """保存备份映射表"""
+        self.mapping_table.to_csv(self.mapping_table_path, index=False)
+
+    def is_device_connected(self) -> bool:
+        """检查是否有安卓设备通过ADB连接"""
+        devices = self._run_adb_command(['devices']).split('\n')[1:]
+        # 过滤掉空行并检查是否有设备
+        return any(device.strip() and not device.startswith('*') for device in devices)
+
+    def search_files(self, file_type: Optional[str] = None, 
+                    directory: str = '/sdcard', 
+                    recursive: bool = True) -> List[Dict[str, str]]:
+        """
+        搜索安卓设备上的文件
+        
+        参数:
+            file_type: 文件类型，可选值为 'video', 'image', 'audio', 'document' 或 None(所有类型)
+            directory: 搜索目录，默认为 /sdcard
+            recursive: 是否递归搜索，默认为True
+            
+        返回:
+            包含文件信息的字典列表
+        """
+        if file_type and file_type not in self.file_types:
+            raise ValueError(f"不支持的文件类型: {file_type}")
+            
+        # 构建find命令
+        find_command = ['shell', 'find', directory]
+        
+        if not recursive:
+            find_command.append('-maxdepth')
+            find_command.append('1')
+            
+        # 添加文件类型过滤
+        if file_type:
+            extensions = self.file_types[file_type]['extensions']
+            name_pattern = ' -o '.join([f'-name "*{ext}"' for ext in extensions])
+            find_command.extend(['(', name_pattern, ')'])
+        
+        # 执行命令
+        output = self._run_adb_command(find_command)
+        
+        # 解析输出
+        files = []
+        for line in output.split('\n'):
+            file_path = line.strip()
+            if file_path and os.path.basename(file_path):  # 排除空路径和目录
+                files.append({
+                    'path': file_path,
+                    'type': self._classify_file(file_path, file_type) if file_type is None else file_type
+                })
+                
+        return files
+
+    def _classify_file(self, file_path: str, default_type: Optional[str] = None) -> str:
+        """根据文件路径和MIME类型对文件进行分类"""
+        # 先尝试通过扩展名判断
+        ext = os.path.splitext(file_path)[1].lower()
+        
+        for file_type, info in self.file_types.items():
+            if ext in info['extensions']:
+                return file_type
+                
+        # 如果扩展名无法判断，则尝试通过MIME类型判断
+        try:
+            mime_type = self._run_adb_command(['shell', 'file', '-b', '--mime-type', f'"{file_path}"'])
+            for file_type, info in self.file_types.items():
+                if any(pattern in mime_type for pattern in info['mime_patterns']):
+                    return file_type
+        except:
+            pass  # 忽略错误，使用默认类型
+            
+        return default_type or 'unknown'
+
+    def is_system_file(self, file_path: str) -> bool:
+        """判断文件是否为安卓系统文件"""
+        return any(file_path.startswith(dir) for dir in self.system_dirs)
+
+    def backup_files(self, files: List[Dict[str, str]], 
+                    overwrite: bool = False, 
+                    skip_system_files: bool = True) -> int:
+        """
+        备份文件到本地目录
+        
+        参数:
+            files: 要备份的文件列表，每个元素是包含 'path' 和 'type' 的字典
+            overwrite: 是否覆盖已存在的文件，默认为False
+            skip_system_files: 是否跳过系统文件，默认为True
+            
+        返回:
+            成功备份的文件数量
+        """
+        if not files:
+            return 0
+            
+        success_count = 0
+        current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        for file_info in files:
+            android_path = file_info['path']
+            file_type = file_info['type']
+            
+            # 检查是否为系统文件
+            is_system = self.is_system_file(android_path)
+            if skip_system_files and is_system:
+                continue
+                
+            # 获取文件信息
+            try:
+                file_size = self._run_adb_command(['shell', 'stat', '-c', '%s', f'"{android_path}"'])
+                md5_hash = self._run_adb_command(['shell', 'md5sum', f'"{android_path}"']).split()[0]
+            except:
+                file_size = 'unknown'
+                md5_hash = 'unknown'
+                
+            # 确定本地路径
+            file_name = os.path.basename(android_path)
+            type_dir = os.path.join(self.backup_dir, file_type)
+            
+            # 确保类型目录存在
+            if not os.path.exists(type_dir):
+                os.makedirs(type_dir)
+                
+            # 构建本地路径
+            local_path = os.path.join(type_dir, file_name)
+            
+            # 处理文件已存在的情况
+            if os.path.exists(local_path) and not overwrite:
+                # 添加时间戳避免冲突
+                base_name, ext = os.path.splitext(file_name)
+                local_path = os.path.join(type_dir, f"{base_name}_{current_time}{ext}")
+                
+            # 执行备份
+            try:
+                self._run_adb_command(['pull', f'"{android_path}"', f'"{local_path}"'])
+                
+                # 更新映射表
+                new_entry = pd.DataFrame({
+                    'android_path': [android_path],
+                    'local_path': [local_path],
+                    'file_type': [file_type],
+                    'is_system': [is_system],
+                    'backup_time': [current_time],
+                    'file_size': [file_size],
+                    'md5_hash': [md5_hash]
+                })
+                
+                self.mapping_table = pd.concat([self.mapping_table, new_entry], ignore_index=True)
+                self._save_mapping_table()
+                
+                success_count += 1
+                print(f"已备份: {android_path} -> {local_path}")
+            except Exception as e:
+                print(f"备份失败: {android_path} - {str(e)}")
+                
+        return success_count
+
+    def backup_by_type(self, file_type: str, directory: str = '/sdcard', 
+                      overwrite: bool = False, skip_system_files: bool = True) -> int:
+        """
+        根据文件类型备份文件
+        
+        参数:
+            file_type: 文件类型，可选值为 'video', 'image', 'audio', 'document'
+            directory: 搜索目录，默认为 /sdcard
+            overwrite: 是否覆盖已存在的文件，默认为False
+            skip_system_files: 是否跳过系统文件，默认为True
+            
+        返回:
+            成功备份的文件数量
+        """
+        if file_type not in self.file_types:
+            raise ValueError(f"不支持的文件类型: {file_type}")
+            
+        files = self.search_files(file_type, directory)
+        return self.backup_files(files, overwrite, skip_system_files)
+
+    def backup_all(self, directory: str = '/sdcard', 
+                  overwrite: bool = False, skip_system_files: bool = True) -> int:
+        """
+        备份所有支持的文件类型
+        
+        参数:
+            directory: 搜索目录，默认为 /sdcard
+            overwrite: 是否覆盖已存在的文件，默认为False
+            skip_system_files: 是否跳过系统文件，默认为True
+            
+        返回:
+            成功备份的文件数量
+        """
+        total_count = 0
+        
+        for file_type in self.file_types:
+            count = self.backup_by_type(file_type, directory, overwrite, skip_system_files)
+            total_count += count
+            print(f"已备份 {file_type} 文件: {count} 个")
+            
+        return total_count
+
+    def get_backup_stats(self) -> Dict[str, int]:
+        """获取备份统计信息"""
+        if self.mapping_table.empty:
+            return {
+                'total_files': 0,
+                'video': 0,
+                'image': 0,
+                'audio': 0,
+                'document': 0,
+                'system_files': 0,
+                'user_files': 0
+            }
+            
+        return {
+            'total_files': len(self.mapping_table),
+            'video': len(self.mapping_table[self.mapping_table['file_type'] == 'video']),
+            'image': len(self.mapping_table[self.mapping_table['file_type'] == 'image']),
+            'audio': len(self.mapping_table[self.mapping_table['file_type'] == 'audio']),
+            'document': len(self.mapping_table[self.mapping_table['file_type'] == 'document']),
+            'system_files': len(self.mapping_table[self.mapping_table['is_system'] == True]),
+            'user_files': len(self.mapping_table[self.mapping_table['is_system'] == False])
+        }
+
+    def find_duplicates(self) -> pd.DataFrame:
+        """查找备份中的重复文件"""
+        if self.mapping_table.empty:
+            return pd.DataFrame()
+            
+        # 按MD5哈希分组并查找重复项
+        return self.mapping_table[self.mapping_table['md5_hash'] != 'unknown'] \
+            .groupby('md5_hash') \
+            .filter(lambda x: len(x) > 1) \
+            .sort_values('md5_hash')    
