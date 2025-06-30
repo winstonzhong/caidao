@@ -286,12 +286,7 @@ def is_float(x):
 
 
 def is_int(x):
-    try:
-        to_int(x)
-        return True
-    except Exception:
-        pass
-    return False
+    return to_int(x) is not None
 
 
 def is_number(x):
