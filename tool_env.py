@@ -259,6 +259,11 @@ def smart_range_safe(start, end):
 def is_string(x):
     return _is_string_like(x)
 
+def to_float(x):
+    try:
+        return float(x)
+    except Exception:
+        pass
 
 def is_float(x):
     """
@@ -277,19 +282,14 @@ def is_float(x):
     >>> is_float('0.1')
     True
     """
-    try:
-        float(x)
-        return "." in str(x)
-    except:
-        pass
-    return False
+    return isinstance(x, float) or (isinstance(x, str) and '.' in x and to_float(x) is not None)
 
 
 def is_int(x):
     try:
-        int(x)
+        to_int(x)
         return True
-    except:
+    except Exception:
         pass
     return False
 
@@ -299,9 +299,20 @@ def is_number(x):
 
 
 def to_int(x):
+    '''
+    >>> to_int('1.0') == 1
+    True
+    >>> to_int('1') == 1
+    True
+    >>> to_int('1.1a')
+    '''
     try:
         return int(x)
-    except:
+    except Exception:
+        pass
+    try:
+        return int(float(x))
+    except Exception:
         pass
 
 

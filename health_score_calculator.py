@@ -264,9 +264,9 @@ def calculate_health_score(
     final_score = max(0, min(100, round(base_score, 1)))
 
     # 生成理由总结
-    reason_summary = "，".join(reasons)
+    # reason_summary = "，".join(reasons)
 
-    return final_score, reason_summary
+    return final_score, reasons
 
 
 if __name__ == "__main__":
