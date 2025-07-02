@@ -3,8 +3,16 @@ import pandas
 from pathlib import Path
 
 import itertools
+import tool_env
 
 UT_DIR = Path(__file__).parent.resolve() / "ut"
+
+# SELF_MAP = {
+#     "True": 1,
+#     "False": 0,
+#     True: 1,
+#     False: 0,
+# }
 
 
 def load_ut_df(name):
@@ -389,6 +397,21 @@ def 同步消息列表得到完整的会话(phone, 历史df=None, func_add_log=N
 # def 拆分消息列表到新消息与历史消息(df):
 #     pass
 
+def 转换自己(x):
+    if x == "True":
+        return 1
+    elif x == "False":
+        return 0
+    return tool_env.to_int(x) or 0
+
+def 标准化df(df):
+    if not df.empty:
+        if '自己' not in df.columns:
+            df['自己'] = False
+        else:
+            # df.自己 = df.自己.apply(lambda x:SELF_MAP.get(x, 1)).fillna(0).astype(bool)
+            df.自己 = df.自己.fillna(0).apply(转换自己).astype(bool)
+    return df
 
 if __name__ == "__main__":
     from helper_hash import get_hash_df
