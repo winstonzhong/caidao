@@ -18,42 +18,27 @@ class 基础任务视图(APIView):
             if v in ("False", "True"):
                 d[k] = eval(v)
         return d
-    
+
     def get_order_by(self, request):
-        if request.GET.get('order_by'):
-            return [x for x in request.GET.get('order_by').strip().split(",") if x.strip()]
-        return ['id']
+        if request.GET.get("order_by"):
+            return [
+                x for x in request.GET.get("order_by").strip().split(",") if x.strip()
+            ]
+        return ["id"]
 
     def get(self, request):
         d = self.before_get(request)
-        
-        # print('paras:', d)
-        
-        obj = self.model.objects.filter(**d).order_by(*self.get_order_by(request)).first()
 
-        # obj = self.model.objects.filter(**d).first()
-        
-        # obj = cls.objects.filter(完成打标签=False).order_by("-榜单权重", "id").first()
-        
-        # obj = q.order_by("update_time").first()
+        obj = (
+            self.model.objects.filter(**d).order_by(*self.get_order_by(request)).first()
+        )
 
-        # if (
-        #     request.GET.get("query_only") is None
-        #     and q.filter(due_time__gt=timezone.now()).first() is not None
-        # ):
-        #     obj = None
-        # else:
-        #     obj = q.order_by("update_time").first()
-            
         if request.GET.get("query_only") is None:
             obj = self.model.尝试获得处理权(obj)
-        
-        obj = self.after_get(request, obj)
+        elif obj is not None:
+            obj.save()
 
-        # if request.GET.get("获取任务"):
-        #     obj = self.model.get_task()
-        # else:
-        #     obj = self.after_get(request, self.model.尝试获得处理权(obj))
+        obj = self.after_get(request, obj)
 
         if isinstance(obj, str):
             return HttpResponse(obj)
@@ -73,11 +58,12 @@ class 基础任务视图(APIView):
     def post(self, request):
         d = request.POST.dict()
 
-        pk_name = d.get("pk_name")
+        pk_name = d.get("pk_name", "pk")
 
         pk_value = d.get("pk_value")
 
         # assert pk_name and pk_value, "pk_name or pk_value is None"
+        print('pk_name', pk_name, 'pk_value', pk_value)
 
         if pk_name and pk_value:
             d = self.model.筛选出数据库字段(d)

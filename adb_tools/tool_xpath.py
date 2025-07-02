@@ -39,6 +39,8 @@ import traceback
 
 import tool_wx
 
+import requests
+
 
 # def execute_lines(job, lines, self=None):
 #     if self is not None:
@@ -51,6 +53,7 @@ import tool_wx
 #                 traceback.print_exc()
 #     else:
 #         exec(lines)
+global_cache = {}
 
 
 def execute_lines(job, lines, self=None):
@@ -261,9 +264,7 @@ class SteadyDevice(DummyDevice):
         return df
 
     def merge_wx_df(self, upper_page, lower_page):
-        rtn = tool_wx_df.合并上下两个df(
-            上一页=upper_page, 当前页=lower_page, safe=True
-        )
+        rtn = tool_wx_df.合并上下两个df(上一页=upper_page, 当前页=lower_page, safe=True)
         if "自己" in rtn.columns:
             rtn.已处理 = rtn.已处理.fillna(False).astype(bool)
         else:
@@ -274,7 +275,6 @@ class SteadyDevice(DummyDevice):
         else:
             rtn["已处理"] = False
         return rtn
-
 
     @property
     def remote_fpath_wx_images(self):
@@ -292,9 +292,9 @@ class SteadyDevice(DummyDevice):
     def cut_wx_df(self, df):
         tmp = df[df.自己]
         if not tmp.empty:
-            return df.loc[tmp.index[-1]:].copy()
+            return df.loc[tmp.index[-1] :].copy()
         return df
-    
+
     def is_wx_group(self, name):
         return tool_wx.is_session_name(name)
 
@@ -490,6 +490,7 @@ class 基本任务(抽象持久序列):
         self.status = None
         self.last_executed_block_id = None
         self.cache = {}
+        self.remote_obj = 0
 
     def get_remote_obj(self, url, 带串行号=True, **kwargs):
         if 带串行号:
@@ -499,13 +500,18 @@ class 基本任务(抽象持久序列):
         return RemoteModel(url, 设备串行号=设备串行号, **kwargs)
 
     def requests_get(self, url, 带串行号=True, **kwargs):
-        # if 带串行号:
-        #     设备串行号 = self.device.adb.serialno
-        # else:
-        #     设备串行号 = None
-        # obj = RemoteModel(url, 设备串行号=设备串行号, **kwargs)
         obj = self.get_remote_obj(url, 带串行号=带串行号, **kwargs)
         return obj if obj.data else None
+
+    def requests_post(self, url, 带串行号=True, **kwargs):
+        payload = {"设备串行号": self.device.adb.serialno}
+        for key, value in kwargs.items():
+            if isinstance(value, (dict, list)):
+                payload[key] = json.dumps(value)
+            else:
+                payload[key] = value
+        response = requests.post(url, data=payload)
+        response.raise_for_status()
 
     @property
     def blocks(self):
@@ -662,12 +668,14 @@ class 基本任务列表(抽象持久序列):
             job.刷新参数(paras)
 
     def 执行任务(self, 单步=False):
+        global_cache.clear()
         if 单步:
             return self.jobs[-1].执行任务(单步=单步)
         else:
             num_executed = 0
+            main_job = self.jobs[-1]
             try:
-                self.jobs[-1].执行前置检查操作块()
+                main_job.执行前置检查操作块()
                 for job in self.jobs:
                     num_executed += job.执行任务(单步=False)
             except 任务预检查不通过异常:
