@@ -256,8 +256,12 @@ class SteadyDevice(DummyDevice):
         )
 
     @property
+    def container_wx(self):
+        return 解析器(xml=self.source)
+
+    @property
     def df_wx(self):
-        df = 解析器(xml=self.source).上下文df
+        df = self.container_wx.上下文df
         df["已处理"] = False
         df["链接"] = None
         df.自己 = df.自己.fillna(False).astype(bool)

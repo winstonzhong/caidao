@@ -63,7 +63,7 @@ class 基础任务视图(APIView):
         pk_value = d.get("pk_value")
 
         # assert pk_name and pk_value, "pk_name or pk_value is None"
-        print('pk_name', pk_name, 'pk_value', pk_value)
+        # print('pk_name', pk_name, 'pk_value', pk_value)
 
         if pk_name and pk_value:
             d = self.model.筛选出数据库字段(d)
