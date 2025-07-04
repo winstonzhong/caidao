@@ -1,5 +1,8 @@
 class 任务预检查不通过异常(Exception):
     pass
 
+class 达到最大重复次数异常(Exception):
+    pass
 
-# {"food_list": [{"name": 清炒圆白菜, "weight": 225, "calories": 35, "heat_level": 放心吃, "material": [圆白菜], "nutrition_list": [{"name": 碳水, "value": 6.3, "unit": g}, {"name": 蛋白质, "value": 1.5, "unit": g}, {"name": 脂肪, "value": 0.1, "unit": g}, {"name": 维生素, "value": 180, "unit": mg}, {"name": 矿物质, "value": 250, "unit": mg}, {"name": 水, "value": 92.1, "unit": g}]}, {"name": 清炒空心菜, "weight": 225, "calories": 35, "heat_level": 放心吃, "material": [空心菜], "nutrition_list": [{"name": 碳水, "value": 4.1, "unit": g}, {"name": 蛋白质, "value": 2.2, "unit": g}, {"name": 脂肪, "value": 0.3, "unit": g}, {"name": 维生素, "value": 130, "unit": mg}, {"name": 矿物质, "value": 150, "unit": mg}, {"name": 水, "value": 93.3, "unit": g}]}, {"name": 蘑菇海带炖肉汤, "weight": 550, "calories": 130, "heat_level": 适量, "material": [蘑菇, 海带, 肉], "nutrition_list": [{"name": 碳水, "value": 10, "unit": g}, {"name": 蛋白质, "value": 20, "unit": g}, {"name": 脂肪, "value": 5, "unit": g}, {"name": 维生素, "value": 50, "unit": mg}, {"name": 矿物质, "value": 100, "unit": mg}, {"name": 水, "value": 400, "unit": g}]}, {"name": 红椒炒饭, "weight": 225, "calories": 200, "heat_level": 适量, "material": [红椒, 大米], "nutrition_list": [{"name": 碳水, "value": 37.8, "unit": g}, {"name": 蛋白质, "value": 2.6, "unit": g}, {"name": 脂肪, "value": 0.3, "unit": g}, {"name": 维生素, "value": 18, "unit": mg}, {"name": 矿物质, "value": 35, "unit": mg}, {"name": 水, "value": 63.3, "unit": g}]} ],"summary": "热量适中,营养均衡"}
+class 达到最大空白屏次数异常(Exception):
+    pass

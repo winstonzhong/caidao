@@ -23,7 +23,7 @@ import pandas
 
 from functools import cached_property
 
-from tool_exceptions import 任务预检查不通过异常
+from tool_exceptions import 任务预检查不通过异常, 达到最大重复次数异常, 达到最大空白屏次数异常
 
 from tool_remote_orm_model import RemoteModel
 
@@ -132,7 +132,9 @@ class DummyDevice(object):
         return self.adb.swipe((fromx, fromy), (tox, toy))
 
     def long_click(self, *a, **k):
-        return self.adb.ua2.long_click(*a, **k)
+        print(a, k)
+        # return self.adb.ua2.long_click(*a, **k)
+        self.adb.do_longclick(*a)
 
     def move_to(self, *a, **k):
         print(a, k)
@@ -637,7 +639,7 @@ class 基本任务(抽象持久序列):
 
             if not tmp[(tmp.repeated >= tmp.max_num) & (tmp.max_num > 0)].empty:
                 print("达到最大重复次数，停止执行")
-                break
+                raise 达到最大重复次数异常
 
             匹配成功 = not tmp.empty
 
@@ -648,7 +650,7 @@ class 基本任务(抽象持久序列):
                 num_empty_repeated += 1
                 if num_empty_repeated > self.max_empty:
                     print("达到最大空白屏次数，停止执行")
-                    break
+                    raise 达到最大空白屏次数异常
 
             if 单步:
                 break

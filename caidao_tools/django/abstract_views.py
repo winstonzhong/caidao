@@ -24,7 +24,9 @@ class 基础任务视图(APIView):
             return [
                 x for x in request.GET.get("order_by").strip().split(",") if x.strip()
             ]
-        return ["id"]
+        if request.GET.get("query_only") is None:
+            return ["id"]
+        return ["update_time"]
 
     def get(self, request):
         d = self.before_get(request)
