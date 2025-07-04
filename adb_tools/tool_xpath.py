@@ -583,8 +583,11 @@ class 基本任务(抽象持久序列):
 
     @property
     def wait_steady(self):
-        # print('wait_steady is:', [self.d.get("wait_steady")])
         return self.d.get("wait_steady", False)
+    
+    @property
+    def few_first(self):
+        return self.d.get("few_first", False)
 
     def 执行操作块(self, block_id):
         self.match(block_id)
@@ -620,7 +623,7 @@ class 基本任务(抽象持久序列):
             ],
         )
         return df.sort_values(
-            ["matched", "priority", "index"], ascending=[False, False, True]
+            ["matched", "priority", "index" if not self.few_first else "num"], ascending=[False, False, True]
         )
 
     def 执行任务(self, 单步=True):
