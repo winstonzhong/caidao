@@ -70,7 +70,7 @@ class AndroidFileBackup:
         return f"adb -s {self.ip_port} shell"
 
     def execute(self, script, encoding="utf8"):
-        # print(f"执行命令：{script}")
+        print(f"执行命令：{script}")
         # raise ValueError
         process = subprocess.Popen(
             self.cmd,
@@ -386,7 +386,7 @@ class AndroidFileBackup:
             is_system = row['is_system']
             
             # 系统文件不删除
-            if is_system:
+            if not pd.isnull(is_system) and is_system:
                 continue
                 
             # 执行删除
@@ -398,9 +398,10 @@ class AndroidFileBackup:
                 self.mapping_table.loc[index, 'original_deleted'] = True
                 
                 success_count += 1
-                print(f"已删除: {android_path}")
+                # print(f"已删除: {android_path}")
             except Exception as e:
                 print(f"删除失败: {android_path} - {str(e)}")
+
                 
         # 保存映射表
         self._save_mapping_table()
