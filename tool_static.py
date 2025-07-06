@@ -23,6 +23,7 @@ elif os.path.lexists("v:/file"):
     BASE_DIR_56T = "v:/file"
 else:
     BASE_DIR_56T = "d:/file"
+    BASE_URL_56T = "https://127.0.0.1:8000/media"
 
 # BASE_DIR_56T = "v:/file" if OS_WIN else "/mnt/56T/file"
 def is_inner():
@@ -109,7 +110,9 @@ def 路径到链接(fpath, base_dir=BASE_DIR_56T):
     """
     if OS_WIN:
         fpath = fpath.lower()
-    return fpath.replace("\\", "/").replace(base_dir, BASE_URL_56T)
+    # print(fpath, base_dir)
+
+    return fpath.replace("\\", "/").replace(base_dir.replace("\\", "/"), BASE_URL_56T)
 
 
 def 存储文件(content, suffix, 返回路径=False, base_dir=BASE_DIR_56T):

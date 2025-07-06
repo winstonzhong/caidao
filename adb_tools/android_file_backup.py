@@ -319,8 +319,10 @@ class AndroidFileBackup:
             # 处理文件已存在的情况
             if os.path.exists(local_path) and not overwrite:
                 # 添加时间戳避免冲突
-                base_name, ext = os.path.splitext(file_name)
-                local_path = os.path.join(type_dir, f"{base_name}_{current_time}{ext}")
+                # base_name, ext = os.path.splitext(file_name)
+                # local_path = os.path.join(type_dir, f"{base_name}_{current_time}{ext}")
+                success_count += 1
+                continue
                 
             # 执行备份
             try:
