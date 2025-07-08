@@ -24,7 +24,8 @@ class 基础任务视图(APIView):
             return [
                 x for x in request.GET.get("order_by").strip().split(",") if x.strip()
             ]
-        if request.GET.get("query_only") is None:
+
+        if request.GET.get("wait_finished") is not None:
             return ["id"]
         return ["update_time"]
 
@@ -35,7 +36,8 @@ class 基础任务视图(APIView):
             self.model.objects.filter(**d).order_by(*self.get_order_by(request)).first()
         )
 
-        if request.GET.get("query_only") is None:
+        # if request.GET.get("query_only") is None:
+        if request.GET.get("wait_finished") is None:
             obj = self.model.尝试获得处理权(obj)
         elif obj is not None:
             obj.save()
