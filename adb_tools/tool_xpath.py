@@ -174,6 +174,21 @@ class SteadyDevice(DummyDevice):
         self.source = None
         self.refresh()
 
+    def open_app_safe(self, package, activity):
+        script = f"am start -n {package}/{activity}"
+        # print(script)
+        self.adb.execute(script)
+        time.sleep(3)
+        self.refresh()
+        print('checking...:')
+        if not self.find_xpath_all(f'//android.widget.TextView[@package="{package}"]'):
+            self.adb.open_certain_app(
+                package = package,
+                activity = activity,
+                stop=True,
+            )
+
+
     def snapshot(self, wait_steady=False):
         if self.need_screen:
             self.img = self.adb.screenshot()
@@ -553,9 +568,17 @@ class 基本任务(抽象持久序列):
 
     def 打开应用(self):
         script = f"am start -n {self.package}/{self.activity}"
-        print(script)
+        # print(script)
         self.device.adb.execute(script)
         time.sleep(3)
+        print(f'checking...:{self.package}/{self.activity}')
+        if not self.device.adb.is_app_opened(self.package):
+            self.device.adb.open_certain_app(
+                package = self.package,
+                activity = self.activity,
+                stop=True,
+            )
+
 
     def 关闭应用(self):
         script = f"am force-stop {self.package}"

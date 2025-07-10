@@ -347,7 +347,7 @@ class 抽象定时任务(BaseModel):
         super().__init__(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.名称} - {self.执行函数}"
+        return f"[{self.id}]{self.名称} - {self.执行函数}"
 
     # def 是否超时(self):
     #     return (timezone.now() - self.update_time).seconds >= self.超时秒
@@ -385,7 +385,12 @@ class 抽象定时任务(BaseModel):
 
     @classmethod
     def 得到所有待执行的任务(cls, **kwargs):
-        return cls.objects.filter(**cls.构建所有待执行的任务查询字典(**kwargs))
+        exclude = kwargs.pop('_exclude', '')
+        if 'id' not in  kwargs:
+            q = cls.objects.filter(**cls.构建所有待执行的任务查询字典(**kwargs))
+        else:
+            q = cls.objects.filter(id=kwargs['id'])
+        return q if not exclude else q.exclude(id__in=exclude.strip().split(','))
 
     @classmethod
     def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
