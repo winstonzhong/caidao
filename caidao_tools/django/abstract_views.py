@@ -31,13 +31,13 @@ class 基础任务视图(APIView):
 
     def get(self, request):
         d = self.before_get(request)
-
+        
         obj = (
             self.model.objects.filter(**d).order_by(*self.get_order_by(request)).first()
         )
-
+        
         # if request.GET.get("query_only") is None:
-        if request.GET.get("wait_finished") is None:
+        if request.GET.get("wait_finished") is not None:
             obj = self.model.尝试获得处理权(obj)
         elif obj is not None:
             obj.save()
