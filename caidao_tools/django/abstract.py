@@ -142,9 +142,16 @@ class BaseModel(models.Model):
         return cls.FIELDS
 
     @classmethod
+    def 是否数据库字段(cls, name, fields):
+        name = name.split("__", maxsplit=1)[0]
+        return name in fields or f'{name}_id' in fields
+    
+    @classmethod
     def 筛选出数据库字段(cls, d):
         fields = cls.get_fields()
-        rtn = {k: v for k, v in d.items() if k.split("__", maxsplit=1)[0] in fields}
+        # print(fields)
+        # print(d)
+        rtn = {k: v for k, v in d.items() if cls.是否数据库字段(k, fields)}
         return rtn
 
     @classmethod
@@ -401,7 +408,7 @@ class 抽象定时任务(BaseModel):
                 for obj in q.iterator():
                     if obj.step() and obj.优先级 > 0:
                         break
-            except Exception as e:
+            except Exception:
                 print(traceback.format_exc())
                 print(f"发生异常, 等待{seconds_sleep_when_exception}秒后继续执行")
                 time.sleep(seconds_sleep_when_exception)

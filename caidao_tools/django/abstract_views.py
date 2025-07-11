@@ -31,7 +31,7 @@ class 基础任务视图(APIView):
 
     def get(self, request):
         d = self.before_get(request)
-        
+        # print(d)
         obj = (
             self.model.objects.filter(**d).order_by(*self.get_order_by(request)).first()
         )
