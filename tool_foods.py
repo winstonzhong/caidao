@@ -39,7 +39,7 @@ def extract_value(value_str):
     """
     # 使用正则表达式匹配数字部分
     # 匹配可能的负号、整数、小数点和小数部分
-    match = re.match(r"^([-+]?\d+(?:\.\d+)?)(.*)$", value_str.replace(',','').strip())
+    match = re.match(r"^([-+]?\d+(?:\.\d+)?)(.*)$", value_str.replace(",", "").strip())
 
     if match:
         try:
@@ -98,6 +98,66 @@ def classify_meal_time(dt: datetime) -> str:
         return "加餐"
 
 
+def parse_quantity(line):
+    """
+    解析包含数值和单位的字符串，返回平均值和单位。
+
+    参数:
+    line (str): 包含数值和单位的字符串，数值部分可以是单个值或范围
+
+    返回:
+    tuple: (平均值, 单位)
+
+    示例:
+    >>> parse_quantity("1100-1400g")
+    (1250.0, 'g')
+    >>> parse_quantity('1000-1200kcal')
+    (1100.0, 'kcal')
+    >>> parse_quantity('1000kcal')
+    (1000.0, 'kcal')
+    >>> parse_quantity('1,230kcal')
+    (1230.0, 'kcal')
+    >>> parse_quantity('5.5-7.5mg')
+    (6.5, 'mg')
+    >>> parse_quantity('5.5-7.5')
+    (6.5, '')
+    >>> parse_quantity('100%')
+    (100.0, '%')
+    >>> parse_quantity('1,000,000ml')
+    (1000000.0, 'ml')
+    >>> parse_quantity('1-5g')
+    (3.0, 'g')
+    >>> parse_quantity('1-5')
+    (3.0, '')
+    """
+    import re
+
+    # 提取数值部分（处理范围和千分位逗号）
+    num_part = re.search(r"^[\d\.,\-]+", line).group(0)
+
+    # 提取单位部分（可能为空）
+    unit_part = line[len(num_part) :].strip()
+
+    # 处理范围
+    if "-" in num_part and not num_part.startswith("-"):
+        bounds = num_part.split("-", 1)
+        lower = float(bounds[0].replace(",", ""))
+        upper = float(bounds[1].replace(",", ""))
+        average = (lower + upper) / 2
+    else:
+        # 处理单个数值（可能包含千分位逗号）
+        average = float(num_part.replace(",", ""))
+
+    return average, unit_part
+
+
+# 运行doctest进行单元测试
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
+
+
 def transform_food_data(input_data, meal_type=None):
     # 初始化返回数据结构
     output_data = {
@@ -125,17 +185,23 @@ def transform_food_data(input_data, meal_type=None):
     # 处理每个菜品
     for dish in input_data.get("foods", []):
         # 提取和验证单位
-        weight = dish.get("weight", "")
-        if not weight.endswith("g"):
-            raise ValueError(f"无效的重量单位: {weight}")
+        # weight = dish.get("weight", "")
+        # if not weight.endswith("g"):
+        #     raise ValueError(f"无效的重量单位: {weight}")
 
-        calories = dish.get("calories", "")
-        if not calories.endswith("kcal"):
-            raise ValueError(f"无效的热量单位: {calories}")
+        # calories = dish.get("calories", "")
+        # if not calories.endswith("kcal"):
+        #     raise ValueError(f"无效的热量单位: {calories}")
 
-        # 转换为数值
-        weight_value = float(weight[:-1])
-        calories_value = float(calories[:-4])
+        # # 转换为数值
+        # weight_value = float(weight[:-1])
+        # calories_value = float(calories[:-4])
+        weight_value, u = parse_quantity(dish.get("weight", ""))
+        assert u == "g", f"无效的重量单位: {u}"
+
+        calories_value, u = parse_quantity(dish.get("calories", ""))
+        assert u == "kcal", f"无效的热量单位: {u}"
+
         total_calories += calories_value
 
         # 构建菜品数据
@@ -146,7 +212,7 @@ def transform_food_data(input_data, meal_type=None):
             "intake_rate": 100,
             "weight": weight_value,
             "is_selected": True,  # 默认全部选中
-            "nutrition_list":[],
+            "nutrition_list": [],
         }
         output_data["meal_data"]["dishes"].append(dish_data)
 
@@ -155,7 +221,13 @@ def transform_food_data(input_data, meal_type=None):
             nutrient_name = nutrient.get("name", "")
             nutrient_value = extract_value(nutrient.get("value", "0"))
             nutrient_unit = nutrient.get("unit", "")
-            dish_data["nutrition_list"].append({"name": nutrient_name, "value": f'{nutrient_value}', "unit": nutrient_unit})
+            dish_data["nutrition_list"].append(
+                {
+                    "name": nutrient_name,
+                    "value": f"{nutrient_value}",
+                    "unit": nutrient_unit,
+                }
+            )
 
             if nutrient_name in nutrient_map:
                 idx = nutrient_map[nutrient_name]
@@ -240,6 +312,7 @@ if __name__ == "__main__":
     }
 
     transformed_data = transform_food_data(input_data)
-    print(json.dumps(transformed_data, ensure_ascii=False, indent=2))
+    # print(json.dumps(transformed_data, ensure_ascii=False, indent=2))
     import doctest
+
     print(doctest.testmod(verbose=False, report=False))
