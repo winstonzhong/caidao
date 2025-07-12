@@ -400,9 +400,9 @@ class 抽象定时任务(BaseModel):
 
     @classmethod
     def 编写起止参数集合(cls):
-        # timezone.localtime().time()
-        return (Q(begin_time__isnull=True) | Q(begin_time__gte='12:50:00'),
-                      Q(end_time__isnull=True) | Q(end_time__lte='23:59:00'),
+        t = timezone.localtime().time()
+        return (Q(begin_time__isnull=True) | Q(begin_time__lte=t),
+                      Q(end_time__isnull=True) | Q(end_time__gte=t),
                       )
 
     @classmethod
