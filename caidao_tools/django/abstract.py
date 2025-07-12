@@ -144,8 +144,8 @@ class BaseModel(models.Model):
     @classmethod
     def 是否数据库字段(cls, name, fields):
         name = name.split("__", maxsplit=1)[0]
-        return name in fields or f'{name}_id' in fields
-    
+        return name in fields or f"{name}_id" in fields
+
     @classmethod
     def 筛选出数据库字段(cls, d):
         fields = cls.get_fields()
@@ -228,17 +228,22 @@ class 抽象任务数据(BaseModel):
     @classmethod
     def get_seconds_expiring(cls):
         return 300
-    
+
     @classmethod
     def get_task(cls, **paras):
-        return cls.objects.filter(**paras).filter(
-                    Q(processing=False)
-                    | Q(
-                        update_time__lt=(
-                            timezone.now() - datetime.timedelta(seconds=cls.get_seconds_expiring())
-                        )
+        return (
+            cls.objects.filter(**paras)
+            .filter(
+                Q(processing=False)
+                | Q(
+                    update_time__lt=(
+                        timezone.now()
+                        - datetime.timedelta(seconds=cls.get_seconds_expiring())
                     )
-                ).first()
+                )
+            )
+            .first()
+        )
 
     @classmethod
     def select_for_processing(cls, pk, seconds=300):
@@ -344,6 +349,9 @@ class 抽象定时任务(BaseModel):
     update_time = models.DateTimeField(verbose_name="更新时间", null=True, blank=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
 
+    begin_time = models.TimeField(verbose_name="开始时间", null=True, blank=True)
+    end_time = models.TimeField(verbose_name="结束时间", null=True, blank=True)
+
     class Meta:
         abstract = True
         indexes = [
@@ -386,18 +394,30 @@ class 抽象定时任务(BaseModel):
             Value(datetime.timedelta(seconds=1)) * F("间隔秒"),
             output_field=DurationField(),
         )
-        if 'id' not in kwargs:
-            kwargs["激活"] = True
+        kwargs["激活"] = True
+
         return kwargs
 
     @classmethod
+    def 编写起止参数集合(cls):
+        # timezone.localtime().time()
+        return (Q(begin_time__isnull=True) | Q(begin_time__gte='12:50:00'),
+                      Q(end_time__isnull=True) | Q(end_time__lte='23:59:00'),
+                      )
+
+    @classmethod
+    def 得到当前时间对象(cls, hour, minute, second):
+        now = timezone.localtime(timezone.now())
+        return now.replace(hour=hour, minute=minute, second=second)
+
+    @classmethod
     def 得到所有待执行的任务(cls, **kwargs):
-        exclude = kwargs.pop('_exclude', '')
-        if 'id' not in  kwargs:
-            q = cls.objects.filter(**cls.构建所有待执行的任务查询字典(**kwargs))
+        exclude = kwargs.pop("_exclude", "")
+        if "id" not in kwargs:
+            q = cls.objects.filter(*cls.编写起止参数集合(), **cls.构建所有待执行的任务查询字典(**kwargs))
         else:
-            q = cls.objects.filter(id=kwargs['id'])
-        return q if not exclude else q.exclude(id__in=exclude.strip().split(','))
+            q = cls.objects.filter(id=kwargs["id"])
+        return q if not exclude else q.exclude(id__in=exclude.strip().split(","))
 
     @classmethod
     def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):

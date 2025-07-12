@@ -8,7 +8,7 @@ import os
 import time
 
 import cv2
-from uiautomator2.xpath import XPath
+from uiautomator2.xpath import XPath, XMLElement
 
 from helper_hash import get_hash
 from tool_env import bounds_to_rect
@@ -40,6 +40,7 @@ import traceback
 import tool_wx
 
 import requests
+
 
 
 # def execute_lines(job, lines, self=None):
@@ -174,6 +175,9 @@ class SteadyDevice(DummyDevice):
         self.source = None
         self.refresh()
 
+    def widget_to_element(self, w):
+        return XMLElement(w, XPath(self))
+    
     def open_app_safe(self, package, activity):
         script = f"am start -n {package}/{activity}"
         # print(script)
