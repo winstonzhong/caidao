@@ -63,58 +63,6 @@ class AndroidFileBackup:
     def _run_adb_command(self, command: List[str]) -> str:
         """执行ADB命令并返回输出"""
         return self.execute(' '.join(command[1:] if command[0] == 'shell' else command))
-        # print(command)
-        # try:
-        #     result = subprocess.run(
-        #         ['adb'] + command,
-        #         capture_output=True,
-        #         text=True,
-        #         check=True,
-        #         encoding='utf8',
-        #     )
-        #     return result.stdout.strip()
-        # except subprocess.CalledProcessError as e:
-        #     print(f"ADB命令执行失败: {e.stderr}")
-        #     raise
-
-    # def execute2(self, script, encoding="utf8") -> Tuple[Generator[str, None, None], Generator[str, None, None]]:
-    #     """
-    #     执行命令并返回实时输出的生成器
-        
-    #     返回:
-    #         包含两个生成器的元组: (stdout_generator, stderr_generator)
-    #     """
-    #     process = subprocess.Popen(
-    #         self.cmd,
-    #         encoding=encoding,
-    #         shell=True,
-    #         stdin=subprocess.PIPE,
-    #         stdout=subprocess.PIPE,
-    #         stderr=subprocess.PIPE,
-    #         bufsize=1,          # 启用行缓冲
-    #         universal_newlines=True  # 文本模式
-    #     )
-        
-    #     # # 定义生成器函数处理标准输出
-    #     # def stdout_generator():
-    #     #     if process.stdout:
-    #     #         for line in iter(process.stdout.readline, ''):
-    #     #             yield line
-    #     #         process.stdout.close()
-        
-    #     # # 定义生成器函数处理标准错误
-    #     # def stderr_generator():
-    #     #     if process.stderr:
-    #     #         for line in iter(process.stderr.readline, ''):
-    #     #             yield line
-    #     #         process.stderr.close()
-        
-    #     # 返回生成器而不是等待完成
-    #     # return stdout_generator(), stderr_generator()
-    #     if process.stdout:
-    #         for line in process.stdout.readline():
-    #             yield line
-    #         process.stdout.close()
 
 
     @property
@@ -122,7 +70,8 @@ class AndroidFileBackup:
         return f"adb -s {self.ip_port} shell"
 
     def execute(self, script, encoding="utf8"):
-        # print(f"执行命令：{script}")
+        print(f"执行命令：{script}")
+        # raise ValueError
         process = subprocess.Popen(
             self.cmd,
             encoding=encoding,
@@ -132,6 +81,23 @@ class AndroidFileBackup:
             stderr=subprocess.PIPE,
         )
         stdout, stderr = process.communicate(input=script)
+        if stderr:
+            raise Exception(f"ADB命令执行失败: {stderr}")
+        return stdout.strip()
+    
+    def run_adb(self, script, encoding="utf8"):
+        # print(f"执行命令：{script}")
+        # raise ValueError
+        script = ' '.join(script) if isinstance(script, list) else script
+        process = subprocess.Popen(
+            f"adb -s {self.ip_port} {script}",
+            encoding=encoding,
+            shell=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stdout, stderr = process.communicate()
         if stderr:
             raise Exception(f"ADB命令执行失败: {stderr}")
         return stdout.strip()
@@ -321,8 +287,9 @@ class AndroidFileBackup:
             file_types_str = "', '".join(file_types)
             query += f' and file_type in ["{file_types_str}"]'
             
-        if skip_system_files:
-            query += ' and is_system == False'
+        # if skip_system_files:
+        #     query += ' and is_system == False'
+        # print(query)
             
         files_to_backup = self.mapping_table.query(query)
         
@@ -352,12 +319,14 @@ class AndroidFileBackup:
             # 处理文件已存在的情况
             if os.path.exists(local_path) and not overwrite:
                 # 添加时间戳避免冲突
-                base_name, ext = os.path.splitext(file_name)
-                local_path = os.path.join(type_dir, f"{base_name}_{current_time}{ext}")
+                # base_name, ext = os.path.splitext(file_name)
+                # local_path = os.path.join(type_dir, f"{base_name}_{current_time}{ext}")
+                success_count += 1
+                continue
                 
             # 执行备份
             try:
-                self._run_adb_command(['pull', f'"{android_path}"', f'"{local_path}"'])
+                self.run_adb(['pull', f'"{android_path}"', f'"{local_path}"'])
                 
                 # 更新映射表中的备份状态
                 index = row.name
@@ -366,7 +335,7 @@ class AndroidFileBackup:
                 self.mapping_table.loc[index, 'backup_status'] = '已备份'
                 
                 success_count += 1
-                print(f"已备份: {android_path} -> {local_path}")
+                # print(f"已备份: {android_path} -> {local_path}")
             except Exception as e:
                 print(f"备份失败: {android_path} - {str(e)}")
                 
@@ -419,7 +388,7 @@ class AndroidFileBackup:
             is_system = row['is_system']
             
             # 系统文件不删除
-            if is_system:
+            if not pd.isnull(is_system) and is_system:
                 continue
                 
             # 执行删除
@@ -431,9 +400,10 @@ class AndroidFileBackup:
                 self.mapping_table.loc[index, 'original_deleted'] = True
                 
                 success_count += 1
-                print(f"已删除: {android_path}")
+                # print(f"已删除: {android_path}")
             except Exception as e:
                 print(f"删除失败: {android_path} - {str(e)}")
+
                 
         # 保存映射表
         self._save_mapping_table()

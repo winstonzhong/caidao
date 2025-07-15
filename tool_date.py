@@ -33,13 +33,20 @@ def time_shanghai():
 def time_now():
     return time_shanghai().strftime("%H:%M:%S")
 
+def 现在():
+    return time_shanghai()
+
 
 def 今天():
     return datetime.datetime.now(TIME_ZONE_SHANGHAI).date()
 
+def 昨天():
+    return 今天() - datetime.timedelta(days=1)
+
 
 def today():
     return dash_date(今天())
+
 
 
 def yesterday():

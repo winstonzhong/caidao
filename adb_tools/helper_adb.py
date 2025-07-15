@@ -583,8 +583,11 @@ class BaseAdb(object):
     def activity(self):
         return self.APP_INFO.get("activity")
 
-    def is_app_opened(self):
-        return self.APP_INFO.get("package") == self.app_info.get("package")
+    def is_app_opened(self, package=None):
+        package = package if package else self.APP_INFO.get("package")
+        current_package = self.app_info.get("package")
+        print('--------------', current_package, package)
+        return package == current_package
 
     def is_app_main(self):
         return self.APP_INFO == self.app_info
