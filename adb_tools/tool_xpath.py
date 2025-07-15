@@ -446,6 +446,7 @@ class 操作块(基本输入字段对象):
 
     def execute(self, job):
         for tpl in self.tpls:
+            # print(tpl, tpl.matched, tpl.d)
             if not tpl.matched:
                 continue
             if tpl.execute(job, self.lines):
@@ -619,6 +620,7 @@ class 基本任务(抽象持久序列):
     def 执行操作块(self, block_id):
         self.match(block_id)
         block = next(filter(lambda b: b.id == block_id, self.blocks))
+        # print('block is:', block, block.id)
         return block.execute(self)
 
     def 执行前置检查操作块(self, block_id=None):
