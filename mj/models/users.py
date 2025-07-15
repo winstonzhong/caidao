@@ -11,6 +11,7 @@ class AbstractPackage(models.Model):
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
     remark = models.TextField(verbose_name='备注', blank=True, null=True)
+    vip_level = models.IntegerField(default=1, verbose_name='vip等级')
 
     class Meta:
         abstract = True
@@ -53,7 +54,8 @@ class AbstractUser(models.Model):
     expired_at = models.DateTimeField(verbose_name='过期时间', null=True)
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
-    open_id = models.CharField(max_length=50, verbose_name='openid', blank=True, null=True)
+    open_id = models.CharField(max_length=50, verbose_name='open_id', blank=True, null=True)
+    vip_level = models.IntegerField(default=1, verbose_name='vip等级')
 
     class Meta:
         abstract = True
