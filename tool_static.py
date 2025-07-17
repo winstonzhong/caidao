@@ -46,7 +46,7 @@ def upload_file(content, token, fname=None, project_name="default"):
     return f'''https://file.j1.sale{data["data"]["url"]}'''
 
 
-def generate_password():
+def generate_password(length=8):
     password_characters = string.ascii_letters + string.digits + '_'
     password = [
         random.choice(string.ascii_uppercase),  # 大写字母
@@ -54,7 +54,7 @@ def generate_password():
         random.choice(string.digits),  # 数字
         random.choice('_')  # 下划线
     ]
-    password += random.choices(password_characters, k=8)
+    password += random.choices(password_characters, k=length - len(password))
     random.shuffle(password)
     return ''.join(password)
 
