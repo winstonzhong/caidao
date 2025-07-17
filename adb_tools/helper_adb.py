@@ -1637,6 +1637,11 @@ class BaseAdb(object):
 
     def screen_shot_safe(self):
         img = self.screen_shot()
+        
+        if img is None:
+            img = self.ua2.screenshot()
+            img = pil2cv2(img) if img is not None else None
+        
         if img is None:
             self.尝试重连设备(最大重连次数=3)
             img = self.screen_shot()

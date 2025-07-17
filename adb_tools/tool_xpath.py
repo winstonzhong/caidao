@@ -431,10 +431,10 @@ class 操作块(基本输入字段对象):
     def is_precheck(self):
         return not bool(self.tpls)
 
-    def 刷新参数(self, paras):
-        self.paras = paras
-        for tpl in self.tpls:
-            tpl.paras = paras
+    # def 刷新参数(self, paras):
+    #     self.paras = paras
+    #     for tpl in self.tpls:
+    #         tpl.paras = paras
 
     @property
     def paras(self):
@@ -566,10 +566,10 @@ class 基本任务(抽象持久序列):
         else:
             return SteadyDevice.from_ip_port(device_pointed.get("ip_port"))
 
-    def 刷新参数(self, paras):
-        self.d["paras"] = paras
-        for block in self._blocks:
-            block.刷新参数(paras)
+    # def 刷新参数(self, paras):
+    #     self.d["paras"] = paras
+    #     for block in self._blocks:
+    #         block.刷新参数(paras)
 
     def 打开应用(self):
         script = f"am start -n {self.package}/{self.activity}"
@@ -701,17 +701,21 @@ class 基本任务列表(抽象持久序列):
     def init(self, list_of_dict):
         self.jobs = [基本任务(d, self.device_pointed) for d in list_of_dict]
 
-    def 刷新参数(self, paras):
-        for job in self.jobs:
-            job.刷新参数(paras)
+    # def 刷新参数(self, paras):
+    #     for job in self.jobs:
+    #         job.刷新参数(paras)
 
     def 执行任务(self, 单步=False):
         global_cache.clear()
+        main_job = self.jobs[-1]
+        # print('paras:', main_job.paras)
+        global_cache.update(main_job.paras)
+        # print(global_cache)
         if 单步:
-            return self.jobs[-1].执行任务(单步=单步)
+            return main_job.执行任务(单步=单步)
         else:
             num_executed = 0
-            main_job = self.jobs[-1]
+            # main_job = self.jobs[-1]
             try:
                 main_job.执行前置检查操作块()
                 for job in self.jobs:
