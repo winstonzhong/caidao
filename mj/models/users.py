@@ -1,11 +1,10 @@
-
 from django.db import models
 
 # Create your models here.
-from caidao_tools.django.abstract import AbstractModel
+from caidao_tools.django.abstract import AbstractModel, BaseModel
 
 
-class AbstractPackage(models.Model):
+class AbstractPackage(BaseModel):
     name = models.CharField(max_length=50, verbose_name='套餐名称', default='')
     price = models.DecimalField(verbose_name='价格', max_digits=6, decimal_places=2, default=0)
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
@@ -16,8 +15,12 @@ class AbstractPackage(models.Model):
     class Meta:
         abstract = True
 
+    @classmethod
+    def 免费套餐(cls):
+        defaults = {'name': '免费', 'price': 0}
+        return cls.objects.get_or_create(vip_level=0, defaults=defaults)[0]
 
-class AbstractSn(models.Model):
+class AbstractSn(BaseModel):
     value = models.CharField(max_length=5, verbose_name='Sn', blank=True, null=True, unique=True)
     user_id = models.IntegerField(verbose_name="用户ID", blank=True, null=True)
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
@@ -27,7 +30,7 @@ class AbstractSn(models.Model):
         abstract = True
 
 
-class AbstractUser(models.Model):
+class AbstractUser(BaseModel):
     """用户"""
     # name = models.CharField(max_length=50, verbose_name='用户名称', default='')
     # head_img = models.TextField(verbose_name='用户头像', default='')
@@ -59,8 +62,20 @@ class AbstractUser(models.Model):
     class Meta:
         abstract = True
 
+    @classmethod
+    def get_key(cls, sn):
+        import hashlib
+        return hashlib.md5(sn.encode()).hexdigest()
 
-class AbstractGroup(models.Model):
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        if self.md5 is None:
+            self.md5 = self.get_key(self.sn)
+        return models.Model.save(self, force_insert=force_insert, force_update=force_update, using=using,
+                                 update_fields=update_fields)
+
+
+
+class AbstractGroup(BaseModel):
     """群组"""
     name = models.CharField(max_length=50, verbose_name='群名称', default='')
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
