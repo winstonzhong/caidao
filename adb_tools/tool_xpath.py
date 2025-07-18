@@ -23,7 +23,11 @@ import pandas
 
 from functools import cached_property
 
-from tool_exceptions import 任务预检查不通过异常, 达到最大重复次数异常, 达到最大空白屏次数异常
+from tool_exceptions import (
+    任务预检查不通过异常,
+    达到最大重复次数异常,
+    达到最大空白屏次数异常,
+)
 
 from tool_remote_orm_model import RemoteModel
 
@@ -40,7 +44,6 @@ import traceback
 import tool_wx
 
 import requests
-
 
 
 # def execute_lines(job, lines, self=None):
@@ -175,23 +178,41 @@ class SteadyDevice(DummyDevice):
         self.source = None
         self.refresh()
 
+    def parse_element(self, e):
+        rtn = []
+        for x in e.elem.xpath(".//*"):
+            text = x.attrib.get("text") or ""
+            desc = x.attrib.get("content-desc") or ""
+            if text or desc:
+                rtn.append(f"{text} {desc}")
+        return rtn
+
+    def print_results(self, results):
+        records = []
+        for e in results:
+            records.append(self.parse_element(e))
+
+        for i, x in enumerate(records):
+            print("=" * 50)
+            print(x)
+            print("=" * 50)
+
     def widget_to_element(self, w):
         return XMLElement(w, XPath(self))
-    
+
     def open_app_safe(self, package, activity):
         script = f"am start -n {package}/{activity}"
         # print(script)
         self.adb.execute(script)
         time.sleep(3)
         self.refresh()
-        print('checking...:')
+        print("checking...:")
         if not self.find_xpath_all(f'//android.widget.TextView[@package="{package}"]'):
             self.adb.open_certain_app(
-                package = package,
-                activity = activity,
+                package=package,
+                activity=activity,
                 stop=True,
             )
-
 
     def snapshot(self, wait_steady=False):
         if self.need_screen:
@@ -576,14 +597,13 @@ class 基本任务(抽象持久序列):
         # print(script)
         self.device.adb.execute(script)
         time.sleep(3)
-        print(f'checking...:{self.package}/{self.activity}')
+        print(f"checking...:{self.package}/{self.activity}")
         if not self.device.adb.is_app_opened(self.package):
             self.device.adb.open_certain_app(
-                package = self.package,
-                activity = self.activity,
+                package=self.package,
+                activity=self.activity,
                 stop=True,
             )
-
 
     def 关闭应用(self):
         script = f"am force-stop {self.package}"
@@ -612,7 +632,7 @@ class 基本任务(抽象持久序列):
     @property
     def wait_steady(self):
         return self.d.get("wait_steady", False)
-    
+
     @property
     def few_first(self):
         return self.d.get("few_first", False)
@@ -652,7 +672,8 @@ class 基本任务(抽象持久序列):
             ],
         )
         return df.sort_values(
-            ["matched", "priority", "index" if not self.few_first else "num"], ascending=[False, False, True]
+            ["matched", "priority", "index" if not self.few_first else "num"],
+            ascending=[False, False, True],
         )
 
     def 执行任务(self, 单步=True):
