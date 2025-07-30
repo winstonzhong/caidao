@@ -729,20 +729,21 @@ class 基本任务列表(抽象持久序列):
     def 执行任务(self, 单步=False):
         global_cache.clear()
         main_job = self.jobs[-1]
-        # print('paras:', main_job.paras)
         global_cache.update(main_job.paras)
-        # print(global_cache)
         if 单步:
             return main_job.执行任务(单步=单步)
         else:
             num_executed = 0
-            # main_job = self.jobs[-1]
+
             try:
                 main_job.执行前置检查操作块()
                 for job in self.jobs:
                     num_executed += job.执行任务(单步=False)
             except 任务预检查不通过异常:
                 pass
+                # print('---------------')
+
+            # print('=====================', num_executed)
             return num_executed > 0
 
 

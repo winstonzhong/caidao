@@ -422,34 +422,51 @@ class 抽象定时任务(BaseModel):
             q = cls.objects.filter(id=kwargs["id"])
         return q if not exclude else q.exclude(id__in=exclude.strip().split(","))
 
+    # @classmethod
+    # def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
+    #     seconds_sleep_when_exception = 10
+    #     while 1:
+    #         q = cls.得到所有待执行的任务(**kwargs).order_by("-优先级", "update_time")
+    #         try:
+    #             for obj in q.iterator():
+    #                 if obj.step() and obj.优先级 > 0:
+    #                     break
+    #         except Exception:
+    #             print(traceback.format_exc())
+    #             print(f"发生异常, 等待{seconds_sleep_when_exception}秒后继续执行")
+    #             time.sleep(seconds_sleep_when_exception)
+    #         if 单步:
+    #             break
+    #         time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
+
     @classmethod
     def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
-        seconds_sleep_when_exception = 10
+        # seconds_sleep_when_exception = 10
         while 1:
             q = cls.得到所有待执行的任务(**kwargs).order_by("-优先级", "update_time")
-            try:
-                for obj in q.iterator():
-                    if obj.step() and obj.优先级 > 0:
-                        break
-            except Exception:
-                print(traceback.format_exc())
-                print(f"发生异常, 等待{seconds_sleep_when_exception}秒后继续执行")
-                time.sleep(seconds_sleep_when_exception)
+            for obj in q.iterator():
+                obj.step()
             if 单步:
                 break
             time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
+
 
     def print_info(self, *a):
         if self.输出调试信息:
             print(*a)
 
-    def step(self):
-        self.下载任务数据()
+    def step(self, seconds_sleep_when_exception=1):
         executed = False
-        if self.远程数据记录 is None or not self.远程数据记录.is_empty():
-            self.print_info(f"开始执行任务:{self.名称} - {self.执行函数}")
-            executed = getattr(self, self.执行函数)()
-        self.save()
+        try:
+            self.下载任务数据()
+            if self.远程数据记录 is None or not self.远程数据记录.is_empty():
+                self.print_info(f"开始执行任务:{self.名称} - {self.执行函数}")
+                executed = getattr(self, self.执行函数)()
+            self.save()
+        except Exception:
+            print(traceback.format_exc())
+            print(f"发生异常, 等待{seconds_sleep_when_exception}秒后继续执行")
+            time.sleep(seconds_sleep_when_exception)
         return executed
 
     def 组建下载参数(self):
