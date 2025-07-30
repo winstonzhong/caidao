@@ -99,14 +99,14 @@ class EncryptedAutoRoutingFilePersistence:
 
 class JobFilePersistence(EncryptedAutoRoutingFilePersistence):
     @classmethod
-    def from_job(cls, job):
-        obj = cls(fname=f'{job.id}_{job.name}.json', project_name='jobs')
+    def from_job(cls, job, net_token):
+        obj = cls(fname=f'{job.id}_{job.name}.json', project_name='jobs', net_token=net_token)
         obj.job = job
         return obj
 
     @classmethod
-    def from_job_name(cls, job_name: str):
-        return cls(fname=f'{job_name}.json', project_name='jobs')
+    def from_job_name(cls, job_name: str, net_token:str):
+        return cls(fname=f'{job_name}.json', project_name='jobs', net_token=net_token)
 
     def save(self):
         return super().save(json.dumps(self.job.pack_list))

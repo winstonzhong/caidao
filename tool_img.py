@@ -6,7 +6,7 @@ Created on 2023年10月19日
 
 import base64
 import io
-
+import os
 from PIL import Image, ImageEnhance
 from cached_property import cached_property
 import cv2
@@ -17,6 +17,7 @@ from helper_net import get_with_random_agent
 from tool_rect import Rect
 from tool_env import is_string
 import numpy as np
+
 # import matplotlib.pyplot as plt
 
 
@@ -35,9 +36,9 @@ def get_mask_by_hsv(img):
     d = (df * 0.9).iloc[-1].astype(int).to_dict()
     end = 255
     print(d)
-    mask1 = cv2.inRange(hsv[..., 0], d.get('h'), end)
-    mask2 = cv2.inRange(hsv[..., 1], d.get('s'), end)
-    mask3 = cv2.inRange(hsv[..., 2], d.get('v'), end)
+    mask1 = cv2.inRange(hsv[..., 0], d.get("h"), end)
+    mask2 = cv2.inRange(hsv[..., 1], d.get("s"), end)
+    mask3 = cv2.inRange(hsv[..., 2], d.get("v"), end)
     # mask3 = cv2.inRange(task.img_hsv[...,1], max(43,int(hsv[1] - 10)), UPPER)
     # mask3 = cv2.inRange(task.img_hsv[...,1], 43, UPPER)
 
@@ -142,17 +143,21 @@ def add_head_tail(img, span=3):
 def rotate_90(img):
     return img.T[..., ::-1]
 
+
 def rotate_90_clockwise(image: np.ndarray) -> np.ndarray:
     """顺时针90度旋转（宽高轴转置后反转宽度轴）"""
     return np.transpose(image, (1, 0, 2))[:, ::-1, :]
+
 
 def rotate_180(image: np.ndarray) -> np.ndarray:
     """180度旋转（分别反转高度轴和宽度轴）"""
     return image[::-1, ::-1, :]  # 先反转高度轴，再反转宽度轴
 
+
 def rotate_270_clockwise(image: np.ndarray) -> np.ndarray:
     """顺时针270度旋转（等价于逆时针90度，宽高轴转置后反转高度轴）"""
     return np.transpose(image, (1, 0, 2))[::-1, :, :]
+
 
 # 统一接口：支持指定旋转角度（90/180/270）和旋转方向
 def rotate_image(image: np.ndarray, angle: int) -> np.ndarray:
@@ -642,13 +647,15 @@ def get_template_points(img, template, threshold=0.8):
     points = list(zip(*loc[::-1][-2:]))
     return points
 
+
 def find_template_first_center(img, template, threshold=0.8):
     points = get_template_points(img, template, threshold)
     if len(points) > 0:
         h, w, _ = template.shape
         pos = points[0]
-        return pos[0] + w//2, pos[1] + h//2
+        return pos[0] + w // 2, pos[1] + h // 2
     return None
+
 
 def has_tempate(img, template, threshold=0.8):
     return len(get_template_points(img, template, threshold)) > 0
@@ -1158,15 +1165,14 @@ def get_bounding_dict_list_by_group(a, gap, x, y, max_width, max_height):
     ]
 
 
-
 def img2rgb_with_alpha(img, bgr=True, background=(255, 255, 255)):
     """
     将RGBA图像合成到指定背景上，生成RGB图像
-    
+
     参数:
     rgba: 输入的RGBA图像
     background: 背景颜色，默认为白色 (R,G,B)
-    
+
     返回:
     rgb: 合成后的RGB图像
     """
@@ -1176,26 +1182,33 @@ def img2rgb_with_alpha(img, bgr=True, background=(255, 255, 255)):
         r, g, b, a = cv2.split(img)
     else:
         b, g, r, a = cv2.split(img)
-    
+
     # 创建背景
     bg = np.full_like(img[:, :, :3], background, dtype=np.uint8)
-    
+
     # 将Alpha通道归一化到0-1范围
     alpha = a.astype(np.float32) / 255.0
-    
+
     # 应用Alpha合成公式: result = foreground * alpha + background * (1-alpha)
-    r = (r.astype(np.float32) * alpha + bg[:, :, 0].astype(np.float32) * (1 - alpha)).astype(np.uint8)
-    g = (g.astype(np.float32) * alpha + bg[:, :, 1].astype(np.float32) * (1 - alpha)).astype(np.uint8)
-    b = (b.astype(np.float32) * alpha + bg[:, :, 2].astype(np.float32) * (1 - alpha)).astype(np.uint8)
-    
+    r = (
+        r.astype(np.float32) * alpha + bg[:, :, 0].astype(np.float32) * (1 - alpha)
+    ).astype(np.uint8)
+    g = (
+        g.astype(np.float32) * alpha + bg[:, :, 1].astype(np.float32) * (1 - alpha)
+    ).astype(np.uint8)
+    b = (
+        b.astype(np.float32) * alpha + bg[:, :, 2].astype(np.float32) * (1 - alpha)
+    ).astype(np.uint8)
+
     # 合并RGB通道
     rgb = cv2.merge([r, g, b])
     return rgb
 
+
 def show_max_contour(mask):
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if not contours:
-        print('No contours found')
+        print("No contours found")
         return
     largest_contour = max(contours, key=lambda c: cv2.contourArea(c))
     canvas = get_canvas(img=mask, mono=True)
@@ -1332,6 +1345,75 @@ class FracContours(object):
         cv2.drawContours(canvas, c, -1, 255, 1)
         return canvas
 
+def stitch_images(image_paths, direction="horizontal"):
+    """
+    拼接多张图片
+
+    参数:
+        image_paths (list): 图片文件路径列表
+        direction (str): 拼接方向，'horizontal' 表示横向，'vertical' 表示纵向，默认为横向
+
+    返回:
+        Image: 拼接后的图像对象
+
+    异常:
+        ValueError: 当输入的图片路径列表为空或方向参数无效时抛出
+        FileNotFoundError: 当图片文件不存在时抛出
+        Exception: 其他可能的异常
+    """
+    # 验证输入
+    if not image_paths:
+        raise ValueError("图片路径列表不能为空")
+
+    if direction not in ["horizontal", "vertical"]:
+        raise ValueError("方向参数必须是 'horizontal' 或 'vertical'")
+
+    # 打开所有图片
+    images = []
+    for path in image_paths:
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"图片文件不存在: {path}")
+        try:
+            img = Image.open(path)
+            images.append(img)
+        except Exception as e:
+            raise Exception(f"打开图片 {path} 失败: {str(e)}")
+
+    # 获取所有图片的尺寸
+    widths, heights = zip(*(img.size for img in images))
+
+    # 计算拼接后图片的尺寸
+    if direction == "horizontal":
+        # 横向拼接：高度取最大值，宽度取总和
+        total_width = sum(widths)
+        max_height = max(heights)
+        new_size = (total_width, max_height)
+    else:
+        # 纵向拼接：宽度取最大值，高度取总和
+        max_width = max(widths)
+        total_height = sum(heights)
+        new_size = (max_width, total_height)
+
+    # 创建新图片（使用白色背景）
+    new_image = Image.new("RGB", new_size, color="white")
+
+    # 拼接图片
+    current_x = 0
+    current_y = 0
+
+    for img in images:
+        if direction == "horizontal":
+            # 横向拼接：每张图片顶部对齐
+            y_position = 0
+            new_image.paste(img, (current_x, y_position))
+            current_x += img.width
+        else:
+            # 纵向拼接：每张图片左部对齐
+            x_position = 0
+            new_image.paste(img, (x_position, current_y))
+            current_y += img.height
+
+    return new_image
 
 
 if __name__ == "__main__":

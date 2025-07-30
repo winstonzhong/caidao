@@ -21,9 +21,11 @@ if not OS_WIN:
     BASE_DIR_56T = "/mnt/56T/file"
 elif os.path.lexists("v:/file"):
     BASE_DIR_56T = "v:/file"
-else:
+elif os.path.lexists('d:/file'):
     BASE_DIR_56T = "d:/file"
     BASE_URL_56T = "https://127.0.0.1:8000/media"
+else:
+    BASE_DIR_56T = "/home"
 
 # BASE_DIR_56T = "v:/file" if OS_WIN else "/mnt/56T/file"
 def is_inner():
