@@ -42,7 +42,7 @@ from tool_img import (
     rgb_to_mono,
     cut_empty_margin,
 )
-from tool_static import 得到一个不重复的文件路径, 路径到链接
+from tool_static import 得到一个不重复的文件路径, 路径到链接, 得到一个不重复的文件名
 import tempfile
 import requests
 from urllib.parse import unquote
@@ -330,6 +330,8 @@ class BaseAdb(object):
     CAMERA_DIR = "/sdcard/DCIM/Camera"
 
     PICTURES_DIR = "/sdcard/Pictures"
+
+    ROBOT_TMP = "/sdcard/robot/temp"
 
     if not os.path.lexists(DIR_CFG):
         os.makedirs(DIR_CFG, exist_ok=True)
@@ -748,13 +750,25 @@ class BaseAdb(object):
             rtn.append(路径到链接(local))
         return rtn
 
-    def copy_file_to_temp(self, fpath, sleep_span=0.1):
+    def copy_file_to_temp(self, fpath, sleep_span=0.1, tmp_dir=None):
+        tmp_dir = tmp_dir or self.DIR_TMP
         src = fpath
-        suffix = os.path.basename(fpath).rsplit(".")[-1]
-        dst = f"{self.DIR_TMP}/{time.time()}.{suffix}"
-        self.ua2.shell(f"cp {src} {dst}")
+        
+        # suffix = os.path.basename(fpath).rsplit(".")[-1]
+        
+        fname = 得到一个不重复的文件名(fpath)
+        
+        dst = f"{tmp_dir}/{fname}"
+        
+        self.ua2.shell(f"mkdir -p {tmp_dir} && cp {src} {dst}")
+
+        self.ua2.shell(f'find "{tmp_dir}" -type f -mtime +7 -delete')
+
         time.sleep(sleep_span)
         self.broadcast(dst)
+
+    def copy_file_to_robot_temp(self, fpath):
+        return self.copy_file_to_temp(fpath, tmp_dir=self.ROBOT_TMP)
 
     def change_file_suffix(self, fpath, new_suffix):
         base = fpath.rsplit(".", maxsplit=1)[0]

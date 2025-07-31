@@ -325,15 +325,22 @@ class SteadyDevice(DummyDevice):
     @property
     def remote_fpath_wx_images(self):
         return "/sdcard/Pictures/WeiXin"
+    
+    @property
+    def remote_fpath_temp(self):
+        return "/sdcard/robot_temp"
 
     def clear_remote_wx_images(self):
         self.adb.clear_temp_dir(self.remote_fpath_wx_images)
 
     def download_wx_image(self):
-        fpath = self.adb.pull_lastest_file_until(
-            base_dir=self.remote_fpath_wx_images, to_56T=True
-        )
-        return tool_static.路径到链接(fpath)
+        if tool_static.is_inner():
+            fpath = self.adb.pull_lastest_file_until(
+                base_dir=self.remote_fpath_wx_images, to_56T=True
+            )
+            return tool_static.路径到链接(fpath)
+        else:
+            pass
 
     def cut_wx_df(self, df):
         tmp = df[df.自己]
