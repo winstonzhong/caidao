@@ -17,7 +17,10 @@ import requests
 
 BASE_URL_56T = "https://file.j1.sale/api/file"
 
-if not OS_WIN:
+
+if os.path.lexists('/data/data/com.termux'):
+    BASE_DIR_56T = "/data/data/com.termux/files/home/file"
+elif not OS_WIN:
     BASE_DIR_56T = "/mnt/56T/file"
 elif os.path.lexists("v:/file"):
     BASE_DIR_56T = "v:/file"
@@ -25,7 +28,7 @@ elif os.path.lexists('d:/file'):
     BASE_DIR_56T = "d:/file"
     BASE_URL_56T = "https://127.0.0.1:8000/media"
 else:
-    BASE_DIR_56T = "/home"
+    BASE_DIR_56T = "/data/data/com.termux/files/home/file"
 
 # BASE_DIR_56T = "v:/file" if OS_WIN else "/mnt/56T/file"
 def is_inner():
