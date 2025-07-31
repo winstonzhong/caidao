@@ -21,7 +21,7 @@ class AbstractPackage(BaseModel):
         return cls.objects.get_or_create(vip_level=0, defaults=defaults)[0]
 
 class AbstractSn(BaseModel):
-    value = models.CharField(max_length=5, verbose_name='Sn', blank=True, null=True, unique=True)
+    value = models.CharField(max_length=10, verbose_name='Sn', blank=True, null=True, unique=True)
     user_id = models.IntegerField(verbose_name="用户ID", blank=True, null=True)
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
