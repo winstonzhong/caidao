@@ -288,14 +288,21 @@ class SteadyDevice(DummyDevice):
         self.adb.ua2.send_keys(keys, clear)
 
     def 上传到下载目录(self, url, fname=None, clean_temp=True):
-        import tool_static
+        if tool_static.is_inner():
+            fpath = tool_static.链接到路径(url)
+            return self.adb.push_file_to_download(
+                fpath,
+                fname=fname,
+                clean_temp=clean_temp,
+            )
+        else:
+            '''
+            根据url的文件名匹配robot temp下的文件
+            并且将此文件拷贝至download目录
+            '''
+            src = self.adb.match_file_in_robot_temp(url)
+            self.adb.copy_file_to_download(src)
 
-        fpath = tool_static.链接到路径(url)
-        return self.adb.push_file_to_download(
-            fpath,
-            fname=fname,
-            clean_temp=clean_temp,
-        )
 
     @property
     def container_wx(self):
@@ -333,14 +340,27 @@ class SteadyDevice(DummyDevice):
     def clear_remote_wx_images(self):
         self.adb.clear_temp_dir(self.remote_fpath_wx_images)
 
-    def download_wx_image(self):
+    def download_wx_image(self, token=None):
         if tool_static.is_inner():
             fpath = self.adb.pull_lastest_file_until(
                 base_dir=self.remote_fpath_wx_images, to_56T=True
             )
             return tool_static.路径到链接(fpath)
         else:
-            pass
+            '''
+            下载该文件到本地
+            上传至56T
+            源文件移动至robot临时目录且按照56T链接返回的文件名(可选touch)
+            '''
+            fpath = self.adb.pull_lastest_file_until(
+                base_dir=self.remote_fpath_wx_images, to_56T=False
+            )
+            url = tool_static.upload_file_by_path(fpath, token)
+            fname = url.split("/")[-1]
+            src = self.adb.get_latest_file(base_dir=self.remote_fpath_wx_images)
+            self.adb.move_file_to_robot_temp(src, fname)
+            return url
+
 
     def cut_wx_df(self, df):
         tmp = df[df.自己]

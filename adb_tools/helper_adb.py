@@ -750,25 +750,39 @@ class BaseAdb(object):
             rtn.append(路径到链接(local))
         return rtn
 
-    def copy_file_to_temp(self, fpath, sleep_span=0.1, tmp_dir=None):
+    def copy_file_to_temp(self, fpath, sleep_span=0.1, tmp_dir=None, clear_expired=True):
         tmp_dir = tmp_dir or self.DIR_TMP
         src = fpath
-        
-        # suffix = os.path.basename(fpath).rsplit(".")[-1]
-        
         fname = 得到一个不重复的文件名(fpath)
-        
         dst = f"{tmp_dir}/{fname}"
-        
-        self.ua2.shell(f"mkdir -p {tmp_dir} && cp {src} {dst}")
+        if clear_expired:
+            self.ua2.shell(f'find "{tmp_dir}" -type f -mtime +7 -delete')
+        self.ua2.shell(f'mkdir -p "{tmp_dir}" && cp "{src}" "{dst}"')
+        time.sleep(sleep_span)
+        self.broadcast(dst)
 
+    def move_file_to_temp(self, fpath, sleep_span=0.1, tmp_dir=None, fname=None):
+        tmp_dir = tmp_dir or self.DIR_TMP
+        src = fpath
+        fname = os.path.basename(fpath) if fname is None else fname
+        dst = f"{tmp_dir}/{fname}"
         self.ua2.shell(f'find "{tmp_dir}" -type f -mtime +7 -delete')
-
+        self.ua2.shell(f'mkdir -p "{tmp_dir}" && mv "{src}" "{dst}"')
         time.sleep(sleep_span)
         self.broadcast(dst)
 
     def copy_file_to_robot_temp(self, fpath):
-        return self.copy_file_to_temp(fpath, tmp_dir=self.ROBOT_TMP)
+        self.copy_file_to_temp(fpath, tmp_dir=self.ROBOT_TMP)
+        
+    def copy_file_to_download(self, fpath):
+        self.copy_file_to_temp(fpath, tmp_dir=self.DIR_UPLOAD, clear_expired=False)
+
+    def move_file_to_robot_temp(self, fpath, fname=None):
+        self.move_file_to_temp(fpath, tmp_dir=self.ROBOT_TMP, fname=fname)
+
+    def match_file_in_robot_temp(self, url):
+        return f"{self.ROBOT_TMP}/{os.path.basename(url)}"
+        
 
     def change_file_suffix(self, fpath, new_suffix):
         base = fpath.rsplit(".", maxsplit=1)[0]

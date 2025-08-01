@@ -34,8 +34,9 @@ else:
 def is_inner():
     return BASE_DIR_56T == "/mnt/56T/file" and  os.path.lexists(BASE_DIR_56T)
 
-def upload_file(content, token, fname=None, project_name="default"):
-    if fname is None or not fname.rsplit('.', maxsplit=1)[0].strip():
+def upload_file(content, token, fname, project_name='default', keep_fname=False):
+    assert fname, "fname is empty!!!"
+    if not keep_fname:
         service_url = BASE_URL_56T
         url = None
     else:
@@ -48,8 +49,14 @@ def upload_file(content, token, fname=None, project_name="default"):
             "url":url,
             }
     data = requests.post(service_url, data=data, files=form_data).json()
-    return f'''https://file.j1.sale{data["data"]["url"]}'''
+    result_url = data["data"].get('url')
+    return f'''https://file.j1.sale{result_url}''' if result_url else data
 
+
+def upload_file_by_path(fpath, token, project_name='default', keep_fname=False):
+    with open(fpath, 'rb') as f:
+        content = f.read()
+    return upload_file(content, token, fname=os.path.basename(fpath), project_name=project_name, keep_fname=keep_fname)
 
 def generate_password(length=8):
     password_characters = string.ascii_letters + string.digits + '_'
