@@ -23,7 +23,11 @@ import pandas
 
 from functools import cached_property
 
-from tool_exceptions import 任务预检查不通过异常, 达到最大重复次数异常, 达到最大空白屏次数异常
+from tool_exceptions import (
+    任务预检查不通过异常,
+    达到最大重复次数异常,
+    达到最大空白屏次数异常,
+)
 
 from tool_remote_orm_model import RemoteModel
 
@@ -40,7 +44,6 @@ import traceback
 import tool_wx
 
 import requests
-
 
 
 # def execute_lines(job, lines, self=None):
@@ -175,23 +178,41 @@ class SteadyDevice(DummyDevice):
         self.source = None
         self.refresh()
 
+    def parse_element(self, e):
+        rtn = []
+        for x in e.elem.xpath(".//*"):
+            text = x.attrib.get("text") or ""
+            desc = x.attrib.get("content-desc") or ""
+            if text or desc:
+                rtn.append(f"{text} {desc}")
+        return rtn
+
+    def print_results(self, results):
+        records = []
+        for e in results:
+            records.append(self.parse_element(e))
+
+        for i, x in enumerate(records):
+            print("=" * 50)
+            print(x)
+            print("=" * 50)
+
     def widget_to_element(self, w):
         return XMLElement(w, XPath(self))
-    
+
     def open_app_safe(self, package, activity):
         script = f"am start -n {package}/{activity}"
         # print(script)
         self.adb.execute(script)
         time.sleep(3)
         self.refresh()
-        print('checking...:')
+        print("checking...:")
         if not self.find_xpath_all(f'//android.widget.TextView[@package="{package}"]'):
             self.adb.open_certain_app(
-                package = package,
-                activity = activity,
+                package=package,
+                activity=activity,
                 stop=True,
             )
-
 
     def snapshot(self, wait_steady=False):
         if self.need_screen:
@@ -267,14 +288,21 @@ class SteadyDevice(DummyDevice):
         self.adb.ua2.send_keys(keys, clear)
 
     def 上传到下载目录(self, url, fname=None, clean_temp=True):
-        import tool_static
+        if tool_static.is_inner():
+            fpath = tool_static.链接到路径(url)
+            return self.adb.push_file_to_download(
+                fpath,
+                fname=fname,
+                clean_temp=clean_temp,
+            )
+        else:
+            '''
+            根据url的文件名匹配robot temp下的文件
+            并且将此文件拷贝至download目录
+            '''
+            src = self.adb.match_file_in_robot_temp(url)
+            self.adb.copy_file_to_download(src)
 
-        fpath = tool_static.链接到路径(url)
-        return self.adb.push_file_to_download(
-            fpath,
-            fname=fname,
-            clean_temp=clean_temp,
-        )
 
     @property
     def container_wx(self):
@@ -304,15 +332,35 @@ class SteadyDevice(DummyDevice):
     @property
     def remote_fpath_wx_images(self):
         return "/sdcard/Pictures/WeiXin"
+    
+    @property
+    def remote_fpath_temp(self):
+        return "/sdcard/robot_temp"
 
     def clear_remote_wx_images(self):
         self.adb.clear_temp_dir(self.remote_fpath_wx_images)
 
-    def download_wx_image(self):
-        fpath = self.adb.pull_lastest_file_until(
-            base_dir=self.remote_fpath_wx_images, to_56T=True
-        )
-        return tool_static.路径到链接(fpath)
+    def download_wx_image(self, token=None):
+        if tool_static.is_inner():
+            fpath = self.adb.pull_lastest_file_until(
+                base_dir=self.remote_fpath_wx_images, to_56T=True
+            )
+            return tool_static.路径到链接(fpath)
+        else:
+            '''
+            下载该文件到本地
+            上传至56T
+            源文件移动至robot临时目录且按照56T链接返回的文件名(可选touch)
+            '''
+            fpath = self.adb.pull_lastest_file_until(
+                base_dir=self.remote_fpath_wx_images, to_56T=False
+            )
+            url = tool_static.upload_file_by_path(fpath, token)
+            fname = url.split("/")[-1]
+            src = self.adb.get_latest_file(base_dir=self.remote_fpath_wx_images)
+            self.adb.move_file_to_robot_temp(src, fname)
+            return url
+
 
     def cut_wx_df(self, df):
         tmp = df[df.自己]
@@ -431,10 +479,10 @@ class 操作块(基本输入字段对象):
     def is_precheck(self):
         return not bool(self.tpls)
 
-    def 刷新参数(self, paras):
-        self.paras = paras
-        for tpl in self.tpls:
-            tpl.paras = paras
+    # def 刷新参数(self, paras):
+    #     self.paras = paras
+    #     for tpl in self.tpls:
+    #         tpl.paras = paras
 
     @property
     def paras(self):
@@ -566,24 +614,23 @@ class 基本任务(抽象持久序列):
         else:
             return SteadyDevice.from_ip_port(device_pointed.get("ip_port"))
 
-    def 刷新参数(self, paras):
-        self.d["paras"] = paras
-        for block in self._blocks:
-            block.刷新参数(paras)
+    # def 刷新参数(self, paras):
+    #     self.d["paras"] = paras
+    #     for block in self._blocks:
+    #         block.刷新参数(paras)
 
     def 打开应用(self):
         script = f"am start -n {self.package}/{self.activity}"
         # print(script)
         self.device.adb.execute(script)
         time.sleep(3)
-        print(f'checking...:{self.package}/{self.activity}')
+        print(f"checking...:{self.package}/{self.activity}")
         if not self.device.adb.is_app_opened(self.package):
             self.device.adb.open_certain_app(
-                package = self.package,
-                activity = self.activity,
+                package=self.package,
+                activity=self.activity,
                 stop=True,
             )
-
 
     def 关闭应用(self):
         script = f"am force-stop {self.package}"
@@ -612,7 +659,7 @@ class 基本任务(抽象持久序列):
     @property
     def wait_steady(self):
         return self.d.get("wait_steady", False)
-    
+
     @property
     def few_first(self):
         return self.d.get("few_first", False)
@@ -652,7 +699,8 @@ class 基本任务(抽象持久序列):
             ],
         )
         return df.sort_values(
-            ["matched", "priority", "index" if not self.few_first else "num"], ascending=[False, False, True]
+            ["matched", "priority", "index" if not self.few_first else "num"],
+            ascending=[False, False, True],
         )
 
     def 执行任务(self, 单步=True):
@@ -701,23 +749,28 @@ class 基本任务列表(抽象持久序列):
     def init(self, list_of_dict):
         self.jobs = [基本任务(d, self.device_pointed) for d in list_of_dict]
 
-    def 刷新参数(self, paras):
-        for job in self.jobs:
-            job.刷新参数(paras)
+    # def 刷新参数(self, paras):
+    #     for job in self.jobs:
+    #         job.刷新参数(paras)
 
     def 执行任务(self, 单步=False):
         global_cache.clear()
+        main_job = self.jobs[-1]
+        global_cache.update(main_job.paras)
         if 单步:
-            return self.jobs[-1].执行任务(单步=单步)
+            return main_job.执行任务(单步=单步)
         else:
             num_executed = 0
-            main_job = self.jobs[-1]
+
             try:
                 main_job.执行前置检查操作块()
                 for job in self.jobs:
                     num_executed += job.执行任务(单步=False)
             except 任务预检查不通过异常:
                 pass
+                # print('---------------')
+
+            # print('=====================', num_executed)
             return num_executed > 0
 
 

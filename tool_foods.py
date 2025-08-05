@@ -129,14 +129,19 @@ def parse_quantity(line):
     (3.0, 'g')
     >>> parse_quantity('1-5')
     (3.0, '')
+    >>> parse_quantity('未知')
+    (0.0, '')
     """
     import re
+    
+    # print(line)
 
     # 提取数值部分（处理范围和千分位逗号）
-    num_part = re.search(r"^[\d\.,\-]+", line).group(0)
+    m = re.search(r"^[\d\.,\-]+", line)
+    num_part = m.group(0) if m else "0"
 
     # 提取单位部分（可能为空）
-    unit_part = line[len(num_part) :].strip()
+    unit_part = line[len(num_part) :].strip() if m else ''
 
     # 处理范围
     if "-" in num_part and not num_part.startswith("-"):
@@ -159,6 +164,8 @@ if __name__ == "__main__":
 
 
 def transform_food_data(input_data, meal_type=None):
+    
+    # print(input_data)
     # 初始化返回数据结构
     output_data = {
         "data_list": [
@@ -197,10 +204,16 @@ def transform_food_data(input_data, meal_type=None):
         # weight_value = float(weight[:-1])
         # calories_value = float(calories[:-4])
         weight_value, u = parse_quantity(dish.get("weight", ""))
-        assert u == "g", f"无效的重量单位: {u}"
+        if weight_value:
+            assert u == "g", f"无效的重量单位: {u}"
+        else:
+            u = 'g'
 
         calories_value, u = parse_quantity(dish.get("calories", ""))
-        assert u == "kcal", f"无效的热量单位: {u}"
+        if calories_value:
+            assert u == "kcal", f"无效的热量单位: {u}"
+        else:
+            u = 'kcal'
 
         total_calories += calories_value
 

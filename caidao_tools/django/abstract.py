@@ -401,9 +401,10 @@ class 抽象定时任务(BaseModel):
     @classmethod
     def 编写起止参数集合(cls):
         t = timezone.localtime().time()
-        return (Q(begin_time__isnull=True) | Q(begin_time__lte=t),
-                      Q(end_time__isnull=True) | Q(end_time__gte=t),
-                      )
+        return (
+            Q(begin_time__isnull=True) | Q(begin_time__lte=t),
+            Q(end_time__isnull=True) | Q(end_time__gte=t),
+        )
 
     @classmethod
     def 得到当前时间对象(cls, hour, minute, second):
@@ -414,39 +415,58 @@ class 抽象定时任务(BaseModel):
     def 得到所有待执行的任务(cls, **kwargs):
         exclude = kwargs.pop("_exclude", "")
         if "id" not in kwargs:
-            q = cls.objects.filter(*cls.编写起止参数集合(), **cls.构建所有待执行的任务查询字典(**kwargs))
+            q = cls.objects.filter(
+                *cls.编写起止参数集合(), **cls.构建所有待执行的任务查询字典(**kwargs)
+            )
         else:
             q = cls.objects.filter(id=kwargs["id"])
         return q if not exclude else q.exclude(id__in=exclude.strip().split(","))
 
+    # @classmethod
+    # def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
+    #     seconds_sleep_when_exception = 10
+    #     while 1:
+    #         q = cls.得到所有待执行的任务(**kwargs).order_by("-优先级", "update_time")
+    #         try:
+    #             for obj in q.iterator():
+    #                 if obj.step() and obj.优先级 > 0:
+    #                     break
+    #         except Exception:
+    #             print(traceback.format_exc())
+    #             print(f"发生异常, 等待{seconds_sleep_when_exception}秒后继续执行")
+    #             time.sleep(seconds_sleep_when_exception)
+    #         if 单步:
+    #             break
+    #         time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
+
     @classmethod
     def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
-        seconds_sleep_when_exception = 10
+        # seconds_sleep_when_exception = 10
         while 1:
             q = cls.得到所有待执行的任务(**kwargs).order_by("-优先级", "update_time")
-            try:
-                for obj in q.iterator():
-                    if obj.step() and obj.优先级 > 0:
-                        break
-            except Exception:
-                print(traceback.format_exc())
-                print(f"发生异常, 等待{seconds_sleep_when_exception}秒后继续执行")
-                time.sleep(seconds_sleep_when_exception)
+            for obj in q.iterator():
+                obj.step()
             if 单步:
                 break
             time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
+
 
     def print_info(self, *a):
         if self.输出调试信息:
             print(*a)
 
-    def step(self):
-        self.下载任务数据()
+    def step(self, seconds_sleep_when_exception=1):
         executed = False
-        if self.远程数据记录 is None or not self.远程数据记录.is_empty():
-            self.print_info(f"开始执行任务:{self.名称} - {self.执行函数}")
-            executed = getattr(self, self.执行函数)()
-        self.save()
+        try:
+            self.下载任务数据()
+            if self.远程数据记录 is None or not self.远程数据记录.is_empty():
+                self.print_info(f"开始执行任务:{self.名称} - {self.执行函数}")
+                executed = getattr(self, self.执行函数)()
+            self.save()
+        except Exception:
+            print(traceback.format_exc())
+            print(f"发生异常, 等待{seconds_sleep_when_exception}秒后继续执行")
+            time.sleep(seconds_sleep_when_exception)
         return executed
 
     def 组建下载参数(self):
@@ -803,7 +823,7 @@ class 抽象原子标签(AbstractModel):
         ******标签抽取列表：开始******
         {prompt_list}
         ******标签抽取列表：结束******
-        
+
         ******输出要求：******
         1， 以上全部标签抽取列表处理完成后，将结果放入一个list， 输出的格式为一个JSON，列表格式，例如：[{{"糖尿病":"是"}},{{"青少年":"否"}},...]
         2， 列表中的每个元素都是一个字典，只含一个键，举例如：{{"糖尿病":"是"}} 或 {{"糖尿病":"否"}}

@@ -42,7 +42,7 @@ from tool_img import (
     rgb_to_mono,
     cut_empty_margin,
 )
-from tool_static import 得到一个不重复的文件路径, 路径到链接
+from tool_static import 得到一个不重复的文件路径, 路径到链接, 得到一个不重复的文件名
 import tempfile
 import requests
 from urllib.parse import unquote
@@ -331,6 +331,8 @@ class BaseAdb(object):
 
     PICTURES_DIR = "/sdcard/Pictures"
 
+    ROBOT_TMP = "/sdcard/robot/temp"
+
     if not os.path.lexists(DIR_CFG):
         os.makedirs(DIR_CFG, exist_ok=True)
 
@@ -359,8 +361,8 @@ class BaseAdb(object):
 
     @cached_property
     def serialno(self):
-        return self.execute('getprop ro.serialno')[0].strip()
-    
+        return self.execute("getprop ro.serialno")[0].strip()
+
     @property
     def device_name(self):
         return self.dict.get("name")
@@ -555,7 +557,7 @@ class BaseAdb(object):
 
     def volume_down(self):
         self.ua2.keyevent("KEYCODE_VOLUME_DOWN")
-        
+
     def backspace(self):
         self.ua2.keyevent("KEYCODE_DEL")
 
@@ -565,7 +567,6 @@ class BaseAdb(object):
         for x in cls.get_devices_as_dict():
             if x.get("name") == d.get("device_name"):
                 return x
-
 
     @property
     def ip(self):
@@ -586,7 +587,7 @@ class BaseAdb(object):
     def is_app_opened(self, package=None):
         package = package if package else self.APP_INFO.get("package")
         current_package = self.app_info.get("package")
-        print('--------------', current_package, package)
+        print("--------------", current_package, package)
         return package == current_package
 
     def is_app_main(self):
@@ -732,7 +733,7 @@ class BaseAdb(object):
         self.ua2.shell(f"rm -rf {base_dir}")
         time.sleep(0.1)
         self.ua2.shell(f"mkdir {base_dir}")
-    
+
     def delete_all_files(self, base_dir):
         self.ua2.shell(f"find {base_dir} -maxdepth 1 -type f -delete")
 
@@ -749,13 +750,39 @@ class BaseAdb(object):
             rtn.append(路径到链接(local))
         return rtn
 
-    def copy_file_to_temp(self, fpath, sleep_span=0.1):
+    def copy_file_to_temp(self, fpath, sleep_span=0.1, tmp_dir=None, clear_expired=True):
+        tmp_dir = tmp_dir or self.DIR_TMP
         src = fpath
-        suffix = os.path.basename(fpath).rsplit(".")[-1]
-        dst = f"{self.DIR_TMP}/{time.time()}.{suffix}"
-        self.ua2.shell(f"cp {src} {dst}")
+        fname = 得到一个不重复的文件名(fpath)
+        dst = f"{tmp_dir}/{fname}"
+        if clear_expired:
+            self.ua2.shell(f'find "{tmp_dir}" -type f -mtime +7 -delete')
+        self.ua2.shell(f'mkdir -p "{tmp_dir}" && cp "{src}" "{dst}"')
         time.sleep(sleep_span)
         self.broadcast(dst)
+
+    def move_file_to_temp(self, fpath, sleep_span=0.1, tmp_dir=None, fname=None):
+        tmp_dir = tmp_dir or self.DIR_TMP
+        src = fpath
+        fname = os.path.basename(fpath) if fname is None else fname
+        dst = f"{tmp_dir}/{fname}"
+        self.ua2.shell(f'find "{tmp_dir}" -type f -mtime +7 -delete')
+        self.ua2.shell(f'mkdir -p "{tmp_dir}" && mv "{src}" "{dst}"')
+        time.sleep(sleep_span)
+        self.broadcast(dst)
+
+    def copy_file_to_robot_temp(self, fpath):
+        self.copy_file_to_temp(fpath, tmp_dir=self.ROBOT_TMP)
+        
+    def copy_file_to_download(self, fpath):
+        self.copy_file_to_temp(fpath, tmp_dir=self.DIR_UPLOAD, clear_expired=False)
+
+    def move_file_to_robot_temp(self, fpath, fname=None):
+        self.move_file_to_temp(fpath, tmp_dir=self.ROBOT_TMP, fname=fname)
+
+    def match_file_in_robot_temp(self, url):
+        return f"{self.ROBOT_TMP}/{os.path.basename(url)}"
+        
 
     def change_file_suffix(self, fpath, new_suffix):
         base = fpath.rsplit(".", maxsplit=1)[0]
@@ -821,12 +848,12 @@ class BaseAdb(object):
         fname=None,
     ):
         return self.push_file_to_temp(
-            src=src, 
-            sleep_span=sleep_span, 
-            clean_temp=clean_temp, 
-            use_timestamp=use_timestamp, 
+            src=src,
+            sleep_span=sleep_span,
+            clean_temp=clean_temp,
+            use_timestamp=use_timestamp,
             base_dir=self.DIR_UPLOAD,
-            fname=fname
+            fname=fname,
         )
 
     def push_file_to_temp_all(self, files):
@@ -1423,14 +1450,14 @@ class BaseAdb(object):
                 (item for item in cls.get_devices_as_dict() if item["id"] == id), None
             )
             if rtn is not None:
-                if not rtn.get('device'):
-                    print('等待设备就绪。。。')
-                    time.sleep(random.randint(1,3))
+                if not rtn.get("device"):
+                    print("等待设备就绪。。。")
+                    time.sleep(random.randint(1, 3))
                 else:
                     return rtn
             else:
-                print(f'设备掉线，等待重新连接中。。。({i})')
-                time.sleep(random.randint(1,3))
+                print(f"设备掉线，等待重新连接中。。。({i})")
+                time.sleep(random.randint(1, 3))
                 cls.reconnect(id)
         raise NoAdbDeviceError(f"{id} not found")
 
@@ -1637,6 +1664,11 @@ class BaseAdb(object):
 
     def screen_shot_safe(self):
         img = self.screen_shot()
+
+        if img is None:
+            img = self.ua2.screenshot()
+            img = pil2cv2(img) if img is not None else None
+
         if img is None:
             self.尝试重连设备(最大重连次数=3)
             img = self.screen_shot()
@@ -1746,13 +1778,16 @@ class BaseAdb(object):
         w, h = self.get_sys_width_height()
         self.ua2.swipe(w // 2, h // 2, w // 2, (h // 2) + distance, duration=duration)
 
-    def page_up(self):
+    def page_up(self, duration=None, steps=None):
         w, h = self.get_sys_width_height()
-        self.ua2.swipe(w // 2, h // 2, w // 2, h)
+        self.ua2.swipe(w // 2, h // 2, w // 2, h, duration, steps)
 
-    def page_down(self):
+    def page_down(self, duration=None, steps=None):
         w, h = self.get_sys_width_height()
-        self.ua2.swipe(w // 2, h // 2, w // 2, 0)
+        self.ua2.swipe(w // 2, h // 2, w // 2, 0, duration, steps)
+
+    def scroll_bottom(self):
+        self.page_down(duration=10, steps=2)
 
     def has_element(self, x, no_wait=False):
         e = self.find_xpath_safe(x)
@@ -1787,7 +1822,8 @@ class BaseAdb(object):
         # ['am', 'broadcast', '-a', cmd, '--es', 'text', base64text])
         # cmd = "ADB_SET_TEXT" if clear else "ADB_INPUT_TEXT"
         import base64
-        btext = txt.encode('utf-8')
+
+        btext = txt.encode("utf-8")
         base64text = base64.b64encode(btext).decode()
         self.execute(f'am broadcast -a ADB_INPUT_TEXT --es text "{base64text}"')
         return self

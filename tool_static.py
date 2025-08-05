@@ -17,20 +17,26 @@ import requests
 
 BASE_URL_56T = "https://file.j1.sale/api/file"
 
-if not OS_WIN:
+
+if os.path.lexists('/data/data/com.termux'):
+    BASE_DIR_56T = "/data/data/com.termux/files/home/file"
+elif not OS_WIN:
     BASE_DIR_56T = "/mnt/56T/file"
 elif os.path.lexists("v:/file"):
     BASE_DIR_56T = "v:/file"
-else:
+elif os.path.lexists('d:/file'):
     BASE_DIR_56T = "d:/file"
     BASE_URL_56T = "https://127.0.0.1:8000/media"
+else:
+    BASE_DIR_56T = "/data/data/com.termux/files/home/file"
 
 # BASE_DIR_56T = "v:/file" if OS_WIN else "/mnt/56T/file"
 def is_inner():
     return BASE_DIR_56T == "/mnt/56T/file" and  os.path.lexists(BASE_DIR_56T)
 
-def upload_file(content, token, fname=None, project_name="default"):
-    if fname is None or not fname.rsplit('.', maxsplit=1)[0].strip():
+def upload_file(content, token, fname, project_name='default', keep_fname=False):
+    assert fname, "fname is empty!!!"
+    if not keep_fname:
         service_url = BASE_URL_56T
         url = None
     else:
@@ -43,10 +49,16 @@ def upload_file(content, token, fname=None, project_name="default"):
             "url":url,
             }
     data = requests.post(service_url, data=data, files=form_data).json()
-    return f'''https://file.j1.sale{data["data"]["url"]}'''
+    result_url = data["data"].get('url')
+    return f'''https://file.j1.sale{result_url}''' if result_url else data
 
 
-def generate_password():
+def upload_file_by_path(fpath, token, project_name='default', keep_fname=False):
+    with open(fpath, 'rb') as f:
+        content = f.read()
+    return upload_file(content, token, fname=os.path.basename(fpath), project_name=project_name, keep_fname=keep_fname)
+
+def generate_password(length=8):
     password_characters = string.ascii_letters + string.digits + '_'
     password = [
         random.choice(string.ascii_uppercase),  # 大写字母
@@ -54,7 +66,7 @@ def generate_password():
         random.choice(string.digits),  # 数字
         random.choice('_')  # 下划线
     ]
-    password += random.choices(password_characters, k=8)
+    password += random.choices(password_characters, k=length - len(password))
     random.shuffle(password)
     return ''.join(password)
 
@@ -94,13 +106,19 @@ def 得到一个固定文件路径(相对路径, base_dir=BASE_DIR_56T):
     相对路径 = 相对路径[1:] if 相对路径.startswith("/") else 相对路径
     return os.path.join(base_dir, 相对路径).replace("\\", "/")
 
-
-def 得到一个不重复的文件路径(fpath="", sub_dir=None, base_dir=None):
+def 得到一个不重复的文件名(fpath):
     time.sleep(0.01)
     后缀 = 得到后缀(fpath)
     后缀 = f".{后缀}" if 后缀 else ""
-    name = f"{time.time():.6f}{random.random():.4f}{后缀}"
-    return os.path.join(当前路径(base_dir=base_dir, sub_dir=sub_dir), name)
+    return f"{time.time():.6f}{random.random():.4f}{后缀}"
+
+
+def 得到一个不重复的文件路径(fpath="", sub_dir=None, base_dir=None):
+    # time.sleep(0.01)
+    # 后缀 = 得到后缀(fpath)
+    # 后缀 = f".{后缀}" if 后缀 else ""
+    # name = f"{time.time():.6f}{random.random():.4f}{后缀}"
+    return os.path.join(当前路径(base_dir=base_dir, sub_dir=sub_dir), 得到一个不重复的文件名(fpath))
 
 
 def 路径到链接(fpath, base_dir=BASE_DIR_56T):

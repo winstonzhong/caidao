@@ -176,9 +176,10 @@ def split_chinese_datetime(line):
     ('1月21日', '中午', '12', '38')
     >>> split_chinese_datetime('2:56')
     (None, '', '2', '56')
+    >>> split_chinese_datetime('公交卡余额不足')
     '''
     m = ptn_chinese_datetime1.match(line) or ptn_chinese_datetime2.match(line)
-    return m.groups()
+    return m.groups() if m is not None else None
 
 def chinese_to_date(line, today=None):
     '''
@@ -237,10 +238,16 @@ def convert_chinese_datetime(line, today=None):
     >>> convert_chinese_datetime(numpy.nan)
     nan
     >>> convert_chinese_datetime(None)
+    >>> convert_chinese_datetime('周四 10:45 ')
+    datetime.datetime(2025, 7, 17, 10, 45, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
+    >>> convert_chinese_datetime('受苦不吃亏')
     '''
     if pandas.isnull(line) or not is_string(line):
         return line
-    cd, name, hour, minute =  split_chinese_datetime(line)
+    r = split_chinese_datetime(line)
+    if r is None:
+        return None
+    cd, name, hour, minute =  r
     d = chinese_to_date(cd, today)
     d = datetime.datetime(year=d.year, month=d.month, day=d.day)
     

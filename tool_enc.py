@@ -41,10 +41,6 @@ class StrSecret(object):
     @classmethod
     def gen_key(cls):
         return Fernet.generate_key()
-        # random_bytes = os.urandom(24)
-        # base64_encoded = base64.urlsafe_b64encode(random_bytes)
-        # return base64_encoded
-
 
 if __name__ == "__main__":
     import doctest
