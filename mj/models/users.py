@@ -53,7 +53,7 @@ class AbstractUser(models.Model):
     expired_at = models.DateTimeField(verbose_name='过期时间', null=True)
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
-    open_id = models.CharField(max_length=50, verbose_name='open_id', blank=True, null=True)
+    open_id = models.CharField(max_length=50, verbose_name='open_id', blank=True, null=True, unique=True)
     vip_level = models.IntegerField(default=0, verbose_name='vip等级')
     recorder_pay_qrcode = models.URLField(verbose_name='支付二維碼', null=True, blank=True)
     expire_date = models.DateTimeField(verbose_name='到期时间', null=True, blank=True)
