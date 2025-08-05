@@ -94,7 +94,34 @@ class AbstractPurchase(AbstractModel):
     num = models.PositiveSmallIntegerField(verbose_name='购买月数', default=1)
     amount = models.DecimalField(verbose_name='总金额', max_digits=6, decimal_places=2, default=0)
     expire_date = models.DateTimeField(verbose_name='到期时间', null=True, blank=True)
-    
+
+    class Meta:
+        abstract = True
+
+
+class 抽象套接字客户端链接类型(AbstractModel):
+    是否线上 = models.BooleanField(verbose_name="是否线上", default=False)
+    链接类型 = models.CharField(max_length=50, verbose_name="链接类型", default="")
+    房间号 = models.CharField(max_length=50, verbose_name="房间号", default="")
+    认证密钥 = models.CharField(max_length=50, verbose_name="认证密钥", null=True)
+    是否选中 = models.BooleanField(verbose_name="是否选中", default=True)
+    用户 = models.IntegerField(verbose_name="用户", blank=True, null=True)
+
+    class Meta:
+        abstract = True
+
+class 抽象样例数据表(AbstractModel):
+    链接类型 = models.CharField(max_length=50, verbose_name="链接类型", default="")
+    名称 = models.CharField(max_length=50, verbose_name="名称", default="")
+    消息体 = models.JSONField(verbose_name="消息体", default=dict)
+
+    class Meta:
+        abstract = True
+
+class 抽象历史消息(AbstractModel):
+    消息体 = models.JSONField(verbose_name="消息体", default=dict)
+    发送方 = models.IntegerField(verbose_name="发送方", blank=True, null=True)
+    接收方 = models.IntegerField(verbose_name="接收方", blank=True, null=True)
 
     class Meta:
         abstract = True
