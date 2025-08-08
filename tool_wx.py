@@ -19,10 +19,6 @@ ptn_renamed_person_name = re.compile(".+_[A-Z]{4}$")
 
 ptn_renamed_name = re.compile(".*_[A-Z]{4}$")
 
-# def parse_session_name(line):
-#     m = ptn_session_name.search(line)
-#     if m:
-#         return int(m.group()[:-1])
 
 def is_renamed_person_name(line):
     """
@@ -32,6 +28,18 @@ def is_renamed_person_name(line):
     False
     """
     return bool(ptn_renamed_person_name.match(line.strip()))
+
+def 过滤掉用户状态字符(line):
+    '''
+    >>> 过滤掉用户状态字符("SunnyAftRain_SUNY") == 'SunnyAftRain_SUNY'
+    True
+    >>> 过滤掉用户状态字符(None)
+    >>> 过滤掉用户状态字符('_') == '_'
+    True
+    >>> 过滤掉用户状态字符('Falsef._QCXP\u2007') == 'Falsef._QCXP'
+    True
+    '''
+    return line[:-1] if line and len(line) >=5 and is_renamed_person_name(line[:-1]) else line
 
 
 def is_renamed_session_name(line):

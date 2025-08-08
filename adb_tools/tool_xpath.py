@@ -494,7 +494,7 @@ class 操作块(基本输入字段对象):
 
     def execute(self, job):
         for tpl in self.tpls:
-            # print(tpl, tpl.matched, tpl.d)
+            print(tpl, tpl.matched, tpl.d)
             if not tpl.matched:
                 continue
             if tpl.execute(job, self.lines):
@@ -503,8 +503,8 @@ class 操作块(基本输入字段对象):
                 job.last_executed_block_id = self.id
                 return True
 
-    def match(self, job):
-        if not job.status and not self.only_when:
+    def match(self, job, ignore_status=False):
+        if ignore_status or (not job.status and not self.only_when):
             状态正确 = True
         else:
             状态正确 = job.status == self.only_when
@@ -664,8 +664,8 @@ class 基本任务(抽象持久序列):
     def few_first(self):
         return self.d.get("few_first", False)
 
-    def 执行操作块(self, block_id):
-        self.match(block_id)
+    def 执行操作块(self, block_id, ignore_status=False):
+        self.match(block_id, ignore_status)
         block = next(filter(lambda b: b.id == block_id, self.blocks))
         # print('block is:', block, block.id)
         return block.execute(self)
@@ -675,11 +675,11 @@ class 基本任务(抽象持久序列):
             if block_id is None or block.id == block_id:
                 execute_lines(self, block.lines)
 
-    def match(self, block_id=None):
+    def match(self, block_id=None, ignore_status=False):
         self.device.snapshot(wait_steady=self.wait_steady)
         for block in self.blocks:
             if block_id is None or block.id == block_id:
-                block.match(self)
+                block.match(self, ignore_status)
 
     def get_df(self):
         df = pandas.DataFrame(
