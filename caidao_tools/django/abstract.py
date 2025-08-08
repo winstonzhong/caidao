@@ -202,9 +202,6 @@ class BaseModel(models.Model):
 
 
 class 抽象任务数据(BaseModel):
-    # due_time = models.DateTimeField(
-    #     verbose_name="到期时间(小于等于当前时间被选中)", null=True, blank=True
-    # )
     update_time = models.DateTimeField(verbose_name="更新时间", auto_now=True)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
     cnt_saved = models.IntegerField(verbose_name="保存次数", default=0)
@@ -213,15 +210,24 @@ class 抽象任务数据(BaseModel):
     class Meta:
         abstract = True
 
+    def 是否被占用(self):
+        return (
+            self.processing
+            and timezone.now() - datetime.timedelta(seconds=self.get_seconds_expiring())
+            < self.update_time
+        )
+
+    def 占用(self):
+        self.__class__.objects.filter(pk=self.pk).update(processing=1,
+                                                         update_time=timezone.now())
+        self.refresh_from_db()
+
+    def 解除占用(self):
+        self.processing = False
+        self.save()
+
     def save(self, *a, **kw):
         self.cnt_saved += 1
-        # if self.due_time is not None:
-        #     if not isinstance(self.due_time, datetime.datetime):
-        #         self.due_time = timezone.now() + datetime.timedelta(
-        #             seconds=int(self.due_time)
-        #         )
-        #     else:
-        #         self.due_time = None
         self.processing = False
         return super().save(*a, **kw)
 
