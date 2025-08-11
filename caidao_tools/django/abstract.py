@@ -218,8 +218,9 @@ class 抽象任务数据(BaseModel):
         )
 
     def 占用(self):
-        self.__class__.objects.filter(pk=self.pk).update(processing=1,
-                                                         update_time=timezone.now())
+        self.__class__.objects.filter(pk=self.pk).update(
+            processing=1, update_time=timezone.now()
+        )
         self.refresh_from_db()
 
     def 解除占用(self):
@@ -273,6 +274,14 @@ class 抽象任务数据(BaseModel):
     @classmethod
     def 尝试获得处理权(cls, obj):
         return cls.select_for_processing(obj.pk) if obj is not None else None
+
+    @classmethod
+    def 是否有记录正在处理(cls):
+        return cls.objects.filter(
+            processing=True,
+            update_time__gte=timezone.now()
+            - datetime.timedelta(seconds=cls.get_seconds_expiring()),
+        ).exists()
 
 
 class AbstractModel(BaseModel):
@@ -455,7 +464,6 @@ class 抽象定时任务(BaseModel):
             if 单步:
                 break
             time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
-
 
     def print_info(self, *a):
         if self.输出调试信息:
