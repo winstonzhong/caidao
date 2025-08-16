@@ -494,7 +494,7 @@ class 操作块(基本输入字段对象):
 
     def execute(self, job):
         for tpl in self.tpls:
-            print(tpl, tpl.matched, tpl.d)
+            # print(tpl, tpl.matched, tpl.d)
             if not tpl.matched:
                 continue
             if tpl.execute(job, self.lines):
