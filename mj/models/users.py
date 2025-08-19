@@ -57,7 +57,7 @@ class AbstractUser(BaseModel):
     updated_at = models.DateTimeField(verbose_name='更新时间', auto_now=True)
     created_at = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
     open_id = models.CharField(max_length=50, verbose_name='open_id', blank=True, null=True, unique=True)
-    vip_level = models.IntegerField(default=0, verbose_name='vip等级')
+    vip_level = models.IntegerField(default=1, verbose_name='vip等级')
     recorder_pay_qrcode = models.URLField(verbose_name='支付二維碼', null=True, blank=True)
     expire_date = models.DateTimeField(verbose_name='到期时间', null=True, blank=True)
 
@@ -90,7 +90,7 @@ class AbstractGroup(BaseModel):
 class AbstractPurchase(AbstractModel):
     user = models.PositiveIntegerField()
     package = models.PositiveIntegerField()
-    icon = models.ImageField(verbose_name='支付截图',upload_to="purchase")
+    icon = models.ImageField(verbose_name='支付截图',upload_to="purchase", null=True, blank=True)
     num = models.PositiveSmallIntegerField(verbose_name='购买月数', default=1)
     amount = models.DecimalField(verbose_name='总金额', max_digits=6, decimal_places=2, default=0)
     expire_date = models.DateTimeField(verbose_name='到期时间', null=True, blank=True)
