@@ -94,6 +94,7 @@ class AbstractPurchase(AbstractModel):
     num = models.PositiveSmallIntegerField(verbose_name='购买月数', default=1)
     amount = models.DecimalField(verbose_name='总金额', max_digits=6, decimal_places=2, default=0)
     expire_date = models.DateTimeField(verbose_name='到期时间', null=True, blank=True)
+    out_trade_no = models.CharField(max_length=50, verbose_name='微信订单号', null=True, blank=True)
 
     class Meta:
         abstract = True
