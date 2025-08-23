@@ -79,6 +79,7 @@ def compute_noise_robust_hash(img, block_size=8, hash_size=16):
         resized = cv2.resize(gray, (img_size, img_size), interpolation=cv2.INTER_AREA)
 
         # 分块计算均值
+
         blocks = []
         for i in range(hash_size):
             for j in range(hash_size):
@@ -89,7 +90,6 @@ def compute_noise_robust_hash(img, block_size=8, hash_size=16):
                 # 使用中位数而非均值，更能抵抗噪声
                 median = np.median(block)
                 blocks.append(median)
-
         # 计算全局中位数作为阈值
         global_median = np.median(blocks)
 
@@ -103,9 +103,13 @@ def compute_noise_robust_hash(img, block_size=8, hash_size=16):
         return None
 
 
-
 if __name__ == "__main__":
     import doctest
+
     def get_hash(fname):
-        return compute_noise_robust_hash(cv2.imread(f'/mnt/56T/file/2025-06-27/{fname}.jpg'))
+        return compute_noise_robust_hash(
+            cv2.imread(f"/mnt/56T/file/2025-06-27/{fname}.jpg")
+        )
+
     print(doctest.testmod(verbose=False, report=False))
+    # print(get_hash("1750984821.5956340.8464"))
