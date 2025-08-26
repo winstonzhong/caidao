@@ -64,6 +64,24 @@ def get_xpath(node, root=None, include_pos=True):
         node = node.getparent()
     return "/".join(xpath_components[::-1])
 
+
+class SingleContainer(object):
+
+    def __init__(self, e):
+        self.e = e
+
+    @property
+    def text(self):
+        pass
+
+    @property
+    def 所有可识别元素(self):
+        rtn = []
+        for e in self.e.xpath(".//*"):
+            if e.attrib.get("content-desc") or e.attrib.get("text"):
+                rtn.append(e)
+
+
 class 单条容器(list):
     def __init__(self, rect_big, rect, *args, **kwargs):
         self.rect_big = rect_big
@@ -73,18 +91,13 @@ class 单条容器(list):
     def 是否顶部探头(self):
         return (
             self.rect.top <= self.rect_big.top
-            # and self.rect.height <= self.rect_big.height * 0.99
             and len(self) >= 2
         )
 
     def 是否底部触底(self):
-        # if self.类型 == '文本':
         return (
             self.rect.bottom >= self.rect_big.bottom
             and self.类型 != "文本"
-            # and (self.类型 != '文本' or self.rect.height <= self.rect_big.height * 0.5)
-            # and self.rect.height <= self.rect_big.height * 0.99
-            # and len(self) >= 2
         )
 
     @property
@@ -105,6 +118,7 @@ class 单条容器(list):
             self.头像 is not None
             and bounds_to_rect(self.头像.bounds).left > self.rect_big.center_x
         )
+
 
     @cached_property
     def 发言者(self):
@@ -318,6 +332,13 @@ class 单条容器(list):
                 return None, None
         return self.rect.center
 
+    @property
+    def most_right(self):
+        return max([x.rect.right for x in self])
+
+    def 是否靠右侧消息容器(self):
+        return self.most_right > self.rect_big.width * 0.75
+
 class 元素(object):
     _types = {
         "正文": [
@@ -428,6 +449,10 @@ class 元素(object):
     @property
     def bounds(self):
         return self.e.attrib.get("bounds")
+
+    @property
+    def rect(self):
+        return bounds_to_rect(self.bounds)
 
     @property
     def 类型(self):
@@ -541,6 +566,7 @@ class 解析器(object):
 
     def show(self, bounds=None):
         from tool_img import show
+
         if bounds is None:
             img = self.img
         else:
@@ -588,6 +614,14 @@ class 解析器(object):
         print(l)
         return any(l)
 
+    def 是否包含靠右侧消息容器(self):
+        for c in self.elements:
+            if c.是否靠右侧消息容器():
+                return True
+        return False
+
+
 if __name__ == "__main__":
     import doctest
+
     print(doctest.testmod(verbose=False, report=False))
