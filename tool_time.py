@@ -113,7 +113,8 @@ def dash_date(tdate):
 def from_dashdate(line):
     if isinstance(line, datetime.datetime) or isinstance(line, datetime.date):
         return line
-    return datetime.datetime.fromtimestamp(mktime(strptime(line, "%Y-%m-%d")))
+    # return datetime.datetime.fromtimestamp(mktime(strptime(line, "%Y-%m-%d")))
+    return datetime.datetime.strptime(line, "%Y-%m-%d")
 
 def to_date(line):
     return from_dashdate(dash_date(line)).date()
