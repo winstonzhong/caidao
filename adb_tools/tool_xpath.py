@@ -315,6 +315,8 @@ class SteadyDevice(DummyDevice):
         df["链接"] = None
         df.自己 = df.自己.fillna(False).astype(bool)
         return df
+    
+    
 
     def merge_wx_df(self, upper_page, lower_page):
         rtn = tool_wx_df.合并上下两个df(上一页=upper_page, 当前页=lower_page, safe=True)
@@ -368,7 +370,14 @@ class SteadyDevice(DummyDevice):
             return df.loc[tmp.index[-1] :].copy()
         return df
 
-    def is_wx_group(self, name):
+    @property
+    def wx_session_name(self):
+        data_list = self.find_xpath_all('//android.view.ViewGroup//android.widget.TextView')
+        data_list = sorted(data_list, key=lambda x:x.center()[1])
+        return data_list[0].attrib.get('text') if data_list else None
+
+    def is_wx_group(self, name=None):
+        name = name if name else self.wx_session_name
         return tool_wx.is_session_name(name)
 
 
@@ -939,3 +948,4 @@ if __name__ == "__main__":
     import doctest
 
     print(doctest.testmod(verbose=False, report=False))
+

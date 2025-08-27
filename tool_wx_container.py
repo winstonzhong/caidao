@@ -27,6 +27,7 @@ ptn_wx_root = (
     """/*/android.widget.FrameLayout[@resource-id=""][@package="com.tencent.mm"]"""
 )
 
+ptn_recycler = """//*[@class="androidx.recyclerview.widget.RecyclerView"]"""
 
 def get_short_text(txt, max_length=20):
     return txt[:max_length] + ("..." if txt[max_length:] else "")
@@ -619,6 +620,12 @@ class 解析器(object):
             if c.是否靠右侧消息容器():
                 return True
         return False
+    
+    @property
+    def key(self):
+        recycler = self.tree.xpath(ptn_recycler, namespaces=namespaces)
+        assert recycler, "没有找到recycler"
+        return get_hash_bytes(etree.tostring(recycler[0]))
 
 
 if __name__ == "__main__":
