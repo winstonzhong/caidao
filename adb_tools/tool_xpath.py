@@ -45,6 +45,9 @@ import tool_wx
 
 import requests
 
+import tool_env
+
+from check_series_contains import check_series_contains
 
 # def execute_lines(job, lines, self=None):
 #     if self is not None:
@@ -567,6 +570,7 @@ class 抽象持久序列(基本输入字段对象):
 
 
 class 基本任务(抽象持久序列):
+    HOST_SERVER = os.getenv('HOST_SERVER', 'crawler.j1.sale')
     def __init__(self, fpath_or_dict, device_pointed=None):
         self.device_pointed = device_pointed
         super().__init__(fpath_or_dict)
@@ -575,15 +579,23 @@ class 基本任务(抽象持久序列):
         self.cache = {}
         self.remote_obj = 0
 
+    @classmethod
+    def 是否已经匹配历史(cls, series, lst):
+        return check_series_contains(series, lst)
+    
+    @classmethod
+    def process_url(cls, url):
+        return tool_env.replace_url_host(url, cls.HOST_SERVER)
+
     def get_remote_obj(self, url, 带串行号=True, **kwargs):
         if 带串行号:
             设备串行号 = self.device.adb.serialno
         else:
             设备串行号 = None
-        return RemoteModel(url, 设备串行号=设备串行号, **kwargs)
+        return RemoteModel(self.process_url(url), 设备串行号=设备串行号, **kwargs)
 
     def requests_get(self, url, 带串行号=True, **kwargs):
-        obj = self.get_remote_obj(url, 带串行号=带串行号, **kwargs)
+        obj = self.get_remote_obj(self.process_url(url), 带串行号=带串行号, **kwargs)
         return obj if obj.data else None
 
     def requests_post(self, url, 带串行号=True, **kwargs):
@@ -593,7 +605,7 @@ class 基本任务(抽象持久序列):
                 payload[key] = json.dumps(value)
             else:
                 payload[key] = value
-        response = requests.post(url, data=payload)
+        response = requests.post(self.process_url(url), data=payload)
         response.raise_for_status()
 
     @property

@@ -14,7 +14,7 @@ import pandas
 
 from tool_rect import Rect
 import os
-
+from urllib.parse import urlparse, urlunparse
 
 IPV4_PAT = "(?:[0-9]{1,3}\\.){3}[0-9]{1,3}"
 
@@ -259,11 +259,13 @@ def smart_range_safe(start, end):
 def is_string(x):
     return _is_string_like(x)
 
+
 def to_float(x):
     try:
         return float(x)
     except Exception:
         pass
+
 
 def is_float(x):
     """
@@ -282,7 +284,9 @@ def is_float(x):
     >>> is_float('0.1')
     True
     """
-    return isinstance(x, float) or (isinstance(x, str) and '.' in x and to_float(x) is not None)
+    return isinstance(x, float) or (
+        isinstance(x, str) and "." in x and to_float(x) is not None
+    )
 
 
 def is_int(x):
@@ -294,13 +298,13 @@ def is_number(x):
 
 
 def to_int(x):
-    '''
+    """
     >>> to_int('1.0') == 1
     True
     >>> to_int('1') == 1
     True
     >>> to_int('1.1a')
-    '''
+    """
     try:
         return int(x)
     except Exception:
@@ -647,6 +651,45 @@ def 文字截断(txt, 最大长度=20, 截断替代="..."):
 def remove_leading_whitespace(text):
     pattern = r"^[ \t]+"
     return re.sub(pattern, "", text, flags=re.M)
+
+
+def replace_url_host(url, host_name):
+    """
+    替换URL中的主机名部分
+
+    参数:
+        url (str): 原始URL
+        host_name (str): 新的主机名
+
+    返回:
+        str: 替换主机名后的新URL
+
+    示例:
+        >>> replace_url_host("https://crawler.j1.sale/admin/wx_msgs/", "coco.test.com")
+        'https://coco.test.com/admin/wx_msgs/'
+
+        >>> replace_url_host("http://oldhost/path", "newhost")
+        'http://newhost/path'
+
+        >>> replace_url_host("ftp://user:pass@oldhost:21/dir", "newhost")
+        'ftp://newhost/dir'
+
+        >>> replace_url_host("https://oldhost:8080", "newhost:9090")
+        'https://newhost:9090'
+
+        >>> replace_url_host("http://oldhost", "newhost")
+        'http://newhost'
+    """
+    # 解析URL，获取各个组成部分
+    parsed_url = urlparse(url)
+
+    # 替换主机名部分（netloc）
+    new_parsed = parsed_url._replace(netloc=host_name)
+
+    # 重新组合URL的各个部分
+    new_url = urlunparse(new_parsed)
+
+    return new_url
 
 
 if __name__ == "__main__":
