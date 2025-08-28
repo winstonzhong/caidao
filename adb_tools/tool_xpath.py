@@ -47,7 +47,7 @@ import requests
 
 import tool_env
 
-from check_series_contains import check_series_contains
+import check_series_contains
 
 # def execute_lines(job, lines, self=None):
 #     if self is not None:
@@ -299,13 +299,12 @@ class SteadyDevice(DummyDevice):
                 clean_temp=clean_temp,
             )
         else:
-            '''
+            """
             根据url的文件名匹配robot temp下的文件
             并且将此文件拷贝至download目录
-            '''
+            """
             src = self.adb.match_file_in_robot_temp(url)
             self.adb.copy_file_to_download(src)
-
 
     @property
     def container_wx(self):
@@ -318,8 +317,6 @@ class SteadyDevice(DummyDevice):
         df["链接"] = None
         df.自己 = df.自己.fillna(False).astype(bool)
         return df
-    
-    
 
     def merge_wx_df(self, upper_page, lower_page):
         rtn = tool_wx_df.合并上下两个df(上一页=upper_page, 当前页=lower_page, safe=True)
@@ -327,17 +324,23 @@ class SteadyDevice(DummyDevice):
             rtn.已处理 = rtn.已处理.fillna(False).astype(bool)
         else:
             rtn["已处理"] = False
-
         if "自己" in rtn.columns:
             rtn.自己 = rtn.自己.fillna(False).astype(bool)
         else:
-            rtn["已处理"] = False
+            rtn["自己"] = False
+
+        # rtn.已处理 = ~rtn.类型.isin(["图片","语音"])
+        rtn["已处理"] = rtn["已处理"].where(
+            rtn["已处理"], ~rtn["类型"].isin(["图片", "语音"])
+        )
+        rtn["新增"] = True
+
         return rtn
 
     @property
     def remote_fpath_wx_images(self):
         return "/sdcard/Pictures/WeiXin"
-    
+
     @property
     def remote_fpath_temp(self):
         return "/sdcard/robot_temp"
@@ -352,11 +355,11 @@ class SteadyDevice(DummyDevice):
             )
             return tool_static.路径到链接(fpath)
         else:
-            '''
+            """
             下载该文件到本地
             上传至56T
             源文件移动至robot临时目录且按照56T链接返回的文件名(可选touch)
-            '''
+            """
             fpath = self.adb.pull_lastest_file_until(
                 base_dir=self.remote_fpath_wx_images, to_56T=False
             )
@@ -366,7 +369,6 @@ class SteadyDevice(DummyDevice):
             self.adb.move_file_to_robot_temp(src, fname)
             return url
 
-
     def cut_wx_df(self, df):
         tmp = df[df.自己]
         if not tmp.empty:
@@ -375,9 +377,11 @@ class SteadyDevice(DummyDevice):
 
     @property
     def wx_session_name(self):
-        data_list = self.find_xpath_all('//android.view.ViewGroup//android.widget.TextView')
-        data_list = sorted(data_list, key=lambda x:x.center()[1])
-        return data_list[0].attrib.get('text') if data_list else None
+        data_list = self.find_xpath_all(
+            "//android.view.ViewGroup//android.widget.TextView"
+        )
+        data_list = sorted(data_list, key=lambda x: x.center()[1])
+        return data_list[0].attrib.get("text") if data_list else None
 
     def is_wx_group(self, name=None):
         name = name if name else self.wx_session_name
@@ -570,7 +574,9 @@ class 抽象持久序列(基本输入字段对象):
 
 
 class 基本任务(抽象持久序列):
-    HOST_SERVER = os.getenv('HOST_SERVER', 'crawler.j1.sale')
+    HOST_SERVER = os.getenv("HOST_SERVER", "crawler.j1.sale")
+    # HOST_SERVER = os.getenv("HOST_SERVER", "coco.j1.sale")
+
     def __init__(self, fpath_or_dict, device_pointed=None):
         self.device_pointed = device_pointed
         super().__init__(fpath_or_dict)
@@ -579,10 +585,20 @@ class 基本任务(抽象持久序列):
         self.cache = {}
         self.remote_obj = 0
 
+    # @classmethod
+    # def 是否已经匹配历史(cls, series, lst):
+    #     return check_series_contains(series, lst)
+
     @classmethod
-    def 是否已经匹配历史(cls, series, lst):
-        return check_series_contains(series, lst)
-    
+    def 处理历史记录(cls, df, lst):
+        tmp = df[~df.自己]
+        i = check_series_contains.find_matching_i(tmp.唯一值, lst)
+        if i is not None:
+            # df['新增'] = True
+            df.loc[tmp.index[:i], "已处理"] = True
+            df.loc[tmp.index[:i], "新增"] = False
+        return i is not None
+
     @classmethod
     def process_url(cls, url):
         return tool_env.replace_url_host(url, cls.HOST_SERVER)
@@ -599,7 +615,7 @@ class 基本任务(抽象持久序列):
         return obj if obj.data else None
 
     def requests_post(self, url, 带串行号=True, **kwargs):
-        payload = {"设备串行号": self.device.adb.serialno}
+        payload = {"设备串行号": self.device.adb.serialno} if 带串行号 else {}
         for key, value in kwargs.items():
             if isinstance(value, (dict, list)):
                 payload[key] = json.dumps(value)
@@ -960,4 +976,3 @@ if __name__ == "__main__":
     import doctest
 
     print(doctest.testmod(verbose=False, report=False))
-

@@ -45,11 +45,13 @@ def check_series_contains(series: pd.Series, lst: list) -> bool:
     True
     >>> check_series_contains(pd.Series([3,4,]), [1,2,3,4,])  # 情况2: 包含列表的一部分且长度匹配, 完整
     True
+    >>> check_series_contains(pd.Series([1,2]), None)
+    False
     """
     # 将Series转换为列表以便处理
     series_list = series.tolist()
     len_series = len(series_list)
-    len_lst = len(lst)
+    len_lst = len(lst or [])
 
     # 处理空列表或空Series的情况
     if len_lst == 0 or len_series == 0:
@@ -74,6 +76,52 @@ def check_series_contains(series: pd.Series, lst: list) -> bool:
 
     # 两种情况都不满足
     return False
+
+
+def find_matching_i(series, lst):
+    """
+    找到满足series.iloc[:i] == lst[len(lst)-i:]的i，返回i，否则返回None。
+
+    参数:
+        series: pandas.Series对象
+        lst: 要检查的列表
+
+    返回:
+        int: 满足条件的i，如果不存在则返回None
+
+    示例:
+        >>> s = pd.Series([3,4,5])
+        >>> l = [1,2,3,4,5]
+        >>> find_matching_i(s, l)
+        3
+        >>> s = pd.Series([1,2,3])
+        >>> l = [4,5,6]
+        >>> find_matching_i(s, l)
+        >>> s = pd.Series([2,3])
+        >>> l = [1,2,3]
+        >>> find_matching_i(s, l)
+        2
+        >>> s = pd.Series([5])
+        >>> l = [1,2,5]
+        >>> find_matching_i(s, l)
+        1
+        >>> s = pd.Series([3,4,5,6])
+        >>> l = [3,4]
+        >>> find_matching_i(s, l)
+        2
+        >>> s = pd.Series([2,3,2,3])
+        >>> l = [1,2,3,2,3]
+        >>> find_matching_i(s, l)
+        4
+    """
+    max_i = min(len(series), len(lst))
+    for i in reversed(list(range(1, max_i + 1))):
+        series_part = series.iloc[:i].tolist()
+        lst_part = lst[len(lst) - i:]
+        if series_part == lst_part:
+            return i
+    return None
+    
 
 
 if __name__ == "__main__":
