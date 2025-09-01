@@ -16,6 +16,7 @@ import subprocess
 import time
 
 import cv2
+
 from django.utils.functional import cached_property
 import numpy
 import uiautomator2
@@ -45,8 +46,52 @@ from tool_img import (
 from tool_static import 得到一个不重复的文件路径, 路径到链接, 得到一个不重复的文件名
 import tempfile
 import requests
+import packaging
 from urllib.parse import unquote
+from uiautomator2 import Device
+from uiautomator2.version import __apk_version__
 
+def _package_version(self, package_name):
+    if self.shell(['pm', 'path', package_name]).exit_code != 0:
+        return None
+    dump_output = self.shell(['dumpsys', 'package', package_name]).output
+    m = re.compile(r'versionName=(?P<name>[\d.]+)').search(dump_output)
+    print('match is:', m, package_name)
+    print(m.group('name') if m else "")
+    # print(dump_output)
+    # return packaging.version.parse(m.group('name') if m else "")
+    return packaging.version.parse(m.group('name')) if m else None
+
+
+def _is_apk_required(self) -> bool:
+    apk_version = self._package_version("com.github.uiautomator")
+    if apk_version is None:
+        return True
+
+    # # 检查测试apk是否存在
+    # if self._package_version("com.github.uiautomator.test") is None:
+    #     return True
+    return False
+
+def _is_apk_outdated(self):
+    # 检查被测应用是否存在
+    apk_version = self._package_version("com.github.uiautomator")
+    if apk_version is None:
+        return True
+
+    # 检查版本是否过期
+    if apk_version < packaging.version.parse(__apk_version__):
+        return True
+
+    # # 检查测试apk是否存在
+    # if self._package_version("com.github.uiautomator.test") is None:
+    #     return True
+    return False
+
+
+Device._package_version = _package_version
+Device._is_apk_required = _is_apk_required
+Device._is_apk_outdated = _is_apk_outdated
 
 # from base_adb import tool_devices
 # from common.exceptions import ElementNotFoundError, TplNotFoundError, NotNeedFurtherActions
