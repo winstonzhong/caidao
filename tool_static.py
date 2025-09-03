@@ -198,6 +198,7 @@ def 链接到路径(url, base_dir=BASE_DIR_56T, safe=True):
     >>> 链接到路径('https://file.j1.sale/api/file/2024-11-26/1732629182.2386892.amr') == f'{BASE_DIR_56T}/2024-11-26/1732629182.2386892.amr'
     True
     """
+    url = url.split('?', maxsplit=1)[0]
     if is_inner():
         if url.startswith(BASE_URL_56T):
             return url.replace(BASE_URL_56T, base_dir)

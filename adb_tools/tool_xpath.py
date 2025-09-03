@@ -319,6 +319,12 @@ class SteadyDevice(DummyDevice):
         return df
 
     def merge_wx_df(self, upper_page, lower_page):
+        print('uppser page:')
+        print(upper_page)
+        print('lower page:')
+        print(lower_page)
+
+
         rtn = tool_wx_df.合并上下两个df(上一页=upper_page, 当前页=lower_page, safe=True)
         if "自己" in rtn.columns:
             rtn.已处理 = rtn.已处理.fillna(False).astype(bool)
@@ -389,12 +395,36 @@ class SteadyDevice(DummyDevice):
 
 
 class 基本输入字段对象(object):
+    HOST_SERVER = os.getenv("HOST_SERVER", "crawler.j1.sale")
+    
     def __init__(self, d):
         self.d = d
 
     @property
     def id(self):
         return self.d.get("id")
+
+    @property
+    def serialno(self):
+        raise NotImplementedError
+
+    @classmethod
+    def process_url(cls, url):
+        return tool_env.replace_url_host(url, cls.HOST_SERVER)
+
+    def requests_get(self, url, 带串行号=True, **kwargs):
+        obj = self.get_remote_obj(self.process_url(url), 带串行号=带串行号, **kwargs)
+        return obj if obj.data else None
+
+    def requests_post(self, url, 带串行号=True, **kwargs):
+        payload = {"设备串行号": self.serialno} if 带串行号 else {}
+        for key, value in kwargs.items():
+            if isinstance(value, (dict, list)):
+                payload[key] = json.dumps(value)
+            else:
+                payload[key] = value
+        response = requests.post(self.process_url(url), data=payload)
+        response.raise_for_status()
 
 
 class 基本界面元素(基本输入字段对象):
@@ -574,7 +604,7 @@ class 抽象持久序列(基本输入字段对象):
 
 
 class 基本任务(抽象持久序列):
-    HOST_SERVER = os.getenv("HOST_SERVER", "crawler.j1.sale")
+    # HOST_SERVER = os.getenv("HOST_SERVER", "crawler.j1.sale")    
     # HOST_SERVER = os.getenv("HOST_SERVER", "coco.j1.sale")
 
     def __init__(self, fpath_or_dict, device_pointed=None):
@@ -599,9 +629,6 @@ class 基本任务(抽象持久序列):
             df.loc[tmp.index[:i], "新增"] = False
         return i is not None
 
-    @classmethod
-    def process_url(cls, url):
-        return tool_env.replace_url_host(url, cls.HOST_SERVER)
 
     def get_remote_obj(self, url, 带串行号=True, **kwargs):
         if 带串行号:
@@ -610,19 +637,6 @@ class 基本任务(抽象持久序列):
             设备串行号 = None
         return RemoteModel(self.process_url(url), 设备串行号=设备串行号, **kwargs)
 
-    def requests_get(self, url, 带串行号=True, **kwargs):
-        obj = self.get_remote_obj(self.process_url(url), 带串行号=带串行号, **kwargs)
-        return obj if obj.data else None
-
-    def requests_post(self, url, 带串行号=True, **kwargs):
-        payload = {"设备串行号": self.device.adb.serialno} if 带串行号 else {}
-        for key, value in kwargs.items():
-            if isinstance(value, (dict, list)):
-                payload[key] = json.dumps(value)
-            else:
-                payload[key] = value
-        response = requests.post(self.process_url(url), data=payload)
-        response.raise_for_status()
 
     @property
     def blocks(self):
@@ -650,6 +664,24 @@ class 基本任务(抽象持久序列):
             return Windows窗口设备(device_pointed)
         else:
             return SteadyDevice.from_ip_port(device_pointed.get("ip_port"))
+
+
+    @property
+    def serialno(self):
+        raise self.device.adb.serialno
+
+    # @classmethod
+    # def process_url(cls, url):
+    #     return tool_env.replace_url_host(url, cls.HOST_SERVER)
+
+    # def requests_get(self, url, 带串行号=True, **kwargs):
+    #     obj = self.get_remote_obj(self.process_url(url), 带串行号=带串行号, **kwargs)
+    #     return obj if obj.data else None
+
+    # def requests_post(self, url, 带串行号=True, **kwargs):
+    #     payload = {"设备串行号": self.device.adb.serialno} if 带串行号 else {}
+
+
 
     # def 刷新参数(self, paras):
     #     self.d["paras"] = paras

@@ -277,11 +277,11 @@ class 单条容器(list):
             return convert_chinese_datetime(e.文本).strftime("%Y-%m-%d %H:%M:%S")
         return numpy.nan
 
-    def 是否合法容器(self):
+    def 是否合法容器(self, 忽略顶部探头=False):
         return (
             bool(self.发言者)
             and bool(self.正文)
-            and not self.是否顶部探头()
+            and (not self.是否顶部探头() or 忽略顶部探头)
             and not self.是否底部触底()
         )
 
@@ -603,17 +603,22 @@ class 解析器(object):
             l.append(tmp)
         return l
 
+    def 是否初次会话(self):
+        c = self.elements[-1]
+        return c.rect.bottom < c.rect_big.height/2
+
     @property
     def 上下文df(self):
-        l = filter(lambda x: x.是否合法容器(), self.elements)
-        l = map(lambda x: x.容器字典, l)
-        df = pandas.DataFrame(data=l)  # .replace({None: numpy.nan})
+        忽略顶部探头 = self.是否初次会话()
+        dl = filter(lambda x: x.是否合法容器(忽略顶部探头=忽略顶部探头), self.elements)
+        dl = map(lambda x: x.容器字典, dl)
+        df = pandas.DataFrame(data=dl)
         return df
 
     def 是否包含顶部探头容器(self):
-        l = [x.是否顶部探头() for x in self.elements]
-        print(l)
-        return any(l)
+        # l = [x.是否顶部探头() for x in self.elements]
+        # print(l)
+        return any([x.是否顶部探头() for x in self.elements])
 
     def 是否包含靠右侧消息容器(self):
         for c in self.elements:
