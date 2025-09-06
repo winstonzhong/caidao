@@ -395,7 +395,8 @@ class SteadyDevice(DummyDevice):
 
 
 class 基本输入字段对象(object):
-    HOST_SERVER = os.getenv("HOST_SERVER", "crawler.j1.sale")
+    # HOST_SERVER = os.getenv("HOST_SERVER", "crawler.j1.sale")
+    HOST_SERVER = os.getenv("HOST_SERVER", "coco.j1.sale")
     
     def __init__(self, d):
         self.d = d
