@@ -668,7 +668,7 @@ class 基本任务(抽象持久序列):
 
     @property
     def serialno(self):
-        raise self.device.adb.serialno
+        return self.device.adb.serialno
 
     # @classmethod
     # def process_url(cls, url):
