@@ -30,9 +30,9 @@ from django.db import OperationalError
 from django.db.models.query_utils import Q
 
 
-import redis
-
 import json
+
+
 
 
 NEW_RECORD = 0
@@ -63,52 +63,6 @@ STATUS = (
 )
 
 
-# 全局Redis连接变量，初始化为None
-REDIS_CONN = None
-
-
-def get_REDIS_CONN(max_retries=3):
-    """
-    获取Redis连接，如果连接不存在则创建，如果存在则检查有效性
-
-    参数:
-        max_retries: 连接检查的最大重试次数
-
-    返回:
-        有效的Redis连接对象
-
-    异常:
-        如果最终无法建立或验证连接，抛出异常
-    """
-    global REDIS_CONN
-
-    # 如果连接不存在，则创建新连接
-    if REDIS_CONN is None:
-        REDIS_CONN = redis.Redis(
-            host="192.168.0.140",  # Redis服务器地址
-            port=6379,  # Redis端口
-            db=15,  # 使用的数据库编号
-            password="Bubiebeng_1202",  # Redis密码
-            decode_responses=True,  # 自动将字节转换为字符串
-            socket_connect_timeout=5,  # 连接超时时间(秒)
-            socket_timeout=None,  # 读写超时时间(秒)
-        )
-
-    # 检查连接是否有效
-    retries = 0
-    while retries < max_retries:
-        try:
-            if REDIS_CONN.ping():
-                return REDIS_CONN
-        except (redis.ConnectionError, redis.TimeoutError):
-            retries += 1
-            if retries < max_retries:
-                time.sleep(1)  # 等待1秒后重试
-
-    # 如果所有重试都失败，抛出异常
-    raise Exception(f"经过{max_retries}次重试后，仍无法与Redis建立有效连接")
-
-
 class 抽象缓存任务(object):
     @property
     def 任务队列名称(self):
@@ -116,13 +70,14 @@ class 抽象缓存任务(object):
 
     @property
     def 下一个任务数据(self):
+        from helper_task_redis import get_REDIS_CONN
         _, task_data = get_REDIS_CONN().blpop(self.任务队列名称)
         if task_data:
             try:
                 return json.loads(task_data)
             except json.JSONDecodeError:
                 print("不是JSON格式")
-    
+
     @property
     def 下一个任务对象(self):
         raise NotImplementedError
@@ -238,8 +193,9 @@ class 抽象任务数据(BaseModel):
     @property
     def 队列名称(self):
         raise NotImplementedError
-    
+
     def 写入任务队列(self, 数据, 队列名称=None):
+        from helper_task_redis import get_REDIS_CONN
         assert get_REDIS_CONN().rpush(队列名称 or self.队列名称, json.dumps(数据))
 
     @classmethod
