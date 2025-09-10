@@ -607,7 +607,9 @@ class 抽象持久序列(基本输入字段对象):
 class 基本任务(抽象持久序列):
     # HOST_SERVER = os.getenv("HOST_SERVER", "crawler.j1.sale")    
     # HOST_SERVER = os.getenv("HOST_SERVER", "coco.j1.sale")
-
+    URL_TASK_PULL = 'https://task.j1.sale/pull/{task_key}'
+    URL_TASK_PUSH = 'https://task.j1.sale/push'
+    
     def __init__(self, fpath_or_dict, device_pointed=None):
         self.device_pointed = device_pointed
         super().__init__(fpath_or_dict)
@@ -619,6 +621,13 @@ class 基本任务(抽象持久序列):
     # @classmethod
     # def 是否已经匹配历史(cls, series, lst):
     #     return check_series_contains(series, lst)
+    @classmethod
+    def 队列拉取地址(cls, task_key):
+        return cls.URL_TASK_PULL.format(task_key=task_key)
+    
+    @classmethod
+    def 队列推送地址(cls):
+        return cls.URL_TASK_PUSH
 
     @classmethod
     def 处理历史记录(cls, df, lst):

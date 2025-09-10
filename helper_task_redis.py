@@ -97,6 +97,20 @@ def 删除任务队列(task_key: str) -> int:
     return deleted_count
 
 
+def 获取队列中任务个数(task_key: str) -> int:
+    """
+    获取Redis中指定任务队列中的任务数量
+
+    参数:
+        task_key: 任务队列的键名
+
+    返回:
+        任务队列中的任务数量
+    """
+    return get_REDIS_CONN().llen(task_key)
+
+def 队列中是否有任务(task_key: str) -> bool:
+    return bool(get_REDIS_CONN().exists(task_key))
 
 class Redis任务管理器(object):
     def __init__(self, host, port, db, password, task_key):
