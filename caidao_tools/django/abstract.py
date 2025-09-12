@@ -193,16 +193,31 @@ class 抽象任务数据(BaseModel):
         indexes = [
             models.Index(
                 fields=[
-                    # "processing","done","update_time"
                     "done",
+                    "processing",
                     "update_time",
                 ]
             ),
         ]
 
+    @classmethod
+    def 得到最大队列容量(cls):
+        raise NotImplementedError
+
+    @classmethod
+    def 得到队列名称(cls):
+        raise NotImplementedError
+
     def 写入任务队列(self, 队列名称, 数据, 队列容量=None):
-        if 队列容量 is None or helper_task_redis.获取队列中任务个数(队列名称) < 队列容量:
-            if bool(helper_task_redis.写任务到缓存(队列名称, 数据)):
+        if (
+            队列容量 is None
+            or helper_task_redis.获取队列中任务个数(队列名称) < 队列容量
+        ):
+            if bool(
+                helper_task_redis.写任务到缓存(
+                    队列名称, 数据, expire_seconds=self.get_seconds_expiring()
+                )
+            ):
                 self.设置为处理中()
                 return True
         return False
@@ -303,17 +318,18 @@ class 抽象任务数据(BaseModel):
             - datetime.timedelta(seconds=cls.get_seconds_expiring()),
         ).exists()
 
-
     def 获取队列字典(self, *a, **kwargs):
-        d = {"pk": self.pk,
-                "cls": self.__class__.__name__,
-                }
+        d = {
+            "pk": self.pk,
+            "cls": self.__class__.__name__,
+        }
         for x in a:
             if isinstance(x, str):
                 if hasattr(self, x):
                     d[x] = getattr(self, x)
         d.update(kwargs)
         return d
+
 
 class AbstractModel(BaseModel):
     update_time = models.DateTimeField(verbose_name="更新时间", auto_now=True)

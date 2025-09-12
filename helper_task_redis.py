@@ -4,10 +4,11 @@ import bz2
 import redis
 from typing import Any
 import time
-
+import os
 # 全局Redis连接变量，初始化为None
 REDIS_CONN = None
 
+REDIS_DB_INDEX = int(os.getenv("REDIS_DB_INDEX_NUM", 15))
 
 def get_REDIS_CONN(max_retries=3):
     """
@@ -29,7 +30,7 @@ def get_REDIS_CONN(max_retries=3):
         REDIS_CONN = redis.Redis(
             host="192.168.0.140",  # Redis服务器地址
             port=6379,  # Redis端口
-            db=15,  # 使用的数据库编号
+            db=REDIS_DB_INDEX,  # 使用的数据库编号
             password="Bubiebeng_1202",  # Redis密码
             decode_responses=True,  # 自动将字节转换为字符串
             socket_connect_timeout=5,  # 连接超时时间(秒)
@@ -59,8 +60,7 @@ def 获取缓存任务(任务队列名称, 阻塞=False):
     return json.loads(task_data) if task_data else {}
 
 
-
-def 写任务到缓存(task_key: str, task_data: Any, expire_seconds: int = None) -> Any:
+def 写任务到缓存(task_key: str, task_data: Any, expire_seconds: int = 1800) -> Any:
     """
     向Redis写入任务数据
 
@@ -109,8 +109,13 @@ def 获取队列中任务个数(task_key: str) -> int:
     """
     return get_REDIS_CONN().llen(task_key)
 
+
 def 队列中是否有任务(task_key: str) -> bool:
     return bool(get_REDIS_CONN().exists(task_key))
+
+def 清空当前数据库():
+    return REDIS_CONN.flushdb()
+
 
 class Redis任务管理器(object):
     def __init__(self, host, port, db, password, task_key):
@@ -123,7 +128,6 @@ class Redis任务管理器(object):
         data = buf.getvalue()
         data = bz2.compress(data.encode())
         self.con.lpush(self.task_key, data)
-
 
     def has_tasks(self):
         return len(self.con.lrange(self.task_key, 0, 0)) == 1
@@ -149,4 +153,3 @@ class 跨进程共享变量控制锁(Redis任务管理器):
 
     def 释放锁(self):
         self.clear_tasks()
-        
