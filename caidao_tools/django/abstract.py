@@ -241,6 +241,10 @@ class 抽象任务数据(BaseModel):
             and timezone.now() - datetime.timedelta(seconds=self.get_seconds_expiring())
             >= self.update_time
         )
+        
+    def 是否过期(self):
+        return timezone.now() >= self.update_time + datetime.timedelta(seconds=self.get_seconds_expiring())
+
 
     def 设置为处理中(self):
         self.__class__.objects.filter(pk=self.pk).update(
