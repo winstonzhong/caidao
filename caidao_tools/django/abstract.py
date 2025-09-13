@@ -246,11 +246,27 @@ class 抽象任务数据(BaseModel):
         return timezone.now() >= self.update_time + datetime.timedelta(seconds=self.get_seconds_expiring())
 
 
-    def 设置为处理中(self):
-        self.__class__.objects.filter(pk=self.pk).update(
-            processing=1, update_time=timezone.now()
-        )
+    def 设置为处理中(self, **k):
+        k = k.copy()
+        k.update(processing=1, update_time=timezone.now())
+        self.__class__.objects.filter(pk=self.pk).update(**k)
         self.refresh_from_db()
+        return self
+
+    def 是否在处理中(self):
+        return (
+            self.processing
+            and self.update_time >= timezone.now() - datetime.timedelta(seconds=self.get_seconds_expiring())
+        )
+
+    @classmethod
+    def 是否有记录正在处理(cls):
+        return cls.objects.filter(
+            processing=True,
+            update_time__gte=timezone.now()
+            - datetime.timedelta(seconds=cls.get_seconds_expiring()),
+        ).exists()
+
 
     def 是否被占用(self):
         return (
@@ -268,7 +284,7 @@ class 抽象任务数据(BaseModel):
 
     def save(self, *a, **kw):
         self.cnt_saved += 1
-        self.processing = False
+        # self.processing = False
         return super().save(*a, **kw)
 
     @classmethod
@@ -313,14 +329,6 @@ class 抽象任务数据(BaseModel):
     @classmethod
     def 尝试获得处理权(cls, obj):
         return cls.select_for_processing(obj.pk) if obj is not None else None
-
-    @classmethod
-    def 是否有记录正在处理(cls):
-        return cls.objects.filter(
-            processing=True,
-            update_time__gte=timezone.now()
-            - datetime.timedelta(seconds=cls.get_seconds_expiring()),
-        ).exists()
 
     def 获取队列字典(self, *a, **kwargs):
         d = {
