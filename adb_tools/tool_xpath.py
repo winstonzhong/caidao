@@ -319,11 +319,10 @@ class SteadyDevice(DummyDevice):
         return df
 
     def merge_wx_df(self, upper_page, lower_page):
-        print('uppser page:')
+        print("uppser page:")
         print(upper_page)
-        print('lower page:')
+        print("lower page:")
         print(lower_page)
-
 
         rtn = tool_wx_df.合并上下两个df(上一页=upper_page, 当前页=lower_page, safe=True)
         if "自己" in rtn.columns:
@@ -397,7 +396,7 @@ class SteadyDevice(DummyDevice):
 class 基本输入字段对象(object):
     # HOST_SERVER = os.getenv("HOST_SERVER", "crawler.j1.sale")
     HOST_SERVER = os.getenv("HOST_SERVER", "coco.j1.sale")
-    
+
     def __init__(self, d):
         self.d = d
 
@@ -605,8 +604,10 @@ class 抽象持久序列(基本输入字段对象):
 
 
 class 基本任务(抽象持久序列):
-    # HOST_SERVER = os.getenv("HOST_SERVER", "crawler.j1.sale")    
+    # HOST_SERVER = os.getenv("HOST_SERVER", "crawler.j1.sale")
     # HOST_SERVER = os.getenv("HOST_SERVER", "coco.j1.sale")
+    URL_TASK_PULL = "https://task.j1.sale/pull/{task_key}"
+    URL_TASK_PUSH = "https://task.j1.sale/push"
 
     def __init__(self, fpath_or_dict, device_pointed=None):
         self.device_pointed = device_pointed
@@ -619,6 +620,13 @@ class 基本任务(抽象持久序列):
     # @classmethod
     # def 是否已经匹配历史(cls, series, lst):
     #     return check_series_contains(series, lst)
+    @classmethod
+    def 队列拉取地址(cls, task_key):
+        return cls.URL_TASK_PULL.format(task_key=task_key)
+
+    @classmethod
+    def 队列推送地址(cls):
+        return cls.URL_TASK_PUSH
 
     @classmethod
     def 处理历史记录(cls, df, lst):
@@ -630,14 +638,12 @@ class 基本任务(抽象持久序列):
             df.loc[tmp.index[:i], "新增"] = False
         return i is not None
 
-
     def get_remote_obj(self, url, 带串行号=True, **kwargs):
         if 带串行号:
             设备串行号 = self.device.adb.serialno
         else:
             设备串行号 = None
         return RemoteModel(self.process_url(url), 设备串行号=设备串行号, **kwargs)
-
 
     @property
     def blocks(self):
@@ -666,7 +672,6 @@ class 基本任务(抽象持久序列):
         else:
             return SteadyDevice.from_ip_port(device_pointed.get("ip_port"))
 
-
     @property
     def serialno(self):
         return self.device.adb.serialno
@@ -681,8 +686,6 @@ class 基本任务(抽象持久序列):
 
     # def requests_post(self, url, 带串行号=True, **kwargs):
     #     payload = {"设备串行号": self.device.adb.serialno} if 带串行号 else {}
-
-
 
     # def 刷新参数(self, paras):
     #     self.d["paras"] = paras

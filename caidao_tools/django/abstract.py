@@ -17,7 +17,7 @@ import time
 from django.utils import timezone
 import datetime
 
-from django.db.models import F, ExpressionWrapper, Value
+from django.db.models import F, ExpressionWrapper, Value, Q
 from django.db.models.fields import DurationField
 from tool_time import shanghai_time_now
 from .tool_task import calculate_rtn
@@ -30,10 +30,9 @@ from django.db import OperationalError
 from django.db.models.query_utils import Q
 
 
-import redis
-
 import json
 
+import helper_task_redis
 
 NEW_RECORD = 0
 DOWNLOADED_RECORD = 1
@@ -63,52 +62,6 @@ STATUS = (
 )
 
 
-# 全局Redis连接变量，初始化为None
-REDIS_CONN = None
-
-
-def get_REDIS_CONN(max_retries=3):
-    """
-    获取Redis连接，如果连接不存在则创建，如果存在则检查有效性
-
-    参数:
-        max_retries: 连接检查的最大重试次数
-
-    返回:
-        有效的Redis连接对象
-
-    异常:
-        如果最终无法建立或验证连接，抛出异常
-    """
-    global REDIS_CONN
-
-    # 如果连接不存在，则创建新连接
-    if REDIS_CONN is None:
-        REDIS_CONN = redis.Redis(
-            host="192.168.0.140",  # Redis服务器地址
-            port=6379,  # Redis端口
-            db=15,  # 使用的数据库编号
-            password="Bubiebeng_1202",  # Redis密码
-            decode_responses=True,  # 自动将字节转换为字符串
-            socket_connect_timeout=5,  # 连接超时时间(秒)
-            socket_timeout=None,  # 读写超时时间(秒)
-        )
-
-    # 检查连接是否有效
-    retries = 0
-    while retries < max_retries:
-        try:
-            if REDIS_CONN.ping():
-                return REDIS_CONN
-        except (redis.ConnectionError, redis.TimeoutError):
-            retries += 1
-            if retries < max_retries:
-                time.sleep(1)  # 等待1秒后重试
-
-    # 如果所有重试都失败，抛出异常
-    raise Exception(f"经过{max_retries}次重试后，仍无法与Redis建立有效连接")
-
-
 class 抽象缓存任务(object):
     @property
     def 任务队列名称(self):
@@ -116,13 +69,15 @@ class 抽象缓存任务(object):
 
     @property
     def 下一个任务数据(self):
+        from helper_task_redis import get_REDIS_CONN
+
         _, task_data = get_REDIS_CONN().blpop(self.任务队列名称)
         if task_data:
             try:
                 return json.loads(task_data)
             except json.JSONDecodeError:
                 print("不是JSON格式")
-    
+
     @property
     def 下一个任务对象(self):
         raise NotImplementedError
@@ -232,20 +187,87 @@ class 抽象任务数据(BaseModel):
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
     cnt_saved = models.IntegerField(verbose_name="保存次数", default=0)
     processing = models.BooleanField(verbose_name="正在处理", default=False)
+    done = models.BooleanField(verbose_name="已经完成", default=False)
 
     class Meta:
         abstract = True
-
-    @property
-    def 队列名称(self):
-        raise NotImplementedError
-    
-    def 写入任务队列(self, 数据, 队列名称=None):
-        assert get_REDIS_CONN().rpush(队列名称 or self.队列名称, json.dumps(数据))
+        indexes = [
+            models.Index(
+                fields=[
+                    "done",
+                    "processing",
+                    "update_time",
+                ]
+            ),
+        ]
 
     @classmethod
-    def 将超时任务重新写入任务队列(cls):
-        pass
+    def 得到最大队列容量(cls):
+        raise NotImplementedError
+
+    @classmethod
+    def 得到队列名称(cls):
+        raise NotImplementedError
+
+    def 写入任务队列(self, 队列名称, 数据, 队列容量=None):
+        if (
+            队列容量 is None
+            or helper_task_redis.获取队列中任务个数(队列名称) < 队列容量
+        ):
+            if bool(
+                helper_task_redis.写任务到缓存(
+                    队列名称, 数据, expire_seconds=self.get_seconds_expiring()
+                )
+            ):
+                self.设置为处理中()
+                return True
+        return False
+
+    @classmethod
+    def 获取未完成记录(cls):
+        # 计算超时时间
+        timeout_time = timezone.now() - datetime.timedelta(
+            seconds=cls.get_seconds_expiring()
+        )
+
+        return cls.objects.filter(
+            Q(processing=False) | Q(update_time__lt=timeout_time),
+            done=False,
+        )
+
+    def 是否超时(self):
+        return (
+            # self.processing
+            not self.done
+            and timezone.now() - datetime.timedelta(seconds=self.get_seconds_expiring())
+            >= self.update_time
+        )
+        
+    def 是否过期(self):
+        return timezone.now() >= self.update_time + datetime.timedelta(seconds=self.get_seconds_expiring())
+
+
+    def 设置为处理中(self, **k):
+        k = k.copy()
+        k.update(processing=1, update_time=timezone.now())
+        self.__class__.objects.filter(pk=self.pk).update(**k)
+        self.refresh_from_db()
+        return self
+
+    def 是否在处理中(self):
+        return (
+            self.processing
+            and self.update_time >= timezone.now() - datetime.timedelta(seconds=self.get_seconds_expiring())
+        )
+
+    @classmethod
+    def 是否有记录正在处理(cls):
+        return cls.objects.filter(
+            processing=True,
+            update_time__gte=timezone.now()
+            - datetime.timedelta(seconds=cls.get_seconds_expiring()),
+        ).exists()
+
 
     def 是否被占用(self):
         return (
@@ -255,10 +277,7 @@ class 抽象任务数据(BaseModel):
         )
 
     def 占用(self):
-        self.__class__.objects.filter(pk=self.pk).update(
-            processing=1, update_time=timezone.now()
-        )
-        self.refresh_from_db()
+        self.设置为处理中()
 
     def 解除占用(self):
         self.processing = False
@@ -266,7 +285,7 @@ class 抽象任务数据(BaseModel):
 
     def save(self, *a, **kw):
         self.cnt_saved += 1
-        self.processing = False
+        # self.processing = False
         return super().save(*a, **kw)
 
     @classmethod
@@ -312,13 +331,17 @@ class 抽象任务数据(BaseModel):
     def 尝试获得处理权(cls, obj):
         return cls.select_for_processing(obj.pk) if obj is not None else None
 
-    @classmethod
-    def 是否有记录正在处理(cls):
-        return cls.objects.filter(
-            processing=True,
-            update_time__gte=timezone.now()
-            - datetime.timedelta(seconds=cls.get_seconds_expiring()),
-        ).exists()
+    def 获取队列字典(self, *a, **kwargs):
+        d = {
+            "pk": self.pk,
+            "cls": self.__class__.__name__,
+        }
+        for x in a:
+            if isinstance(x, str):
+                if hasattr(self, x):
+                    d[x] = getattr(self, x)
+        d.update(kwargs)
+        return d
 
 
 class AbstractModel(BaseModel):
