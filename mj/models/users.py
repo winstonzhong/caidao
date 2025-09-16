@@ -126,3 +126,21 @@ class 抽象历史消息(AbstractModel):
 
     class Meta:
         abstract = True
+
+
+class AbstractTableSeats(BaseModel):
+    hall_num = models.PositiveIntegerField(verbose_name="大厅号", default=1, db_index=True)
+    table_num = models.PositiveIntegerField(verbose_name="座位号", default=1)
+    seats = models.JSONField(verbose_name="座位数据", default=dict)
+
+    class Meta:
+        abstract = True
+        indexes = [
+            models.Index(fields=["hall_num", "table_num"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['hall_num', 'table_num'],  # 联合的字段列表
+                name='unique_user_table_num'  # 约束名称（必须唯一）
+            )
+        ]

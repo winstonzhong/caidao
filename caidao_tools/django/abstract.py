@@ -177,6 +177,7 @@ class BaseModel(models.Model):
         # print(fields)
         # print(d)
         rtn = {k: v for k, v in d.items() if cls.是否数据库字段(k, fields)}
+        print('rtn', rtn)
         return rtn
 
     @classmethod
