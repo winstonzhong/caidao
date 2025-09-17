@@ -241,10 +241,11 @@ class 抽象任务数据(BaseModel):
             and timezone.now() - datetime.timedelta(seconds=self.get_seconds_expiring())
             >= self.update_time
         )
-        
-    def 是否过期(self):
-        return timezone.now() >= self.update_time + datetime.timedelta(seconds=self.get_seconds_expiring())
 
+    def 是否过期(self):
+        return timezone.now() >= self.update_time + datetime.timedelta(
+            seconds=self.get_seconds_expiring()
+        )
 
     def 设置为处理中(self, **k):
         k = k.copy()
@@ -256,7 +257,8 @@ class 抽象任务数据(BaseModel):
     def 是否在处理中(self):
         return (
             self.processing
-            and self.update_time >= timezone.now() - datetime.timedelta(seconds=self.get_seconds_expiring())
+            and self.update_time
+            >= timezone.now() - datetime.timedelta(seconds=self.get_seconds_expiring())
         )
 
     @classmethod
@@ -267,6 +269,20 @@ class 抽象任务数据(BaseModel):
             - datetime.timedelta(seconds=cls.get_seconds_expiring()),
         ).exists()
 
+    @classmethod
+    def 获取需要处理的记录(cls, **paras):
+        timeout_time = timezone.now() - datetime.timedelta(
+            seconds=cls.get_seconds_expiring()
+        )
+
+        return (
+            cls.objects.filter(
+                Q(processing=False) | Q(update_time__lt=timeout_time),
+                **paras,
+            )
+            .order_by("-update_time")
+            .first()
+        )
 
     def 是否被占用(self):
         return (

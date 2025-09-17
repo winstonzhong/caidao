@@ -62,6 +62,38 @@ import check_series_contains
 #         exec(lines)
 global_cache = {}
 
+URL_TASK_QUEUE = f"https://{tool_env.HOST_TASK}"
+
+
+def 拉取任务字典(task_key, 中继=False):
+    return requests.get(f'{URL_TASK_QUEUE}/pull/{task_key}{"_" if 中继 else ""}').json()
+
+
+def 如有任务转发中继(task_key):
+    url = f"{URL_TASK_QUEUE}/pull/{task_key}?forward={task_key}_"
+    return bool(requests.get(url).json())
+
+
+def 上传结果字典(task_key, result_data):
+    # return requests.post(f'{URL_TASK_QUEUE}/push', data={'result_key': task_key, 'result_data': result_data}).json()
+    url = f"{URL_TASK_QUEUE}/push"
+
+    data = {
+        "result_key": task_key,
+        "result_data": result_data,
+    }
+
+    # response = await requests_async.post(params.get('url'), data=data)
+
+    response = requests.post(
+        url,
+        headers={"Content-Type": "application/json"},
+        data=json.dumps(data),
+    )
+
+    response.raise_for_status()
+    return response.json()
+
 
 def execute_lines(job, lines, self=None):
     if self is not None:

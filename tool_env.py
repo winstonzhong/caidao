@@ -38,6 +38,11 @@ ptn_not_number = re.compile("[^\d^\.^\s]+")
 
 MAIN_HOST_J_ONE = os.environ.get("MAIN_HOST_J_ONE", "https://coco.j1.sale")
 
+U4080 = os.path.lexists('/home/yka-003/zwd')
+
+HOST_TASK_DEFAULT = 'task.j1.sale' if not U4080 else 'task-test.j1.sale'
+
+HOST_TASK = os.environ.get("HOST_TASK", HOST_TASK_DEFAULT)
 
 class cached_property_for_cls:
     def __init__(self, method):

@@ -5,10 +5,15 @@ import redis
 from typing import Any
 import time
 import os
+import tool_env
+
+
 # 全局Redis连接变量，初始化为None
 REDIS_CONN = None
 
-REDIS_DB_INDEX = int(os.getenv("REDIS_DB_INDEX_NUM", 15))
+REDIS_DB_INDEX = int(os.getenv("REDIS_DB_INDEX_NUM", 15 if not tool_env.U4080 else 14))
+
+# print('using:REDIS_DB_INDEX', REDIS_DB_INDEX)
 
 def get_REDIS_CONN(max_retries=3):
     """

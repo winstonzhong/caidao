@@ -163,11 +163,12 @@ class 单条容器(list):
             if type_name in x.类型:
                 return x
 
-    def 获取所有文本或描述(self, type_name):
+    def 获取所有文本或描述(self, type_name=None):
         rtn = []
         for x in self:
-            if type_name in x.类型:
-                rtn.append(x)
+            if type_name is None or type_name in x.类型:
+                if "头像" not in x.类型:
+                    rtn.append(x)
         return " ".join([x.文本或者描述 for x in rtn if x.文本或者描述])
 
     @classmethod
@@ -199,8 +200,11 @@ class 单条容器(list):
         '小视频'
         >>> 单条容器.判断类型(['机构名', '文章封面', '昵称', '未知', '分割条', '时间', '公众号文章标题', '头像'])
         '公众号文章'
+        >>> 单条容器.判断类型(['公众号文章标题', '头像', '分割条', '未知', '小程序卡片注脚'])
+        '小程序'
         """
         text = ",".join(l)
+        
 
         if "微信红包" in l:
             return "微信红包"
@@ -208,6 +212,9 @@ class 单条容器(list):
         if "语音描述" in l:
             return "语音"
 
+        if "小程序卡片注脚" in l:
+            return "小程序"
+        
         if "公众号文章标题" in l:
             return "公众号文章"
 
@@ -269,6 +276,9 @@ class 单条容器(list):
 
         if self.类型 == "小视频文件":
             return f"""[分享了一个小视频文件, 时长：{self.获取所有文本或描述('视频时长')}]"""
+        
+        if self.类型 == "小程序":
+            return f"""[分享了一个小程序]{self.获取所有文本或描述()}"""
 
     @property
     def 时间(self):
@@ -345,6 +355,7 @@ class 元素(object):
         "正文": [
             'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
             'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.RelativeLayout"]/node[@class="android.widget.TextView"]',
+            'node[@class="android.widget.RelativeLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
             'node[@class="android.widget.RelativeLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.RelativeLayout"]/node[@class="android.widget.TextView"]',
             'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
         ],
@@ -408,6 +419,11 @@ class 元素(object):
             'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
         ],
         "文件尺寸": 'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.FrameLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
+
+        "小程序卡片注脚": [
+            'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.FrameLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
+        ],
+
     }
 
     types = {}
