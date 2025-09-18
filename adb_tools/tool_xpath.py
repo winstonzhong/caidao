@@ -344,19 +344,21 @@ class SteadyDevice(DummyDevice):
 
     @property
     def df_wx(self):
-        df = self.container_wx.上下文df
-        df["已处理"] = False
-        df["链接"] = None
-        df.自己 = df.自己.fillna(False).astype(bool)
-        return df
+        return self.container_wx.上下文df
+        # df = self.container_wx.上下文df
+        # df["已处理"] = False
+        # df["链接"] = None
+        # df.自己 = df.自己.fillna(False).astype(bool)
+        # return df
 
     def merge_wx_df(self, upper_page, lower_page):
-        print("uppser page:")
-        print(upper_page)
-        print("lower page:")
-        print(lower_page)
+        # print("uppser page:")
+        # print(upper_page)
+        # print("lower page:")
+        # print(lower_page)
 
         rtn = tool_wx_df.合并上下两个df(上一页=upper_page, 当前页=lower_page, safe=True)
+        """
         if "自己" in rtn.columns:
             rtn.已处理 = rtn.已处理.fillna(False).astype(bool)
         else:
@@ -370,6 +372,7 @@ class SteadyDevice(DummyDevice):
         rtn["已处理"] = rtn["已处理"].where(
             rtn["已处理"], ~rtn["类型"].isin(["图片", "语音"])
         )
+        """
         rtn["新增"] = True
 
         return rtn
@@ -840,6 +843,45 @@ class 基本任务(抽象持久序列):
             if 单步:
                 break
         return executed
+
+    def 是否该类型处理完成(self, 类型):
+        df = self.cache.get('当前')
+        if df is None:
+            df = self.device.df_wx
+        if 类型 == '语音':
+            print(df)
+        return df[(df.类型 == 类型) & (~df.已处理)].empty
+    
+    def 处理日日常(self, last_keys):
+        # print('会话:', session_name, last_keys)
+        container_wx = self.device.container_wx
+        容器key = container_wx.key
+        容器未变化 = self.cache.get("容器key") == 容器key
+        self.cache["容器key"] = 容器key
+
+        self.cache["当前"] = 当前 = self.device.df_wx
+        
+        已向下翻页 = False
+
+        
+        if self.cache.get("语音转文字已点击"):
+            self.cache["语音转文字已点击"] = False
+            self.cache["缓存"] = None
+            if self.是否该类型处理完成('语音'):
+                self.device.adb.page_down()
+                已向下翻页 = True
+        elif not 容器未变化:
+            print("=======================容器变化=======================")
+            # self.cache["当前"] = 当前
+            df = self.device.merge_wx_df(当前, self.cache.get("缓存"))
+            self.cache["是否已经匹配历史"] = self.处理历史记录(df, last_keys)
+            self.cache["缓存"] = df
+        return 容器未变化, 已向下翻页
+
+    # def 处理图片(self, df):
+    #     tmp = df[(df.类型 == '图片') & (~df.已处理)]
+    #     if not tmp.empty:
+    #         self.device.adb.do_click(*tmp.iloc[-1].xy)
 
 
 class 前置预检查任务(基本任务):
