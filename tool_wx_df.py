@@ -413,6 +413,13 @@ def 标准化df(df):
             df.自己 = df.自己.fillna(0).apply(转换自己).astype(bool)
     return df
 
+
+def 得到新消息部分df(df):
+    tmp = df[df.自己]
+    if tmp.empty:
+        return df
+    return df.loc[tmp.index[-1]+1:]
+
 if __name__ == "__main__":
     from helper_hash import get_hash_df
     import doctest

@@ -99,6 +99,9 @@ class 单条容器(list):
     @property
     def 和微信容器底边间距(self):
         return abs(self.rect_big.bottom - self.rect.bottom)
+    
+    def 是否底部被截断(self):
+        return self.和微信容器底边间距 <= 0
 
     @property
     def list(self):
