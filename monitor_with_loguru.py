@@ -45,7 +45,7 @@ def monitor_functions(function_list, log_path="monitor.log", step=False):
             try:
                 result = func()
                 if result is True:
-                    logger.info(f"函数 {func.__name__} 执行结果: {result}")
+                    logger.info(f"函数 {func.__name__} : {result}")
                     has_true = True
                     break  # 遇到True立即跳出，无需执行后续函数
 
