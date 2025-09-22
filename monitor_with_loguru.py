@@ -55,6 +55,6 @@ def monitor_functions(function_list, log_path="monitor.log", step=False):
 
         if step:
             break
-        
+
         if not has_true:
-            time.sleep(0.5)
+            time.sleep(1)

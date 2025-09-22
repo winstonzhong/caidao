@@ -62,6 +62,39 @@ import check_series_contains
 #         exec(lines)
 global_cache = {}
 
+URL_TASK_QUEUE = f"https://{tool_env.HOST_TASK}"
+
+
+def 拉取任务字典(task_key, 中继=False):
+    url = f'{URL_TASK_QUEUE}/pull/{task_key}{"_" if 中继 else ""}'
+    print("拉取任务字典:", url)
+    return requests.get(url).json()
+
+
+def 如有任务转发中继(task_key):
+    url = f"{URL_TASK_QUEUE}/pull/{task_key}?forward={task_key}_"
+    print("如有任务转发中继:", url)
+    return bool(requests.get(url).json())
+
+
+def 上传结果字典(task_key, result_data):
+    url = f"{URL_TASK_QUEUE}/push"
+    print("上传结果字典:", url)
+
+    data = {
+        "result_key": task_key,
+        "result_data": result_data,
+    }
+
+    response = requests.post(
+        url,
+        headers={"Content-Type": "application/json"},
+        data=json.dumps(data),
+    )
+
+    response.raise_for_status()
+    return response.json()
+
 
 def execute_lines(job, lines, self=None):
     if self is not None:
@@ -312,19 +345,21 @@ class SteadyDevice(DummyDevice):
 
     @property
     def df_wx(self):
-        df = self.container_wx.上下文df
-        df["已处理"] = False
-        df["链接"] = None
-        df.自己 = df.自己.fillna(False).astype(bool)
-        return df
+        return self.container_wx.上下文df
+        # df = self.container_wx.上下文df
+        # df["已处理"] = False
+        # df["链接"] = None
+        # df.自己 = df.自己.fillna(False).astype(bool)
+        # return df
 
     def merge_wx_df(self, upper_page, lower_page):
-        print("uppser page:")
-        print(upper_page)
-        print("lower page:")
-        print(lower_page)
+        # print("uppser page:")
+        # print(upper_page)
+        # print("lower page:")
+        # print(lower_page)
 
         rtn = tool_wx_df.合并上下两个df(上一页=upper_page, 当前页=lower_page, safe=True)
+        """
         if "自己" in rtn.columns:
             rtn.已处理 = rtn.已处理.fillna(False).astype(bool)
         else:
@@ -338,7 +373,9 @@ class SteadyDevice(DummyDevice):
         rtn["已处理"] = rtn["已处理"].where(
             rtn["已处理"], ~rtn["类型"].isin(["图片", "语音"])
         )
+        """
         rtn["新增"] = True
+        rtn.自己 = rtn.自己.fillna(False)
 
         return rtn
 
@@ -457,14 +494,6 @@ class 基本界面元素(基本输入字段对象):
 
     def execute(self, job, lines):
         return execute_lines(job, lines, self)
-        # from tool_remote_orm_model import RemoteModel
-
-        # if self.matched:
-        #     try:
-        #         exec(lines)
-        #         return True
-        #     except Exception as e:
-        #         print(f"error when executing:{self.id}:{e}")
 
 
 class Xml界面元素(基本界面元素):
@@ -630,10 +659,10 @@ class 基本任务(抽象持久序列):
 
     @classmethod
     def 处理历史记录(cls, df, lst):
+        # print(df)
         tmp = df[~df.自己]
         i = check_series_contains.find_matching_i(tmp.唯一值, lst)
         if i is not None:
-            # df['新增'] = True
             df.loc[tmp.index[:i], "已处理"] = True
             df.loc[tmp.index[:i], "新增"] = False
         return i is not None
@@ -808,6 +837,81 @@ class 基本任务(抽象持久序列):
             if 单步:
                 break
         return executed
+
+    def 是否首次识别且最后一条为语音(self):
+        if not self.cache.get("首次打开会话"):
+            self.cache.update(首次打开会话=True)
+            df = self.获得当前会话df()
+            return not df.empty and df.iloc[-1].类型 == "语音"
+        return False
+
+    def 是否首次识别且新消息包含语音(self):
+        if not self.cache.get("首次打开会话"):
+            self.cache.update(首次打开会话=True)
+            df = tool_wx_df.得到新消息部分df(self.获得当前会话df())
+            return "语音" in df.类型.tolist()
+        return False
+
+    def 获得当前会话df(self):
+        df = self.cache.get("当前")
+        if df is None:
+            df = self.device.df_wx
+        return df
+
+    def 是否容器底部被截断(self):
+        el = self.device.container_wx.elements
+        return el and el[-1].是否底部被截断()
+    
+    def 是否该类型处理完成(self, 类型, 是否缓存=False):
+        df = self.获得当前会话df() if not 是否缓存 else self.cache.get("缓存")
+        return df is None or df.empty or df[(df.类型 == 类型) & (~df.已处理)].empty
+
+    def 处理日日常(self, last_keys):
+        container_wx = self.device.container_wx
+        容器key = container_wx.key
+        容器未变化 = self.cache.get("容器key") == 容器key
+        self.cache["容器key"] = 容器key
+
+        self.cache["当前"] = 当前 = self.device.df_wx
+
+        需向下翻页 = False
+
+        是否已经匹配历史 = False
+
+        if self.cache.get("语音转文字已点击"):
+            print("oooooooooooooooooo转文字已点击oooooooooooooooooo")
+            self.cache.update(语音转文字已点击=False)
+            # self.cache.update(缓存=None)
+            需向下翻页 = True
+            # if self.是否该类型处理完成("语音"):
+            #     需向下翻页 = True
+        elif self.cache.get("向下翻页中"):
+            if self.是否容器底部被截断():
+                print("++++++++++++++向下翻页不彻底++++++++++++++")
+                需向下翻页 = True
+            else:
+                print("++++++++++++++向下翻页已经到底++++++++++++++")
+                需向下翻页 = False
+            self.cache.update(向下翻页中=False)
+            
+        elif not 容器未变化:
+            print("~~~~~~~~~~~~~~~容器变化~~~~~~~~~~~~~~~")
+            df = self.device.merge_wx_df(当前, self.cache.get("缓存"))
+            是否已经匹配历史 = self.处理历史记录(df, last_keys)
+            self.cache["缓存"] = df
+        elif self.cache.get("缓存") is None:
+            print("~~~~~~~~~~~~~~~容器无变化, 缓存为空~~~~~~~~~~~~~~~")
+            df = 当前
+            是否已经匹配历史 = self.处理历史记录(df, last_keys)
+            self.cache["缓存"] = df
+        else:
+            print("!!!!!!!!!!!!!!!!容器无变化, 缓存不为空!!!!!!!!!!!!!!!!")
+
+        return 容器未变化, 需向下翻页, 是否已经匹配历史
+
+    def 清除缓存并重置(self):
+        self.cache.update(缓存=None)
+        self.cache.update(cnt_up=0)
 
 
 class 前置预检查任务(基本任务):

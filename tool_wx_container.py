@@ -29,6 +29,7 @@ ptn_wx_root = (
 
 ptn_recycler = """//*[@class="androidx.recyclerview.widget.RecyclerView"]"""
 
+
 def get_short_text(txt, max_length=20):
     return txt[:max_length] + ("..." if txt[max_length:] else "")
 
@@ -90,20 +91,17 @@ class 单条容器(list):
         super().__init__(*args, **kwargs)
 
     def 是否顶部探头(self):
-        return (
-            self.rect.top <= self.rect_big.top
-            and len(self) >= 2
-        )
+        return self.rect.top <= self.rect_big.top and len(self) >= 2
 
     def 是否底部触底(self):
-        return (
-            self.rect.bottom >= self.rect_big.bottom
-            and self.类型 != "文本"
-        )
+        return self.rect.bottom >= self.rect_big.bottom and self.类型 != "文本"
 
     @property
     def 和微信容器底边间距(self):
         return abs(self.rect_big.bottom - self.rect.bottom)
+    
+    def 是否底部被截断(self):
+        return self.和微信容器底边间距 <= 0
 
     @property
     def list(self):
@@ -111,15 +109,47 @@ class 单条容器(list):
 
     @cached_property
     def 头像(self):
-        e = first(filter(lambda x: "头像" in x.类型, self))
+        e = first(
+            filter(
+                lambda x: "头像" in x.类型 and x.描述 and x.描述.endswith("头像"), self
+            )
+        )
         return e
 
-    def 是否自己消息(self):
-        return (
-            self.头像 is not None
-            and bounds_to_rect(self.头像.bounds).left > self.rect_big.center_x
-        )
+    # def 是否自己消息(self):
+    #     return (
+    #         self.头像 is not None
+    #         and bounds_to_rect(self.头像.bounds).left > self.rect_big.center_x
+    #     )
 
+    def 是否自己消息(self):
+        return self.是否靠右侧消息容器()
+
+    def 是否已处理(self):
+        if self.是否自己消息():
+            return True
+
+        if self.类型 == "图片":
+            return False
+
+        if self.语音转文字控件 is not None:
+            return False
+        return True
+
+    @property
+    def 语音转文字控件(self):
+        if self.类型 != "语音":
+            return
+        e = self.get_first_type("语音转文字")
+
+        if e is None:
+            return
+
+        if e.文本 != "转文字":
+            return
+
+        if numpy.isclose(e.rect.center_y, self.头像.rect.center_y, rtol=0, atol=2):
+            return e
 
     @cached_property
     def 发言者(self):
@@ -163,11 +193,12 @@ class 单条容器(list):
             if type_name in x.类型:
                 return x
 
-    def 获取所有文本或描述(self, type_name):
+    def 获取所有文本或描述(self, type_name=None):
         rtn = []
         for x in self:
-            if type_name in x.类型:
-                rtn.append(x)
+            if type_name is None or type_name in x.类型:
+                if "头像" not in x.类型:
+                    rtn.append(x)
         return " ".join([x.文本或者描述 for x in rtn if x.文本或者描述])
 
     @classmethod
@@ -199,6 +230,8 @@ class 单条容器(list):
         '小视频'
         >>> 单条容器.判断类型(['机构名', '文章封面', '昵称', '未知', '分割条', '时间', '公众号文章标题', '头像'])
         '公众号文章'
+        >>> 单条容器.判断类型(['公众号文章标题', '头像', '分割条', '未知', '小程序卡片注脚'])
+        '小程序'
         """
         text = ",".join(l)
 
@@ -207,6 +240,9 @@ class 单条容器(list):
 
         if "语音描述" in l:
             return "语音"
+
+        if "小程序卡片注脚" in l:
+            return "小程序"
 
         if "公众号文章标题" in l:
             return "公众号文章"
@@ -270,6 +306,9 @@ class 单条容器(list):
         if self.类型 == "小视频文件":
             return f"""[分享了一个小视频文件, 时长：{self.获取所有文本或描述('视频时长')}]"""
 
+        if self.类型 == "小程序":
+            return f"""[分享了一个小程序]{self.获取所有文本或描述()}"""
+
     @property
     def 时间(self):
         e = first(filter(lambda x: "时间" in x.类型, self))
@@ -309,6 +348,8 @@ class 单条容器(list):
             "唯一值": self.唯一值,
             "xy": self.点选中心,
             "xy头像": self.xy头像,
+            "已处理": self.是否已处理(),
+            "链接": None,
         }
 
     @property
@@ -318,12 +359,21 @@ class 单条容器(list):
     @property
     def 点选中心(self):
         if self.类型 == "语音":
-            if self.是否自己消息():
-                return bounds_to_rect(self.头像.bounds).offset(-1, 0.5)
-            elif self.头像 is not None:
-                return bounds_to_rect(self.头像.bounds).offset(1, 0.5)
-            else:
-                return None, None
+            # if self.是否自己消息():
+            #     return bounds_to_rect(self.头像.bounds).offset(-1, 0.5)
+            # elif self.头像 is not None:
+            #     e = self.语音转文字控件
+            #     if e is not None:
+            #         return bounds_to_rect(e.bounds).offset(0, 0)
+            #     # return bounds_to_rect(self.头像.bounds).offset(1, 0.5)
+            if (
+                not self.是否自己消息()
+                and self.头像 is not None
+                and self.语音转文字控件 is not None
+            ):
+                return self.语音转文字控件.rect.offset(0, 0)
+                # return bounds_to_rect(self.头像.bounds).offset(1, 0.5)
+            return None, None
         elif self.类型 == "图片":
             if self.是否自己消息():
                 return bounds_to_rect(self.头像.bounds).offset(-1.1, 0.5)
@@ -338,13 +388,15 @@ class 单条容器(list):
         return max([x.rect.right for x in self])
 
     def 是否靠右侧消息容器(self):
-        return self.most_right > self.rect_big.width * 0.75
+        return self.most_right > self.rect_big.width * 0.95
+
 
 class 元素(object):
     _types = {
         "正文": [
             'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
             'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.RelativeLayout"]/node[@class="android.widget.TextView"]',
+            'node[@class="android.widget.RelativeLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
             'node[@class="android.widget.RelativeLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.RelativeLayout"]/node[@class="android.widget.TextView"]',
             'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
         ],
@@ -408,6 +460,9 @@ class 元素(object):
             'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
         ],
         "文件尺寸": 'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.FrameLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
+        "小程序卡片注脚": [
+            'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.FrameLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
+        ],
     }
 
     types = {}
@@ -605,7 +660,7 @@ class 解析器(object):
 
     def 是否初次会话(self):
         c = self.elements[-1]
-        return c.rect.bottom < c.rect_big.height/2
+        return c.rect.bottom < c.rect_big.height / 2
 
     @property
     def 上下文df(self):
@@ -625,7 +680,7 @@ class 解析器(object):
             if c.是否靠右侧消息容器():
                 return True
         return False
-    
+
     @property
     def key(self):
         recycler = self.tree.xpath(ptn_recycler, namespaces=namespaces)
