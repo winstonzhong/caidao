@@ -65,15 +65,20 @@ global_cache = {}
 URL_TASK_QUEUE = f"https://{tool_env.HOST_TASK}"
 
 
+def 得到url(task_key, 中继=False):
+    return f'{URL_TASK_QUEUE}/pull/{task_key}{"_" if 中继 else ""}'
+
+
 def 拉取任务字典(task_key, 中继=False):
-    url = f'{URL_TASK_QUEUE}/pull/{task_key}{"_" if 中继 else ""}'
+    # url = f'{URL_TASK_QUEUE}/pull/{task_key}{"_" if 中继 else ""}'
+    url = 得到url(task_key, 中继)
     print("拉取任务字典:", url)
     return requests.get(url).json()
 
 
 def 如有任务转发中继(task_key):
     url = f"{URL_TASK_QUEUE}/pull/{task_key}?forward={task_key}_"
-    print("如有任务转发中继:", url)
+    # print("如有任务转发中继:", url)
     return bool(requests.get(url).json())
 
 
