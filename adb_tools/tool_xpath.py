@@ -103,6 +103,9 @@ def 上传结果字典(task_key, result_data):
     response.raise_for_status()
     return response.json()
 
+def 回传结果到服务器(result_data):
+    return 上传结果字典(task_key='服务器回传结果队列', result_data=result_data)
+
 
 def execute_lines(job, lines, self=None):
     if self is not None:
