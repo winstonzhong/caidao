@@ -202,6 +202,12 @@ class 抽象任务数据(BaseModel):
         ]
 
     @classmethod
+    def 得到结果处理函数(cls, pk=None):
+        if pk is not None:
+            return getattr(cls.objects.get(pk=pk), "处理结果")
+        return getattr(cls, "处理结果类函数")
+    
+    @classmethod
     def 得到最大队列容量(cls):
         raise NotImplementedError
 
