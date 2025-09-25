@@ -205,7 +205,7 @@ class 抽象任务数据(BaseModel):
         if pk is not None:
             return getattr(cls.objects.get(pk=pk), "处理结果")
         return getattr(cls, "处理结果类函数")
-    
+
     @classmethod
     def 得到最大队列容量(cls):
         raise NotImplementedError
@@ -281,7 +281,7 @@ class 抽象任务数据(BaseModel):
             seconds=cls.get_seconds_expiring()
         )
 
-        return (
+        obj = (
             cls.objects.filter(
                 Q(processing=False) | Q(update_time__lt=timeout_time),
                 **paras,
@@ -289,6 +289,12 @@ class 抽象任务数据(BaseModel):
             .order_by("-update_time")
             .first()
         )
+
+        if obj is not None:
+            obj.processing = True
+            obj.save()
+
+        return obj
 
     def 是否被占用(self):
         return (

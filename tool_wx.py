@@ -64,6 +64,9 @@ def is_renamed_name(line):
     """
     return bool(ptn_renamed_name.match(line.strip()))
 
+def 是否已经是重命名的唯一名字(line):
+    return is_renamed_name(line)
+
 def cutoff_renamed_suffix(line):
     """
     >>> cutoff_renamed_suffix("SunnyAftRain_SUNY")
@@ -73,7 +76,8 @@ def cutoff_renamed_suffix(line):
     """
     return line.rsplit('_', maxsplit=1)[0] if is_renamed_name(line) else line
 
-
+def 去掉唯一后缀(line):
+    return cutoff_renamed_suffix(line)
 
 def is_session_name(line):
     """
@@ -103,6 +107,9 @@ def clean_session_name(line):
     """
     if line:
         return ptn_session_name.sub("", line.strip())
+
+def 去掉群名后面的数字(line):
+    return clean_session_name(line)
 
 
 def clean_head_description(line):

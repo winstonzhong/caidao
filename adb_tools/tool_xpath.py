@@ -667,6 +667,9 @@ class 基本任务(抽象持久序列):
     @classmethod
     def 队列推送地址(cls):
         return cls.URL_TASK_PUSH
+    
+    def 获取设备相关队列名称(self, name):
+        return f"{name}_{self.serialno}"
 
     @classmethod
     def 处理历史记录(cls, df, lst):
