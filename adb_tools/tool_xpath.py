@@ -442,9 +442,6 @@ class SteadyDevice(DummyDevice):
 
 
 class 基本输入字段对象(object):
-    # HOST_SERVER = os.getenv("HOST_SERVER", "crawler.j1.sale")
-    HOST_SERVER = os.getenv("HOST_SERVER", "coco.j1.sale")
-
     def __init__(self, d):
         self.d = d
 
@@ -458,7 +455,7 @@ class 基本输入字段对象(object):
 
     @classmethod
     def process_url(cls, url):
-        return tool_env.replace_url_host(url, cls.HOST_SERVER)
+        return tool_env.replace_url_host(url, tool_env.HOST_SERVER)
 
     def requests_get(self, url, 带串行号=True, **kwargs):
         obj = self.get_remote_obj(self.process_url(url), 带串行号=带串行号, **kwargs)
@@ -644,8 +641,6 @@ class 抽象持久序列(基本输入字段对象):
 
 
 class 基本任务(抽象持久序列):
-    # HOST_SERVER = os.getenv("HOST_SERVER", "crawler.j1.sale")
-    # HOST_SERVER = os.getenv("HOST_SERVER", "coco.j1.sale")
     URL_TASK_PULL = "https://task.j1.sale/pull/{task_key}"
     URL_TASK_PUSH = "https://task.j1.sale/push"
 
@@ -718,22 +713,6 @@ class 基本任务(抽象持久序列):
     @property
     def serialno(self):
         return self.device.adb.serialno
-
-    # @classmethod
-    # def process_url(cls, url):
-    #     return tool_env.replace_url_host(url, cls.HOST_SERVER)
-
-    # def requests_get(self, url, 带串行号=True, **kwargs):
-    #     obj = self.get_remote_obj(self.process_url(url), 带串行号=带串行号, **kwargs)
-    #     return obj if obj.data else None
-
-    # def requests_post(self, url, 带串行号=True, **kwargs):
-    #     payload = {"设备串行号": self.device.adb.serialno} if 带串行号 else {}
-
-    # def 刷新参数(self, paras):
-    #     self.d["paras"] = paras
-    #     for block in self._blocks:
-    #         block.刷新参数(paras)
 
     def 打开应用(self):
         script = f"am start -n {self.package}/{self.activity}"

@@ -39,22 +39,26 @@ def monitor_functions(function_list, log_path="monitor.log", step=False):
     logger.info(f"监控的函数列表: {[func.__name__ for func in function_list]}")
 
     while True:
-        has_true = False
+        try:
+            has_true = False
 
-        for func in function_list:
-            try:
-                result = func()
-                if result is True:
-                    logger.info(f"函数 {func.__name__} : {result}")
-                    has_true = True
-                    break  # 遇到True立即跳出，无需执行后续函数
+            for func in function_list:
+                try:
+                    result = func()
+                    if result is True:
+                        logger.info(f"函数 {func.__name__} : {result}")
+                        has_true = True
+                        break  # 遇到True立即跳出，无需执行后续函数
 
-            except Exception as e:
-                # 输出详细异常信息，包括堆栈跟踪
-                logger.exception(f"函数 {func.__name__} 执行出错: {e}")
+                except Exception as e:
+                    # 输出详细异常信息，包括堆栈跟踪
+                    logger.exception(f"函数 {func.__name__} 执行出错: {e}")
 
-        if step:
-            break
+            if step:
+                break
 
-        if not has_true:
-            time.sleep(1)
+            if not has_true:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            logger.warning("监控函数被强制停止")
+            break   
