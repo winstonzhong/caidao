@@ -206,7 +206,6 @@ class 抽象任务数据(BaseModel):
     #         return getattr(cls.objects.get(pk=pk), "处理结果")
     #     return getattr(cls, "处理结果类函数")
 
-
     @classmethod
     def 得到结果处理函数(cls, **k):
         if k:
@@ -223,7 +222,10 @@ class 抽象任务数据(BaseModel):
     def 得到队列名称(cls):
         raise NotImplementedError
 
-    def 写入任务队列(self, 队列名称, 数据, 队列容量=None):
+    def 写入任务队列(self, 队列名称, 数据, 队列容量=None, 设备相关=False):
+
+        队列名称 = 队列名称 if not 设备相关 else self.获取设备相关队列名称(队列名称)
+
         if (
             队列容量 is None
             or helper_task_redis.获取队列中任务个数(队列名称) < 队列容量
@@ -381,6 +383,7 @@ class 抽象任务数据(BaseModel):
 
     def 获取设备相关队列名称(self, name):
         return f"{name}_{self.设备串行号}"
+
 
 class AbstractModel(BaseModel):
     update_time = models.DateTimeField(verbose_name="更新时间", auto_now=True)
