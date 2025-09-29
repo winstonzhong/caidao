@@ -237,17 +237,17 @@ class 抽象任务数据(BaseModel):
                 return True
         return False
 
-    @classmethod
-    def 获取未完成记录(cls):
-        # 计算超时时间
-        timeout_time = timezone.now() - datetime.timedelta(
-            seconds=cls.get_seconds_expiring()
-        )
+    # @classmethod
+    # def 获取未完成记录(cls):
+    #     # 计算超时时间
+    #     timeout_time = timezone.now() - datetime.timedelta(
+    #         seconds=cls.get_seconds_expiring()
+    #     )
 
-        return cls.objects.filter(
-            Q(processing=False) | Q(update_time__lt=timeout_time),
-            done=False,
-        )
+    #     return cls.objects.filter(
+    #         Q(processing=False) | Q(update_time__lt=timeout_time),
+    #         done=False,
+    #     )
 
     def 是否超时(self):
         return (
@@ -379,6 +379,8 @@ class 抽象任务数据(BaseModel):
         d.update(kwargs)
         return d
 
+    def 获取设备相关队列名称(self, name):
+        return f"{name}_{self.设备串行号}"
 
 class AbstractModel(BaseModel):
     update_time = models.DateTimeField(verbose_name="更新时间", auto_now=True)
@@ -483,7 +485,7 @@ class 抽象定时任务(BaseModel):
         if self.是否到了执行时间():
             update_time = timezone.localtime(self.update_time)
             self.update_time = calculate_rtn(
-                update_time, self.间隔秒, shanghai_time_now()
+                update_time, self.间隔秒, shanghai_time_now(), safe=True
             )
 
     def save(self, *args, **kwargs):
@@ -573,6 +575,7 @@ class 抽象定时任务(BaseModel):
                 self.print_info(f"开始执行任务:{self.名称} - {self.执行函数}")
                 executed = getattr(self, self.执行函数)()
             self.save()
+
         except Exception:
             print(traceback.format_exc())
             print(f"发生异常, 等待{seconds_sleep_when_exception}秒后继续执行")

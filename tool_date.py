@@ -33,6 +33,7 @@ def time_shanghai():
 def time_now():
     return time_shanghai().strftime("%H:%M:%S")
 
+
 def 现在():
     return time_shanghai()
 
@@ -40,13 +41,13 @@ def 现在():
 def 今天():
     return datetime.datetime.now(TIME_ZONE_SHANGHAI).date()
 
+
 def 昨天():
     return 今天() - datetime.timedelta(days=1)
 
 
 def today():
     return dash_date(今天())
-
 
 
 def yesterday():
@@ -439,10 +440,35 @@ def generate_person_id(name: str, birthdate, gender: str) -> str:
         standardized_birthdate = convert_to_date(birthdate)
         birthdate_str = standardized_birthdate.strftime("%Y-%m-%d")
     else:
-        birthdate_str = '-'
+        birthdate_str = "-"
 
     # 生成并返回标准化标识
     return f"{standardized_name}|{standardized_gender}|{birthdate_str}"
+
+
+def 北京时间字符串转UTC(time_str):
+    """
+    将北京时间（Asia/Shanghai）字符串转换为UTC时区的datetime对象
+
+    参数:
+        time_str (str): 北京时间字符串，格式为 "%Y-%m-%d %H:%M:%S"（例如 "2025-01-01 08:29:00"）
+
+    返回:
+        datetime: 带UTC时区信息的datetime对象（aware datetime）
+    """
+    if time_str and isinstance(time_str, str):
+        # 1. 解析字符串为 naive datetime（不带时区）
+        naive_time = datetime.datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+
+        # 2. 指定原始时区为北京时间（Asia/Shanghai）
+        beijing_tz = pytz.timezone("Asia/Shanghai")
+        beijing_time = beijing_tz.localize(naive_time)  # 转换为北京时间的aware datetime
+
+        # 3. 转换为UTC时区
+        utc_time = beijing_time.astimezone(pytz.UTC)
+
+        return utc_time
+    return time_str
 
 
 if __name__ == "__main__":

@@ -49,6 +49,7 @@ import tool_env
 
 import check_series_contains
 
+
 # def execute_lines(job, lines, self=None):
 #     if self is not None:
 #         if self.matched:
@@ -64,24 +65,27 @@ global_cache = {}
 
 URL_TASK_QUEUE = f"https://{tool_env.HOST_TASK}"
 
+namespaces = {"re": "http://exslt.org/regular-expressions"}
+
 
 def 得到url(task_key, 中继=False):
     return f'{URL_TASK_QUEUE}/pull/{task_key}{"_" if 中继 else ""}'
 
+
 def 在队列中是否有任务(task_key, 中继=False):
-    url = f'{得到url(task_key, 中继)}?query_only=1'
-    print("在队列中是否有任务:", url)
+    url = f"{得到url(task_key, 中继)}?query_only=1"
+    # print("在队列中是否有任务:", url)
     return bool(requests.get(url).json())
 
+
 def 拉取任务字典(task_key, 中继=False):
-    # url = f'{URL_TASK_QUEUE}/pull/{task_key}{"_" if 中继 else ""}'
     url = 得到url(task_key, 中继)
-    print("拉取任务字典:", url)
+    # print("拉取任务字典:", url)
     return requests.get(url).json()
+
 
 def 如有任务转发中继(task_key):
     url = f"{URL_TASK_QUEUE}/pull/{task_key}?forward={task_key}_"
-    # print("如有任务转发中继:", url)
     return bool(requests.get(url).json())
 
 
@@ -103,8 +107,9 @@ def 上传结果字典(task_key, result_data):
     response.raise_for_status()
     return response.json()
 
+
 def 回传结果到服务器(result_data):
-    return 上传结果字典(task_key='服务器回传结果队列', result_data=result_data)
+    return 上传结果字典(task_key="服务器回传结果队列", result_data=result_data)
 
 
 def execute_lines(job, lines, self=None):
@@ -141,6 +146,56 @@ def retrying(tries):
         return wrapper
 
     return decorator
+
+
+def 解析列表条目(e, debug=False):
+    data_list = e.elem.xpath("//android.widget.ListView/android.widget.LinearLayout")
+
+    assert data_list, "没有找到列表"
+
+    top_nav = e.elem.xpath(
+        '//android.view.ViewGroup/android.widget.RelativeLayout/android.widget.RelativeLayout/android.widget.LinearLayout/android.widget.LinearLayout/android.widget.TextView[re:match(@text,"微信.*")][re:match(@content-desc,"")]/../../../../..',
+        namespaces=namespaces,
+    )
+
+    assert top_nav, "没有找到顶部导航栏"
+
+    rect_top_nav = bounds_to_rect(top_nav[0].attrib.get("bounds"))
+
+    bottom_nav = e.elem.xpath(
+        '//android.widget.LinearLayout/android.widget.RelativeLayout/android.widget.LinearLayout/android.widget.TextView[@text="通讯录"][@content-desc=""]/../../..'
+    )
+
+    assert bottom_nav, "没有找到底部导航栏"
+
+    rect_bottom_nav = bounds_to_rect(bottom_nav[0].attrib.get("bounds"))
+
+    # print(rect_bottom_nav)
+
+    rtn = []
+    for i, x in enumerate(data_list):
+        tmp = x.xpath(".//android.view.View")[0]
+        bounds = tmp.attrib.get("bounds")
+        center_y = bounds_to_rect(bounds).center_y
+        if debug:
+            print(
+                i,
+                tmp.attrib.get("text"),
+                bounds,
+                center_y,
+                center_y > rect_top_nav.bottom and center_y < rect_bottom_nav.top,
+            )
+        if center_y > rect_top_nav.bottom and center_y < rect_bottom_nav.top:
+            rtn.append(tmp)
+    return rtn
+
+
+def 匹配列表中的第一个并点击(e, name, debug=False):
+    el = 解析列表条目(e, debug=debug)
+    for x in el:
+        if x.attrib.get("text") == name:
+            e._d.click(*bounds_to_rect(x.attrib["bounds"]).center)
+            return True
 
 
 class NoTemplatePopupException(Exception):
@@ -440,6 +495,11 @@ class SteadyDevice(DummyDevice):
         name = name if name else self.wx_session_name
         return tool_wx.is_session_name(name)
 
+    @property
+    def wx_session_pair(self):
+        name = self.wx_session_name
+        return name, tool_wx.is_session_name(name)
+
 
 class 基本输入字段对象(object):
     def __init__(self, d):
@@ -662,9 +722,13 @@ class 基本任务(抽象持久序列):
     @classmethod
     def 队列推送地址(cls):
         return cls.URL_TASK_PUSH
-    
+
     def 获取设备相关队列名称(self, name):
         return f"{name}_{self.serialno}"
+    
+    def 拉取任务(self, task_key, 是否设备相关=True):
+        task_key = task_key if not 是否设备相关 else self.获取设备相关队列名称(task_key)
+        return 拉取任务字典(task_key)
 
     @classmethod
     def 处理历史记录(cls, df, lst):
@@ -719,7 +783,7 @@ class 基本任务(抽象持久序列):
         # print(script)
         self.device.adb.execute(script)
         time.sleep(3)
-        print(f"checking...:{self.package}/{self.activity}")
+        print(f"checking...:{self.package}/{self.activity}", self.device.adb.is_app_opened(self.package))
         if not self.device.adb.is_app_opened(self.package):
             self.device.adb.open_certain_app(
                 package=self.package,
@@ -802,6 +866,9 @@ class 基本任务(抽象持久序列):
         num_empty_repeated = 0
         executed = 0
         while 1:
+            if not self.blocks:
+                self.status = "完成"
+
             if self.status == "完成":
                 break
 
@@ -824,8 +891,11 @@ class 基本任务(抽象持久序列):
             else:
                 num_empty_repeated += 1
                 if num_empty_repeated > self.max_empty:
-                    print("达到最大空白屏次数，停止执行")
+                    print("达到最大空白屏次数，停止执行:", num_empty_repeated, self.max_empty)
                     raise 达到最大空白屏次数异常
+                else:
+                    print("空白:", num_empty_repeated, self.max_empty)
+                    time.sleep(0.5)
 
             if 单步:
                 break
@@ -854,7 +924,7 @@ class 基本任务(抽象持久序列):
     def 是否容器底部被截断(self):
         el = self.device.container_wx.elements
         return el and el[-1].是否底部被截断()
-    
+
     def 是否该类型处理完成(self, 类型, 是否缓存=False):
         df = self.获得当前会话df() if not 是否缓存 else self.cache.get("缓存")
         return df is None or df.empty or df[(df.类型 == 类型) & (~df.已处理)].empty
@@ -886,7 +956,7 @@ class 基本任务(抽象持久序列):
                 print("++++++++++++++向下翻页已经到底++++++++++++++")
                 需向下翻页 = False
             self.cache.update(向下翻页中=False)
-            
+
         elif not 容器未变化:
             print("~~~~~~~~~~~~~~~容器变化~~~~~~~~~~~~~~~")
             df = self.device.merge_wx_df(当前, self.cache.get("缓存"))
@@ -934,6 +1004,7 @@ class 基本任务列表(抽象持久序列):
 
             try:
                 main_job.执行前置检查操作块()
+                # print(self.jobs)
                 for job in self.jobs:
                     num_executed += job.执行任务(单步=False)
             except 任务预检查不通过异常:

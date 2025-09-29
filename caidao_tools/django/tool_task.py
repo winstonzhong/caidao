@@ -2,7 +2,7 @@ import datetime
 
 
 
-def calculate_rtn(a, b, x):
+def calculate_rtn(a, b, x, safe=False):
     """
     计算满足条件的 rtn 值。
     rtn 需满足两个条件: 1. rtn = a + n * b; 2. rtn - b < x <= rtn。
@@ -45,6 +45,8 @@ def calculate_rtn(a, b, x):
     True
     """
     if x < a + datetime.timedelta(seconds=b):
+        if safe:
+            return a
         raise ValueError("输入的 x 必须大于等于 a + b", f'{a}, {b}, {x}')
     assert b > 0, "间隔时间不能为负或零"
     delta_seconds = (x - a).total_seconds()

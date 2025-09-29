@@ -73,6 +73,8 @@ def cutoff_renamed_suffix(line):
     'SunnyAftRain'
     >>> cutoff_renamed_suffix("SunnyAftRain_1UNY")
     'SunnyAftRain_1UNY'
+    >>> cutoff_renamed_suffix("SunnyAftRain_1UN")
+    'SunnyAftRain_1UN'
     """
     return line.rsplit('_', maxsplit=1)[0] if is_renamed_name(line) else line
 
@@ -91,8 +93,13 @@ def is_session_name(line):
     False
     >>> is_session_name("11(5)")
     True
+    >>> is_session_name("内部机器人测试群_FPUL(6)")
+    True
     """
     return bool(re.match(".+\(\d+\)$", line.strip()))
+
+def 是否群名称(line):
+    return is_session_name(line)
 
 
 def clean_session_name(line):
