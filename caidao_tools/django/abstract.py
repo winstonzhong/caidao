@@ -563,8 +563,13 @@ class 抽象定时任务(BaseModel):
         # seconds_sleep_when_exception = 10
         while 1:
             q = cls.得到所有待执行的任务(**kwargs).order_by("-优先级", "update_time")
+            max_priority = 0
             for obj in q.iterator():
-                obj.step()
+                if obj.优先级 < max_priority:
+                    break
+                if obj.step() and obj.优先级 > max_priority:
+                    max_priority = obj.优先级
+
             if 单步:
                 break
             time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
