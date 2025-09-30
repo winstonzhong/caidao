@@ -40,7 +40,7 @@ MAIN_HOST_J_ONE = os.environ.get("MAIN_HOST_J_ONE", "https://coco.j1.sale")
 
 U4080 = os.path.lexists('/home/yka-003/zwd')
 
-U4080 = True
+# U4080 = True
 
 HOST_TASK_DEFAULT = 'task.j1.sale' if not U4080 else 'task-test.j1.sale'
 
