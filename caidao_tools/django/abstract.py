@@ -507,10 +507,12 @@ class 抽象定时任务(BaseModel):
 
     @classmethod
     def 构建所有待执行的任务查询字典(cls, **kwargs):
-        kwargs["update_time__lte"] = timezone.now() - ExpressionWrapper(
-            Value(datetime.timedelta(seconds=1)) * F("间隔秒"),
-            output_field=DurationField(),
-        )
+        _without_updated = kwargs.pop("_without_updated", None)
+        if _without_updated is None:
+            kwargs["update_time__lte"] = timezone.now() - ExpressionWrapper(
+                Value(datetime.timedelta(seconds=1)) * F("间隔秒"),
+                output_field=DurationField(),
+            )
         kwargs["激活"] = True
 
         return kwargs
