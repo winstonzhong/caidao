@@ -174,7 +174,10 @@ def 解析列表条目(e, debug=False):
 
     rtn = []
     for i, x in enumerate(data_list):
-        tmp = x.xpath(".//android.view.View")[0]
+        tmp = x.xpath(".//android.view.View")
+        if not tmp:
+            continue
+        tmp = tmp[0]
         bounds = tmp.attrib.get("bounds")
         center_y = bounds_to_rect(bounds).center_y
         if debug:
@@ -728,6 +731,7 @@ class 基本任务(抽象持久序列):
     
     def 拉取任务(self, task_key, 是否设备相关=True):
         task_key = task_key if not 是否设备相关 else self.获取设备相关队列名称(task_key)
+        print('task_key:', task_key)
         return 拉取任务字典(task_key)
 
     @classmethod

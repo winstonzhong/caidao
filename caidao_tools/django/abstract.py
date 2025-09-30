@@ -225,6 +225,7 @@ class 抽象任务数据(BaseModel):
     def 写入任务队列(self, 队列名称, 数据, 队列容量=None, 设备相关=False):
 
         队列名称 = 队列名称 if not 设备相关 else self.获取设备相关队列名称(队列名称)
+        print('队列名称:', 队列名称)
 
         if (
             队列容量 is None
