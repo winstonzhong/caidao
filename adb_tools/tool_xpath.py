@@ -731,7 +731,7 @@ class 基本任务(抽象持久序列):
     
     def 拉取任务(self, task_key, 是否设备相关=True):
         task_key = task_key if not 是否设备相关 else self.获取设备相关队列名称(task_key)
-        print('task_key:', task_key)
+        # print('task_key:', task_key)
         return 拉取任务字典(task_key)
 
     @classmethod
@@ -787,7 +787,7 @@ class 基本任务(抽象持久序列):
         # print(script)
         self.device.adb.execute(script)
         time.sleep(3)
-        print(f"checking...:{self.package}/{self.activity}", self.device.adb.is_app_opened(self.package))
+        # print(f"checking...:{self.package}/{self.activity}", self.device.adb.is_app_opened(self.package))
         if not self.device.adb.is_app_opened(self.package):
             self.device.adb.open_certain_app(
                 package=self.package,

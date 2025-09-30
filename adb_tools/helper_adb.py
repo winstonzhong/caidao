@@ -632,7 +632,6 @@ class BaseAdb(object):
     def is_app_opened(self, package=None):
         package = package if package else self.APP_INFO.get("package")
         current_package = self.app_info.get("package")
-        print("--------------", current_package, package)
         return package == current_package
 
     def is_app_main(self):
@@ -758,6 +757,10 @@ class BaseAdb(object):
             time.sleep(1)
         raise NoFileDownloadedError
 
+    def pull_latest_picture(self, to_dir, base_dir="/sdcard/Pictures"):
+        # return self.pull_lastest_file_until(base_dir=base_dir, to_dir)
+        return self.pull_lastest_file_until(to_dir, base_dir)
+    
     def pull_latest_picture_weixin(
         self,
         to_dir=TMP_DIR,
