@@ -308,7 +308,7 @@ def is_number(x):
     return is_int(x)
 
 
-def to_int(x):
+def to_int(x, default=None):
     """
     >>> to_int('1.0') == 1
     True
@@ -324,6 +324,7 @@ def to_int(x):
         return int(float(x))
     except Exception:
         pass
+    return default
 
 
 def is_chinese(ch):

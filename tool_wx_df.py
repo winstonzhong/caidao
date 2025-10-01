@@ -139,8 +139,9 @@ def 直接暴力合并(上一页, 当前页):
     1   2
     2   2
     3   1
+    >>> 直接暴力合并(None, page_current).唯一值.tolist() == ['2', '1']
+    True
     """
-    # return 串行(page_pre, page_current)
     return pandas.concat([上一页, 当前页], ignore_index=True)
 
 
