@@ -385,7 +385,7 @@ class 单条容器(list):
 
     @property
     def most_right(self):
-        return max([x.rect.right for x in self])
+        return max([x.rect.right for x in self]) if self else 0
 
     def 是否靠右侧消息容器(self):
         return self.most_right > self.rect_big.width * 0.95

@@ -422,30 +422,9 @@ class SteadyDevice(DummyDevice):
         # return df
 
     def merge_wx_df(self, upper_page, lower_page):
-        # print("uppser page:")
-        # print(upper_page)
-        # print("lower page:")
-        # print(lower_page)
-
         rtn = tool_wx_df.合并上下两个df(上一页=upper_page, 当前页=lower_page, safe=True)
-        """
-        if "自己" in rtn.columns:
-            rtn.已处理 = rtn.已处理.fillna(False).astype(bool)
-        else:
-            rtn["已处理"] = False
-        if "自己" in rtn.columns:
-            rtn.自己 = rtn.自己.fillna(False).astype(bool)
-        else:
-            rtn["自己"] = False
-
-        # rtn.已处理 = ~rtn.类型.isin(["图片","语音"])
-        rtn["已处理"] = rtn["已处理"].where(
-            rtn["已处理"], ~rtn["类型"].isin(["图片", "语音"])
-        )
-        """
         rtn["新增"] = True
         rtn.自己 = rtn.自己.fillna(False)
-
         return rtn
 
     @property
@@ -728,10 +707,10 @@ class 基本任务(抽象持久序列):
 
     def 获取设备相关队列名称(self, name):
         return f"{name}_{self.serialno}"
-    
+
     def 拉取任务(self, task_key, 是否设备相关=True):
         task_key = task_key if not 是否设备相关 else self.获取设备相关队列名称(task_key)
-        print('task_key:', task_key)
+        # print('task_key:', task_key)
         return 拉取任务字典(task_key)
 
     @classmethod
@@ -787,7 +766,7 @@ class 基本任务(抽象持久序列):
         # print(script)
         self.device.adb.execute(script)
         time.sleep(3)
-        print(f"checking...:{self.package}/{self.activity}", self.device.adb.is_app_opened(self.package))
+        # print(f"checking...:{self.package}/{self.activity}", self.device.adb.is_app_opened(self.package))
         if not self.device.adb.is_app_opened(self.package):
             self.device.adb.open_certain_app(
                 package=self.package,
@@ -895,7 +874,11 @@ class 基本任务(抽象持久序列):
             else:
                 num_empty_repeated += 1
                 if num_empty_repeated > self.max_empty:
-                    print("达到最大空白屏次数，停止执行:", num_empty_repeated, self.max_empty)
+                    print(
+                        "达到最大空白屏次数，停止执行:",
+                        num_empty_repeated,
+                        self.max_empty,
+                    )
                     raise 达到最大空白屏次数异常
                 else:
                     print("空白:", num_empty_repeated, self.max_empty)
@@ -948,10 +931,8 @@ class 基本任务(抽象持久序列):
         if self.cache.get("语音转文字已点击"):
             print("oooooooooooooooooo转文字已点击oooooooooooooooooo")
             self.cache.update(语音转文字已点击=False)
-            # self.cache.update(缓存=None)
             需向下翻页 = True
-            # if self.是否该类型处理完成("语音"):
-            #     需向下翻页 = True
+
         elif self.cache.get("向下翻页中"):
             if self.是否容器底部被截断():
                 print("++++++++++++++向下翻页不彻底++++++++++++++")
@@ -962,17 +943,23 @@ class 基本任务(抽象持久序列):
             self.cache.update(向下翻页中=False)
 
         elif not 容器未变化:
-            print("~~~~~~~~~~~~~~~容器变化~~~~~~~~~~~~~~~")
+            print("~~~~~~~~~~~~~~~容器发生了变化~~~~~~~~~~~~~~~")
+            # df = self.device.merge_wx_df(当前, self.cache.get("缓存"))
+            # 是否已经匹配历史 = self.处理历史记录(df, last_keys)
+            # self.cache["缓存"] = df
+        # elif self.cache.get("缓存") is None:
+        #     print("~~~~~~~~~~~~~~~容器无变化, 缓存为空~~~~~~~~~~~~~~~")
+        #     df = 当前
+        #     是否已经匹配历史 = self.处理历史记录(df, last_keys)
+        #     self.cache["缓存"] = df
+        else:
+            print("!!!!!!!!!!!!!!!!容器无变化!!!!!!!!!!!!!!!!")
+
+        if self.cache.get("缓存") is None or not 容器未变化:
+            print("~~~~~~~~~~~~~~~容易变化, 或缓存为空的情况~~~~~~~~~~~~~~~")
             df = self.device.merge_wx_df(当前, self.cache.get("缓存"))
             是否已经匹配历史 = self.处理历史记录(df, last_keys)
             self.cache["缓存"] = df
-        elif self.cache.get("缓存") is None:
-            print("~~~~~~~~~~~~~~~容器无变化, 缓存为空~~~~~~~~~~~~~~~")
-            df = 当前
-            是否已经匹配历史 = self.处理历史记录(df, last_keys)
-            self.cache["缓存"] = df
-        else:
-            print("!!!!!!!!!!!!!!!!容器无变化, 缓存不为空!!!!!!!!!!!!!!!!")
 
         return 容器未变化, 需向下翻页, 是否已经匹配历史
 

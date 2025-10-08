@@ -508,10 +508,12 @@ class 抽象定时任务(BaseModel):
 
     @classmethod
     def 构建所有待执行的任务查询字典(cls, **kwargs):
-        kwargs["update_time__lte"] = timezone.now() - ExpressionWrapper(
-            Value(datetime.timedelta(seconds=1)) * F("间隔秒"),
-            output_field=DurationField(),
-        )
+        _without_updated = kwargs.pop("_without_updated", None)
+        if _without_updated is None:
+            kwargs["update_time__lte"] = timezone.now() - ExpressionWrapper(
+                Value(datetime.timedelta(seconds=1)) * F("间隔秒"),
+                output_field=DurationField(),
+            )
         kwargs["激活"] = True
 
         return kwargs
@@ -562,8 +564,13 @@ class 抽象定时任务(BaseModel):
         # seconds_sleep_when_exception = 10
         while 1:
             q = cls.得到所有待执行的任务(**kwargs).order_by("-优先级", "update_time")
+            max_priority = 0
             for obj in q.iterator():
-                obj.step()
+                if obj.优先级 < max_priority:
+                    break
+                if obj.step() and obj.优先级 > max_priority:
+                    max_priority = obj.优先级
+
             if 单步:
                 break
             time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
