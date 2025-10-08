@@ -471,6 +471,53 @@ def 北京时间字符串转UTC(time_str):
     return time_str
 
 
+def 日期转中文周几(tdate: datetime.date):
+    """
+    将日期转换为中文表示的周几
+
+    :param tdate: 待转换的日期
+    :return: 中文表示的周几
+
+    >>> 日期转中文周几(datetime.date(2023, 1, 1))
+    '星期天'
+    """
+    weekdays = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期天"]
+    return weekdays[tdate.weekday()]
+
+
+def 日期转中文几日(tdate: datetime.date):
+    """
+    将日期转换为中文表示的几日
+
+    :param tdate: 待转换的日期
+    :return: 中文表示的几日
+
+    >>> 日期转中文几日(datetime.date(2023, 1, 1))
+    '1日'
+    """
+    return f"{tdate.day}日"
+
+
+def 日期列表转不重复的中文几月列表(dates: list[datetime.date]) -> list[str]:
+    """
+    将日期列表转换为不重复的中文几月列表
+
+    :param dates: 待转换的日期列表
+    :return: 不重复的中文几月列表
+
+    >>> 日期列表转不重复的中文几月列表([datetime.date(2023, 1, 1), datetime.date(2023, 2, 1), datetime.date(2023, 3, 1)])
+    ['1月', '2月', '3月']
+    >>> 日期列表转不重复的中文几月列表([datetime.date(2023, 1, 1), datetime.date(2023, 2, 1), datetime.date(2023, 3, 1), datetime.date(2024, 1, 1)])
+    ['1月', '2月', '3月', '1月']
+    """
+    months = []
+    for date in dates:
+        key = f"{date.year}-{date.month}月"
+        if key not in months:
+            months.append(key)
+    return [item.split("-")[-1] for item in months]
+
+
 if __name__ == "__main__":
     import doctest
 
