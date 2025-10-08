@@ -316,7 +316,16 @@ class 单条容器(list):
             return convert_chinese_datetime(e.文本).strftime("%Y-%m-%d %H:%M:%S")
         return numpy.nan
 
+    
+    
     def 是否合法容器(self, 忽略顶部探头=False):
+        if self.类型 == "文本":
+            return (
+                bool(self.发言者)
+                and bool(self.正文)
+                # and (not self.是否顶部探头() or 忽略顶部探头)
+                # and not self.是否底部触底()
+            )
         return (
             bool(self.发言者)
             and bool(self.正文)

@@ -424,7 +424,10 @@ class SteadyDevice(DummyDevice):
     def merge_wx_df(self, upper_page, lower_page):
         rtn = tool_wx_df.合并上下两个df(上一页=upper_page, 当前页=lower_page, safe=True)
         rtn["新增"] = True
-        rtn.自己 = rtn.自己.fillna(False)
+        if '自己' not in rtn.columns:
+            rtn['自己'] = False
+        else:
+            rtn.自己 = rtn.自己.fillna(False)
         return rtn
 
     @property
@@ -715,8 +718,10 @@ class 基本任务(抽象持久序列):
 
     @classmethod
     def 处理历史记录(cls, df, lst):
-        # print(df)
+        print('===============================================================')
+        print(df)
         tmp = df[~df.自己]
+        print(tmp)
         i = check_series_contains.find_matching_i(tmp.唯一值, lst)
         if i is not None:
             df.loc[tmp.index[:i], "已处理"] = True
