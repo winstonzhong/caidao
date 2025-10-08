@@ -518,6 +518,51 @@ def 日期列表转不重复的中文几月列表(dates: list[datetime.date]) ->
     return [item.split("-")[-1] for item in months]
 
 
+def 获取日期范围(
+    总天数: int, 截止日期: datetime.datetime = None
+) -> list[datetime.date]:
+    """
+    生成从开始日期到截止日期（包含两端）的所有日期列表
+
+    参数:
+        总天数 (int): 非负整数，用于计算开始日期（开始日期 = 截止日期 - 总天数）
+        截止日期 (datetime.datetime, 可选): 范围的结束日期，默认为None（此时使用当前日期时间）
+
+    返回:
+        list[datetime.date]: 包含开始日期到截止日期的所有日期（仅日期部分，不含时间）
+
+    异常:
+        TypeError: 若截止日期不是datetime.datetime类型（当提供时）
+        ValueError: 若总天数为负数或非整数
+    """
+    # 处理截止日期默认值（为None时使用当前时间）
+    if 截止日期 is None:
+        截止日期 = 今天()
+    elif not isinstance(截止日期, datetime.datetime):
+        截止日期 = to_date(截止日期)
+
+    # 输入参数验证
+    if not isinstance(截止日期, datetime.date):
+        raise TypeError("截止日期必须是 datetime.datetime 类型")
+
+    if not isinstance(总天数, int) or 总天数 < 0:
+        raise ValueError("总天数必须是非负整数")
+
+    # 计算开始日期（取日期部分，忽略时间）
+    开始日期 = (截止日期 - datetime.timedelta(days=总天数 - 1))
+    # 提取截止日期的日期部分（忽略时间）
+    结束日期 = 截止日期
+
+    # 生成范围内所有日期
+    日期列表 = []
+    当前日期 = 开始日期
+    while 当前日期 <= 结束日期:
+        日期列表.append(当前日期)
+        当前日期 += datetime.timedelta(days=1)
+
+    return 日期列表
+
+
 if __name__ == "__main__":
     import doctest
 
