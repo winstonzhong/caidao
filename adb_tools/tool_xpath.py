@@ -718,11 +718,8 @@ class 基本任务(抽象持久序列):
 
     @classmethod
     def 处理历史记录(cls, df, lst):
-        print('===============================================================')
-        print(df)
         tmp = df[~df.自己]
-        print(tmp)
-        i = check_series_contains.find_matching_i(tmp.唯一值, lst)
+        i = check_series_contains.find_matching_i(tmp.唯一值, lst) if not tmp.empty else None
         if i is not None:
             df.loc[tmp.index[:i], "已处理"] = True
             df.loc[tmp.index[:i], "新增"] = False
@@ -949,14 +946,6 @@ class 基本任务(抽象持久序列):
 
         elif not 容器未变化:
             print("~~~~~~~~~~~~~~~容器发生了变化~~~~~~~~~~~~~~~")
-            # df = self.device.merge_wx_df(当前, self.cache.get("缓存"))
-            # 是否已经匹配历史 = self.处理历史记录(df, last_keys)
-            # self.cache["缓存"] = df
-        # elif self.cache.get("缓存") is None:
-        #     print("~~~~~~~~~~~~~~~容器无变化, 缓存为空~~~~~~~~~~~~~~~")
-        #     df = 当前
-        #     是否已经匹配历史 = self.处理历史记录(df, last_keys)
-        #     self.cache["缓存"] = df
         else:
             print("!!!!!!!!!!!!!!!!容器无变化!!!!!!!!!!!!!!!!")
 
