@@ -4,6 +4,9 @@ import random
 
 from django.utils import timezone
 
+import tool_date
+
+import copy
 
 def extract_value(value_str):
     """
@@ -258,6 +261,41 @@ def transform_food_data(input_data, meal_type=None):
     return output_data
 
 
+# {"data_list": [{"name": "微信步数", "value": 8984, "unit": "步"}, {"name": "强度", "value": "中速", "unit": ""}], "summary": "2025-10-09走了8984步"}
+
+def generate_wx_steps(start_date, end_date):
+    """
+    生成指定日期范围内的微信步数数据
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+
+    返回:
+        list: 包含微信步数记录的列表，每个元素为包含"steps"和"datetime"的字典
+    """
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+
+    output_data = []
+    current_date = start_date
+    
+    tpl = {"data_list": [{"name": "微信步数", "value": 8984, "unit": "步"}, {"name": "强度", "value": "中速", "unit": ""}], "summary": ""}
+
+    while current_date <= end_date:
+        steps = random.randint(1000, 20000)
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = steps
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "微信步数"
+        tmp["图片识别内容"] = "-"
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
+
+
 def generate_calorie_intake(
     start_date,
     end_date,
@@ -342,15 +380,15 @@ def generate_calorie_intake(
 
             # 生成随机时间（时分）
             start_hour, end_hour = config["time_range"]
-            hour = random.randint(start_hour, end_hour)
-            minute = random.randint(0, 59)
-            meal_datetime = datetime.combine(current_date, time(hour, minute))
+            # hour = random.randint(start_hour, end_hour)
+            # minute = random.randint(0, 59)
+            # meal_datetime = datetime.combine(current_date, time(hour, minute))
 
-            meal_datetime = timezone.make_aware(
-                meal_datetime,
-                timezone=timezone.get_current_timezone()  # 使用 Django 配置的时区（如 Asia/Shanghai）
-            )
-
+            # meal_datetime = timezone.make_aware(
+            #     meal_datetime,
+            #     timezone=timezone.get_current_timezone()  # 使用 Django 配置的时区（如 Asia/Shanghai）
+            # )
+            meal_datetime = tool_date.日期转随机北京时间(current_date)
 
             # 确定热量范围：判断是否触发暴食
             if random.random() < binge_eating_prob:
@@ -364,7 +402,8 @@ def generate_calorie_intake(
             calories = random.randint(min_cal, max_cal)
 
             # 添加到结果列表
-            tmp = tpl.copy()
+            # tmp = tpl.copy()
+            tmp = copy.deepcopy(tpl)
             tmp["meal_data"]["total_calories"] = calories
             tmp["meal_data"]["intake_calories"] = calories
             tmp["create_time"] = meal_datetime

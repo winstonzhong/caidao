@@ -11,7 +11,8 @@ import time
 import numpy
 import pytz
 import re
-
+import random
+from django.utils import timezone
 
 TIME_ZONE_SHANGHAI = pytz.timezone("Asia/Shanghai")
 
@@ -562,6 +563,26 @@ def 获取日期范围(
 
     return 日期列表
 
+def 日期转随机北京时间(current_date, start_hour=0, end_hour=23):
+    """
+    给定一个日期，随机生成该日期对应的北京时间。
+
+    参数:
+    current_date: 需要转换的时间，可以是 datetime.date 或者 datetime.datetime 类型的对象。
+
+    返回:
+    一个 datetime.datetime 类型的对象，表示转换后的北京时间。
+
+    """
+    current_date = to_date(current_date)
+    hour = random.randint(start_hour, end_hour)
+    minute = random.randint(0, 59)
+    target = datetime.datetime.combine(current_date, datetime.time(hour, minute))
+
+    return timezone.make_aware(
+        target,
+        timezone=timezone.get_current_timezone()  # 使用 Django 配置的时区（如 Asia/Shanghai）
+    )
 
 if __name__ == "__main__":
     import doctest
