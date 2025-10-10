@@ -502,7 +502,64 @@ def generate_heart_rate(start_date, end_date):
 
 
 
+def generate_blood_oxygen(start_date, end_date):
+    """
+    生成指定日期范围内的血氧记录数据
 
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+
+    返回:
+        list: 包含血氧记录的列表，每个元素为包含血氧信息和日期时间的字典
+    """
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+
+    output_data = []
+    current_date = start_date
+
+    # 血氧记录模板
+    tpl = {
+        "data_list": [
+            {"name": "血氧饱和度", "value": 98, "unit": "%"},
+            {"name": "状态", "value": "静息", "unit": ""},
+            {"name": "测量环境", "value": "室内", "unit": ""}
+        ],
+        "summary": "",
+    }
+
+    # 可能的状态和测量环境选项
+    status_options = ["静息", "日常活动后", "睡眠中", "轻度运动后"]
+    environment_options = ["室内", "室外", "空调房", "运动后"]
+
+    while current_date <= end_date:
+        # 生成正常范围的血氧值（95%-100%）
+        oxygen_level = random.randint(95, 100)
+        # 随机选择状态（静息状态概率更高）
+        status = random.choices(
+            status_options,
+            weights=[0.5, 0.2, 0.2, 0.1],  # 权重分配，静息占比最高
+            k=1
+        )[0]
+        # 随机选择测量环境
+        environment = random.choice(environment_options)
+
+        # 复制模板并替换数据
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = oxygen_level
+        tmp["data_list"][1]["value"] = status
+        tmp["data_list"][2]["value"] = environment
+        # 设置创建时间（使用工具函数生成随机北京时间）
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "血氧记录"
+        tmp["图片识别内容"] = "-"
+
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
 
 
 
