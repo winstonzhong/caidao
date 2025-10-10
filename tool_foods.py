@@ -1,5 +1,14 @@
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 import re
+import random
+
+from django.utils import timezone
+
+from tool_calculate_calories import calculate_calories
+
+import tool_date
+
+import copy
 
 
 def extract_value(value_str):
@@ -133,7 +142,7 @@ def parse_quantity(line):
     (0.0, '')
     """
     import re
-    
+
     # print(line)
 
     # 提取数值部分（处理范围和千分位逗号）
@@ -141,7 +150,7 @@ def parse_quantity(line):
     num_part = m.group(0) if m else "0"
 
     # 提取单位部分（可能为空）
-    unit_part = line[len(num_part) :].strip() if m else ''
+    unit_part = line[len(num_part) :].strip() if m else ""
 
     # 处理范围
     if "-" in num_part and not num_part.startswith("-"):
@@ -156,15 +165,8 @@ def parse_quantity(line):
     return average, unit_part
 
 
-# 运行doctest进行单元测试
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod()
-
-
 def transform_food_data(input_data, meal_type=None):
-    
+
     # print(input_data)
     # 初始化返回数据结构
     output_data = {
@@ -207,13 +209,13 @@ def transform_food_data(input_data, meal_type=None):
         if weight_value:
             assert u == "g", f"无效的重量单位: {u}"
         else:
-            u = 'g'
+            u = "g"
 
         calories_value, u = parse_quantity(dish.get("calories", ""))
         if calories_value:
             assert u == "kcal", f"无效的热量单位: {u}"
         else:
-            u = 'kcal'
+            u = "kcal"
 
         total_calories += calories_value
 
@@ -259,6 +261,183 @@ def transform_food_data(input_data, meal_type=None):
     if total_calories > 0:
         output_data["meal_data"]["intake_rate"] = 100
 
+    return output_data
+
+
+# {"data_list": [{"name": "微信步数", "value": 8984, "unit": "步"}, {"name": "强度", "value": "中速", "unit": ""}], "summary": "2025-10-09走了8984步"}
+
+
+def generate_wx_steps(start_date, end_date):
+    """
+    生成指定日期范围内的微信步数数据
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+
+    返回:
+        list: 包含微信步数记录的列表，每个元素为包含"steps"和"datetime"的字典
+    """
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+
+    output_data = []
+    current_date = start_date
+
+    tpl = {
+        "data_list": [
+            {"name": "微信步数", "value": 8984, "unit": "步"},
+            {"name": "强度", "value": "中速", "unit": ""},
+            {"name": "耗能", "value": 0, "unit": "千卡"}
+        ],
+        "summary": "",
+    }
+
+    while current_date <= end_date:
+        steps = random.randint(1000, 20000)
+        burned = calculate_calories(
+            40,
+            "male",
+            170,
+            90,
+            steps,
+            walk_type="medium",
+        )
+
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = steps
+        tmp["data_list"][-1]["value"] = burned
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "微信步数"
+        tmp["图片识别内容"] = "-"
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
+
+
+def generate_calorie_intake(
+    start_date,
+    end_date,
+    meal_fast_prob=0.2,
+    all_day_fast_prob=0.05,
+    binge_eating_prob=0.1,  # 新增：每餐暴食概率，默认10%
+):
+    """
+    生成指定日期范围内的随机热量摄入数据（含暴食概率）
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+        meal_fast_prob (float): 单餐断食概率 (0-1), 默认0.2
+        all_day_fast_prob (float): 全天断食概率 (0-1), 默认0.05
+        binge_eating_prob (float): 每餐暴食概率 (0-1), 默认0.1（10%概率）
+
+    返回:
+        list: 包含热量摄入记录的列表，每个元素为包含"total_calories"和"datetime"的字典
+    """
+    # 输入验证（新增暴食概率验证）
+    if not (0 <= meal_fast_prob <= 1):
+        raise ValueError("单餐断食概率必须在0到1之间")
+    if not (0 <= all_day_fast_prob <= 1):
+        raise ValueError("全天断食概率必须在0到1之间")
+    if not (0 <= binge_eating_prob <= 1):
+        raise ValueError("暴食概率必须在0到1之间")
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+
+    output_data = []
+    current_date = start_date
+
+    # 定义三餐的配置：包含正常热量范围、暴食热量范围、时间范围
+    # 暴食热量设置为正常范围的1.5-3倍（符合实际暴食场景）
+    meal_configs = [
+        {
+            "time_range": (6, 9),
+            "normal_calorie": (200, 500),  # 正常早餐
+            "binge_calorie": (600, 1500),  # 暴食早餐（显著高于正常）
+        },
+        {
+            "time_range": (11, 14),
+            "normal_calorie": (300, 800),  # 正常午餐
+            "binge_calorie": (900, 2200),  # 暴食午餐
+        },
+        {
+            "time_range": (17, 20),
+            "normal_calorie": (200, 700),  # 正常晚餐
+            "binge_calorie": (800, 2000),  # 暴食晚餐
+        },
+    ]
+
+    tpl = {
+        "data_list": [
+            {"name": "碳水", "value": "0", "unit": "g"},
+            {"name": "蛋白质", "value": "0", "unit": "g"},
+            {"name": "脂肪", "value": "0", "unit": "g"},
+            {"name": "总热量", "value": "0", "unit": "千卡"},
+        ],
+        # "summary": input_data.get("summary", ""),
+        "meal_data": {
+            "total_calories": 0,
+            "dishes": [],
+            "intake_calories": 0,
+            # "type": meal_type,
+            "intake_rate": 100,
+        },
+    }
+
+    while current_date <= end_date:
+        # 检查是否全天断食
+        if random.random() < all_day_fast_prob:
+            current_date += timedelta(days=1)
+            continue
+
+        # 处理当天的每一餐
+        for config in meal_configs:
+            # 检查是否单餐断食（断食则跳过）
+            if random.random() < meal_fast_prob:
+                continue
+
+            # 生成随机时间（时分）
+            start_hour, end_hour = config["time_range"]
+            # hour = random.randint(start_hour, end_hour)
+            # minute = random.randint(0, 59)
+            # meal_datetime = datetime.combine(current_date, time(hour, minute))
+
+            # meal_datetime = timezone.make_aware(
+            #     meal_datetime,
+            #     timezone=timezone.get_current_timezone()  # 使用 Django 配置的时区（如 Asia/Shanghai）
+            # )
+            meal_datetime = tool_date.日期转随机北京时间(current_date)
+
+            # 确定热量范围：判断是否触发暴食
+            if random.random() < binge_eating_prob:
+                # 暴食场景：使用暴食热量范围
+                min_cal, max_cal = config["binge_calorie"]
+            else:
+                # 正常场景：使用正常热量范围
+                min_cal, max_cal = config["normal_calorie"]
+
+            # 生成随机热量（整数）
+            calories = random.randint(min_cal, max_cal)
+
+            # 添加到结果列表
+            # tmp = tpl.copy()
+            tmp = copy.deepcopy(tpl)
+            tmp["meal_data"]["total_calories"] = calories
+            tmp["meal_data"]["intake_calories"] = calories
+            tmp["data_list"][-1]["value"] = str(calories)
+            tmp["create_time"] = meal_datetime
+            tmp["是否测试数据"] = True
+            tmp["类型"] = "热量记录"
+            tmp["图片识别内容"] = "-"
+            output_data.append(tmp)
+
+        current_date += timedelta(days=1)
+
+    # 按时间排序
+    # output_data.sort(key=lambda x: x["datetime"])
     return output_data
 
 

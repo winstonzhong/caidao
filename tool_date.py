@@ -11,7 +11,8 @@ import time
 import numpy
 import pytz
 import re
-
+import random
+from django.utils import timezone
 
 TIME_ZONE_SHANGHAI = pytz.timezone("Asia/Shanghai")
 
@@ -517,6 +518,82 @@ def 日期列表转不重复的中文几月列表(dates: list[datetime.date]) ->
             months.append(key)
     return [item.split("-")[-1] for item in months]
 
+
+def 获取日期范围(
+    总天数: int, 截止日期: datetime.datetime = None
+) -> list[datetime.date]:
+    """
+    生成从开始日期到截止日期（包含两端）的所有日期列表
+
+    参数:
+        总天数 (int): 非负整数，用于计算开始日期（开始日期 = 截止日期 - 总天数）
+        截止日期 (datetime.datetime, 可选): 范围的结束日期，默认为None（此时使用当前日期时间）
+
+    返回:
+        list[datetime.date]: 包含开始日期到截止日期的所有日期（仅日期部分，不含时间）
+
+    异常:
+        TypeError: 若截止日期不是datetime.datetime类型（当提供时）
+        ValueError: 若总天数为负数或非整数
+    """
+    # 处理截止日期默认值（为None时使用当前时间）
+    if 截止日期 is None:
+        截止日期 = 今天()
+    elif not isinstance(截止日期, datetime.datetime):
+        截止日期 = to_date(截止日期)
+
+    # 输入参数验证
+    if not isinstance(截止日期, datetime.date):
+        raise TypeError("截止日期必须是 datetime.datetime 类型")
+
+    if not isinstance(总天数, int) or 总天数 < 0:
+        raise ValueError("总天数必须是非负整数")
+
+    # 计算开始日期（取日期部分，忽略时间）
+    开始日期 = (截止日期 - datetime.timedelta(days=总天数 - 1))
+    # 提取截止日期的日期部分（忽略时间）
+    结束日期 = 截止日期
+
+    # 生成范围内所有日期
+    日期列表 = []
+    当前日期 = 开始日期
+    while 当前日期 <= 结束日期:
+        日期列表.append(当前日期)
+        当前日期 += datetime.timedelta(days=1)
+
+    return 日期列表
+
+def 获取日周月年期范围(self, 类型:str, 截止日期: datetime.datetime = None):
+    总天数 = {
+        "日": 1,
+        "周": 7,
+        "月": 30,
+        "年": 365,
+    }.get(类型)
+    assert 总天数 is not None, f"未知的类型：{类型}"
+    return 获取日期范围(总天数, 截止日期)
+
+
+def 日期转随机北京时间(current_date, start_hour=0, end_hour=23):
+    """
+    给定一个日期，随机生成该日期对应的北京时间。
+
+    参数:
+    current_date: 需要转换的时间，可以是 datetime.date 或者 datetime.datetime 类型的对象。
+
+    返回:
+    一个 datetime.datetime 类型的对象，表示转换后的北京时间。
+
+    """
+    current_date = to_date(current_date)
+    hour = random.randint(start_hour, end_hour)
+    minute = random.randint(0, 59)
+    target = datetime.datetime.combine(current_date, datetime.time(hour, minute))
+
+    return timezone.make_aware(
+        target,
+        timezone=timezone.get_current_timezone()  # 使用 Django 配置的时区（如 Asia/Shanghai）
+    )
 
 if __name__ == "__main__":
     import doctest
