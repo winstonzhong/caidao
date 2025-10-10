@@ -563,6 +563,17 @@ def 获取日期范围(
 
     return 日期列表
 
+def 获取日周月年期范围(self, 类型:str, 截止日期: datetime.datetime = None):
+    总天数 = {
+        "日": 1,
+        "周": 7,
+        "月": 30,
+        "年": 365,
+    }.get(类型)
+    assert 总天数 is not None, f"未知的类型：{类型}"
+    return 获取日期范围(总天数, 截止日期)
+
+
 def 日期转随机北京时间(current_date, start_hour=0, end_hour=23):
     """
     给定一个日期，随机生成该日期对应的北京时间。
