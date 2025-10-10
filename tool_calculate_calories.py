@@ -1,3 +1,4 @@
+import tool_time
 WALK_TYPES = ["slow", "medium", "fast", "uphill"]
 
 WALK_TYPES_MAP = {
@@ -129,7 +130,7 @@ def calculate_step_length(
 
 
 def calculate_calories(
-    age: int, gender: str, height: float, weight: float, steps: int, walk_type: str
+    age: int, gender: str, height: float, weight: float, steps: int, walk_type: str, is_today:str=False, time_now:str='12:00:00'
 ) -> float:
     """
     计算不同行走类型的热量消耗
@@ -141,6 +142,7 @@ def calculate_calories(
     weight (float): 体重(公斤)
     steps (int): 行走步数
     walk_type (str): 行走类型("slow", "medium", "fast", "uphill")
+    is_today (bool): 是否是今天的记录
 
     返回:
     float: 估计的热量消耗(千卡)
@@ -156,6 +158,8 @@ def calculate_calories(
     2394.89
     >>> calculate_calories(25, "female", 160, 60, 6000, "medium")
     1697.05
+    >>> calculate_calories(25, "female", 160, 60, 6000, "medium", True, "12:00:00")
+    936.02
     """
 
     # 计算基础代谢率(BMR) - 使用Mifflin-St Jeor公式
@@ -191,6 +195,9 @@ def calculate_calories(
     # 使用BMR计算久坐活动消耗的热量
     # 久坐时的活动系数通常为1.2（轻度活动）
     sedentary_calories = bmr * (sedentary_time / 24) * 1.2
+    
+    if is_today:
+        sedentary_calories *= tool_time.time_str_to_percentage(time_now)
 
     # 全天总热量消耗
     total_calories = exercise_calories + sedentary_calories

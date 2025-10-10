@@ -563,7 +563,7 @@ def 获取日期范围(
 
     return 日期列表
 
-def 获取日周月年期范围(self, 类型:str, 截止日期: datetime.datetime = None):
+def 获取日周月年期范围(类型:str, 截止日期: datetime.datetime = None):
     总天数 = {
         "日": 1,
         "周": 7,
