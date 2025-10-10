@@ -4,9 +4,12 @@ import random
 
 from django.utils import timezone
 
+from tool_calculate_calories import calculate_calories
+
 import tool_date
 
 import copy
+
 
 def extract_value(value_str):
     """
@@ -263,6 +266,7 @@ def transform_food_data(input_data, meal_type=None):
 
 # {"data_list": [{"name": "微信步数", "value": 8984, "unit": "步"}, {"name": "强度", "value": "中速", "unit": ""}], "summary": "2025-10-09走了8984步"}
 
+
 def generate_wx_steps(start_date, end_date):
     """
     生成指定日期范围内的微信步数数据
@@ -279,13 +283,30 @@ def generate_wx_steps(start_date, end_date):
 
     output_data = []
     current_date = start_date
-    
-    tpl = {"data_list": [{"name": "微信步数", "value": 8984, "unit": "步"}, {"name": "强度", "value": "中速", "unit": ""}], "summary": ""}
+
+    tpl = {
+        "data_list": [
+            {"name": "微信步数", "value": 8984, "unit": "步"},
+            {"name": "强度", "value": "中速", "unit": ""},
+            {"name": "耗能", "value": 0, "unit": "千卡"}
+        ],
+        "summary": "",
+    }
 
     while current_date <= end_date:
         steps = random.randint(1000, 20000)
+        burned = calculate_calories(
+            40,
+            "male",
+            170,
+            90,
+            steps,
+            walk_type="medium",
+        )
+
         tmp = copy.deepcopy(tpl)
         tmp["data_list"][0]["value"] = steps
+        tmp["data_list"][-1]["value"] = burned
         tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
         tmp["是否测试数据"] = True
         tmp["类型"] = "微信步数"
@@ -406,6 +427,7 @@ def generate_calorie_intake(
             tmp = copy.deepcopy(tpl)
             tmp["meal_data"]["total_calories"] = calories
             tmp["meal_data"]["intake_calories"] = calories
+            tmp["data_list"][-1]["value"] = str(calories)
             tmp["create_time"] = meal_datetime
             tmp["是否测试数据"] = True
             tmp["类型"] = "热量记录"
