@@ -441,7 +441,71 @@ def generate_calorie_intake(
     return output_data
 
 
-# 使用示例
+def generate_heart_rate(start_date, end_date):
+    """
+    生成指定日期范围内的心率记录数据
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+
+    返回:
+        list: 包含心率记录的列表，每个元素为包含心率信息和日期时间的字典
+    """
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+
+    output_data = []
+    current_date = start_date
+
+    # 心率记录模板
+    tpl = {
+        "data_list": [
+            {"name": "心率", "value": 75, "unit": "次/分钟"},
+            {"name": "状态", "value": "静息", "unit": ""},
+            {"name": "测量时段", "value": "上午", "unit": ""}
+        ],
+        "summary": "",
+    }
+
+    # 可能的状态和测量时段选项
+    status_options = ["静息", "日常活动", "轻度运动后", "睡眠中"]
+    time_periods = ["凌晨", "上午", "下午", "晚上"]
+
+    while current_date <= end_date:
+        # 生成正常范围的心率（60-100次/分钟）
+        heart_rate = random.randint(60, 100)
+        # 随机选择状态（静息状态概率更高）
+        status = random.choices(
+            status_options,
+            weights=[0.5, 0.2, 0.1, 0.2],  # 权重分配，静息占比最高
+            k=1
+        )[0]
+        # 随机选择测量时段
+        time_period = random.choice(time_periods)
+
+        # 复制模板并替换数据
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = heart_rate
+        tmp["data_list"][1]["value"] = status
+        tmp["data_list"][2]["value"] = time_period
+        # 设置创建时间（使用工具函数生成随机北京时间）
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "心率记录"
+        tmp["图片识别内容"] = "-"
+
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
+
+
+
+
+
+
+
 if __name__ == "__main__":
     # 这里应该使用实际的input_data
     # 为简化示例，此处省略具体数据
