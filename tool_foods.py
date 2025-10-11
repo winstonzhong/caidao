@@ -1075,6 +1075,84 @@ def generate_weight(start_date, end_date, age, gender, initial_weight=None):
         current_date += timedelta(days=1)
 
     return output_data
+
+def generate_sleep_report(start_date, end_date):
+    """
+    生成指定日期范围内的睡眠报告数据
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+
+    返回:
+        list: 包含睡眠报告的列表，每个元素为包含睡眠时长、质量及日期时间的字典
+    """
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+
+    output_data = []
+    current_date = start_date
+
+    # 睡眠报告模板
+    tpl = {
+        "data_list": [
+            {"name": "实际睡眠时长", "value": "7.5", "unit": "小时"},
+            {"name": "睡眠质量", "value": "良好", "unit": ""}
+        ],
+        "summary": "睡眠时长充足，质量良好，建议保持规律作息。"
+    }
+
+    # 睡眠质量选项及对应时长范围（小时）
+    # 参考成人正常睡眠时长：7-9小时，偶尔6-10小时属正常波动
+    quality_options = ["优质", "良好", "一般", "较差"]
+    # 不同质量对应的时长范围（左闭右开）及概率权重
+    quality_params = {
+        "优质": {"range": (7.5, 9.0), "weight": 0.3},  # 时长充足且稳定
+        "良好": {"range": (7.0, 7.5), "weight": 0.3},   # 时长达标但略短
+        "一般": {"range": (6.0, 7.0), "weight": 0.2},   # 时长略不足
+        "较差": {"range": (5.0, 6.0), "weight": 0.2}    # 时长不足
+    }
+
+    while current_date <= end_date:
+        # 1. 随机选择睡眠质量（按权重分布）
+        quality = random.choices(
+            quality_options,
+            weights=[params["weight"] for params in quality_params.values()],
+            k=1
+        )[0]
+        
+        # 2. 根据睡眠质量生成对应范围的实际睡眠时长（保留1位小数）
+        min_hour, max_hour = quality_params[quality]["range"]
+        sleep_hour = round(random.uniform(min_hour, max_hour), 1)
+        
+        # 3. 生成summary（结合时长和质量）
+        if quality == "优质":
+            summary = f"实际睡眠时长{sleep_hour}小时，睡眠质量优质，深睡比例高，精力恢复良好。"
+        elif quality == "良好":
+            summary = f"实际睡眠时长{sleep_hour}小时，睡眠质量良好，基本满足身体恢复需求。"
+        elif quality == "一般":
+            summary = f"实际睡眠时长{sleep_hour}小时，睡眠质量一般，可能存在轻微夜间醒来，建议减少睡前使用电子设备。"
+        else:  # 较差
+            summary = f"实际睡眠时长{sleep_hour}小时，睡眠质量较差，时长不足，建议调整作息，保证充足睡眠。"
+
+        # 4. 复制模板并更新数据
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = f"{sleep_hour}"  # 睡眠时长（字符串类型，保留1位小数）
+        tmp["data_list"][1]["value"] = quality          # 睡眠质量
+        tmp["summary"] = summary
+        # 设置创建时间（对应睡眠结束时间，模拟早上记录）
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "睡眠报告"
+        tmp["图片识别内容"] = "-"
+
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
+
+
+
 if __name__ == "__main__":
     # 这里应该使用实际的input_data
     # 为简化示例，此处省略具体数据
