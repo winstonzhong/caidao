@@ -849,7 +849,7 @@ def generate_uric_acid(start_date, end_date):
 
     return output_data
 
-def generate_height(start_date, end_date, age, gender):
+def generate_height(start_date, end_date, age, gender, initial_height=None):
     """
     生成指定日期范围内的身高记录数据，随年龄和时间动态变化
 
@@ -893,7 +893,7 @@ def generate_height(start_date, end_date, age, gender):
             return random.randint(160, 180) if gender == "男" else random.randint(150, 170)  # 老年期
 
     # 2. 计算初始身高及每日变化量
-    initial_height = get_initial_height(age, gender)
+    initial_height = get_initial_height(age, gender) if initial_height is None else initial_height
     current_height = initial_height  # 记录当前身高，随时间动态更新
 
     # 确定阶段及每日身高变化率（cm/天）
@@ -958,7 +958,7 @@ def generate_height(start_date, end_date, age, gender):
     return output_data
 
 
-def generate_weight(start_date, end_date, age, gender):
+def generate_weight(start_date, end_date, age, gender, initial_weight=None):
     """
     生成指定日期范围内的体重记录数据，随年龄、性别和时间动态变化
 
@@ -1004,7 +1004,7 @@ def generate_weight(start_date, end_date, age, gender):
             return round(random.uniform(50.0, 80.0), 1) if gender == "男" else round(random.uniform(42.0, 65.0), 1)
 
     # 2. 确定体重变化阶段及每日变化率（kg/天）
-    initial_weight = get_initial_weight(age, gender)
+    initial_weight = get_initial_weight(age, gender) if initial_weight is None else initial_weight
     current_weight = initial_weight  # 记录当前体重，随时间动态更新
 
     if age < 18:
