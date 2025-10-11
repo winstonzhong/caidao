@@ -957,6 +957,124 @@ def generate_height(start_date, end_date, age, gender):
 
     return output_data
 
+
+def generate_weight(start_date, end_date, age, gender):
+    """
+    生成指定日期范围内的体重记录数据，随年龄、性别和时间动态变化
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+        age (int): 起始日期时的年龄（岁，需为非负整数）
+        gender (str): 性别，仅支持"男"或"女"
+
+    返回:
+        list: 包含体重记录的列表，每个元素为包含体重信息、状态和日期时间的字典
+    """
+    # 参数校验
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+    if not isinstance(age, int) or age < 0:
+        raise ValueError("年龄必须为非负整数")
+    if gender not in ["男", "女"]:
+        raise ValueError("性别仅支持'男'或'女'")
+
+    output_data = []
+    current_date = start_date
+    total_days = (end_date - start_date).days + 1  # 总记录天数
+
+    # 1. 根据年龄和性别生成初始体重（kg，参考通用生长标准）
+    def get_initial_weight(age, gender):
+        """基于年龄和性别生成合理的初始体重"""
+        if age <= 1:
+            return round(random.uniform(3.0, 10.0), 1)  # 婴儿期
+        elif 2 <= age <= 6:
+            return round(random.uniform(10.0, 25.0), 1)  # 幼儿期
+        elif 7 <= age <= 12:
+            # 儿童期：男略高于女
+            return round(random.uniform(22.0, 40.0), 1) if gender == "男" else round(random.uniform(20.0, 38.0), 1)
+        elif 13 <= age <= 18:
+            # 青春期：性别差异扩大
+            return round(random.uniform(45.0, 70.0), 1) if gender == "男" else round(random.uniform(40.0, 60.0), 1)
+        elif 19 <= age <= 60:
+            # 成年期：男性平均体重更高
+            return round(random.uniform(55.0, 85.0), 1) if gender == "男" else round(random.uniform(45.0, 70.0), 1)
+        else:  # 60岁以上
+            # 老年期：略低于成年期
+            return round(random.uniform(50.0, 80.0), 1) if gender == "男" else round(random.uniform(42.0, 65.0), 1)
+
+    # 2. 确定体重变化阶段及每日变化率（kg/天）
+    initial_weight = get_initial_weight(age, gender)
+    current_weight = initial_weight  # 记录当前体重，随时间动态更新
+
+    if age < 18:
+        stage = "生长期"
+        # 生长阶段：年龄越小增长越快
+        if age <= 3:
+            yearly_growth = random.uniform(2.0, 5.0)  # 婴幼儿期增长快
+        elif 4 <= age <= 12:
+            yearly_growth = random.uniform(1.5, 3.0)  # 儿童期稳定增长
+        else:  # 13-17岁青春期
+            # 青春期体重增长加速，男性略快
+            yearly_growth = random.uniform(3.0, 6.0) if gender == "男" else random.uniform(2.0, 5.0)
+        daily_change = yearly_growth / 365  # 日均增长量
+    elif 18 <= age <= 60:
+        stage = "稳定期"
+        # 成年期体重波动（受饮食/运动影响，±2-3kg/年）
+        yearly_fluctuation = random.uniform(-3.0, 3.0)
+        daily_change = yearly_fluctuation / 365  # 日均波动量
+    else:  # 60岁以上
+        stage = "老年期"
+        # 老年期体重可能轻微下降（年降0-2kg）或稳定
+        yearly_change = random.uniform(-2.0, 0.5)
+        daily_change = yearly_change / 365  # 日均变化量
+
+    # 3. 生成每日记录
+    tpl = {
+        "data_list": [
+            {"name": "体重", "value": initial_weight, "unit": "kg"},
+            {"name": "体重状态", "value": stage, "unit": ""}
+        ],
+        "summary": f"{stage}，体重变化在正常范围内。"
+    }
+
+    for day in range(total_days):
+        # 更新当前体重（保留1位小数，模拟测量精度）
+        current_weight += daily_change
+        
+        # 限制极端值（避免体重过低/过高）
+        if current_weight < 2.0:  # 最低体重限制（新生儿最低约2kg）
+            current_weight = 2.0
+        # 成年/老年期体重上限（粗略限制，避免不合理值）
+        max_weight = 120.0 if gender == "男" else 100.0
+        if current_weight > max_weight:
+            current_weight = max_weight
+
+        # 生成summary（结合阶段、性别、年龄和变化趋势）
+        if stage == "生长期":
+            yearly_rate = round(daily_change * 365, 1)
+            summary = f"{gender}，{age}岁（生长期），体重{current_weight}kg，年增长约{yearly_rate}kg，生长发育正常。"
+        elif stage == "稳定期":
+            yearly_fluct = round(daily_change * 365, 1)
+            trend = "增长" if yearly_fluct > 0 else "下降" if yearly_fluct < 0 else "稳定"
+            summary = f"{gender}，{age}岁（成年稳定期），体重{current_weight}kg，年{trend}{abs(yearly_fluct)}kg，属正常波动。"
+        else:  # 老年期
+            yearly_trend = round(daily_change * 365, 1)
+            summary = f"{gender}，{age}岁（老年期），体重{current_weight}kg，年变化{yearly_trend}kg，身体状态稳定。"
+
+        # 复制模板并更新数据
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = round(current_weight, 1)
+        tmp["summary"] = summary
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "体重记录"
+        tmp["图片识别内容"] = "-"
+
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
 if __name__ == "__main__":
     # 这里应该使用实际的input_data
     # 为简化示例，此处省略具体数据
