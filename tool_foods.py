@@ -2,7 +2,7 @@ from datetime import datetime, time, timedelta
 import re
 import random
 
-from django.utils import timezone
+# from django.utils import timezone
 
 from tool_calculate_calories import calculate_calories
 
@@ -441,7 +441,522 @@ def generate_calorie_intake(
     return output_data
 
 
-# 使用示例
+def generate_heart_rate(start_date, end_date):
+    """
+    生成指定日期范围内的心率记录数据
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+
+    返回:
+        list: 包含心率记录的列表，每个元素为包含心率信息和日期时间的字典
+    """
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+
+    output_data = []
+    current_date = start_date
+
+    # 心率记录模板
+    tpl = {
+        "data_list": [
+            {"name": "心率", "value": 75, "unit": "次/分钟"},
+            {"name": "状态", "value": "静息", "unit": ""},
+            {"name": "测量时段", "value": "上午", "unit": ""}
+        ],
+        "summary": "",
+    }
+
+    # 可能的状态和测量时段选项
+    status_options = ["静息", "日常活动", "轻度运动后", "睡眠中"]
+    time_periods = ["凌晨", "上午", "下午", "晚上"]
+
+    while current_date <= end_date:
+        # 生成正常范围的心率（60-100次/分钟）
+        heart_rate = random.randint(60, 100)
+        # 随机选择状态（静息状态概率更高）
+        status = random.choices(
+            status_options,
+            weights=[0.5, 0.2, 0.1, 0.2],  # 权重分配，静息占比最高
+            k=1
+        )[0]
+        # 随机选择测量时段
+        time_period = random.choice(time_periods)
+
+        # 复制模板并替换数据
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = heart_rate
+        tmp["data_list"][1]["value"] = status
+        tmp["data_list"][2]["value"] = time_period
+        # 设置创建时间（使用工具函数生成随机北京时间）
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "心率记录"
+        tmp["图片识别内容"] = "-"
+
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
+
+
+
+def generate_blood_oxygen(start_date, end_date):
+    """
+    生成指定日期范围内的血氧记录数据
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+
+    返回:
+        list: 包含血氧记录的列表，每个元素为包含血氧信息和日期时间的字典
+    """
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+
+    output_data = []
+    current_date = start_date
+
+    # 血氧记录模板
+    tpl = {
+        "data_list": [
+            {"name": "血氧饱和度", "value": 98, "unit": "%"},
+            {"name": "状态", "value": "静息", "unit": ""},
+            {"name": "测量环境", "value": "室内", "unit": ""}
+        ],
+        "summary": "",
+    }
+
+    # 可能的状态和测量环境选项
+    status_options = ["静息", "日常活动后", "睡眠中", "轻度运动后"]
+    environment_options = ["室内", "室外", "空调房", "运动后"]
+
+    while current_date <= end_date:
+        # 生成正常范围的血氧值（95%-100%）
+        oxygen_level = random.randint(95, 100)
+        # 随机选择状态（静息状态概率更高）
+        status = random.choices(
+            status_options,
+            weights=[0.5, 0.2, 0.2, 0.1],  # 权重分配，静息占比最高
+            k=1
+        )[0]
+        # 随机选择测量环境
+        environment = random.choice(environment_options)
+
+        # 复制模板并替换数据
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = oxygen_level
+        tmp["data_list"][1]["value"] = status
+        tmp["data_list"][2]["value"] = environment
+        # 设置创建时间（使用工具函数生成随机北京时间）
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "血氧记录"
+        tmp["图片识别内容"] = "-"
+
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
+
+
+
+
+def generate_blood_pressure(start_date, end_date):
+    """
+    生成指定日期范围内的血压记录数据
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+
+    返回:
+        list: 包含血压记录的列表，每个元素为包含血压信息和日期时间的字典
+    """
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+
+    output_data = []
+    current_date = start_date
+
+    # 血压记录模板（严格遵循指定格式）
+    tpl = {
+        "data_list": [
+            {"name": "高压", "value": 135, "unit": "mmHg"},
+            {"name": "低压", "value": 94, "unit": "mmHg"},
+            {"name": "脉搏", "value": 83, "unit": "次/分"}
+        ],
+        "summary": "血压正常，继续监测。"
+    }
+
+    while current_date <= end_date:
+        # 生成正常范围血压值：
+        # 高压（收缩压）：90-139 mmHg
+        # 低压（舒张压）：60-89 mmHg
+        # 脉搏：60-100 次/分
+        systolic = random.randint(90, 169)
+        diastolic = random.randint(60, 109)
+        pulse = random.randint(60, 100)
+
+        # 根据血压值生成summary描述
+        if systolic < 120 and diastolic < 80:
+            summary = "血压正常，继续保持健康生活方式。"
+        elif 120 <= systolic <= 139 or 80 <= diastolic <= 89:
+            summary = "血压处于正常高值，建议定期监测。"
+        else:
+            summary = "血压略高，注意休息，减少盐分摄入。"
+
+        # 复制模板并替换数据
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = systolic  # 高压值
+        tmp["data_list"][1]["value"] = diastolic  # 低压值
+        tmp["data_list"][2]["value"] = pulse  # 脉搏值
+        tmp["summary"] = summary  # 更新summary
+        # 设置创建时间（使用工具函数生成随机北京时间）
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "血压记录"
+        tmp["图片识别内容"] = "-"
+
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
+
+
+def generate_blood_glucose(start_date, end_date):
+    """
+    生成指定日期范围内的血糖记录数据
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+
+    返回:
+        list: 包含血糖记录的列表，每个元素为包含血糖信息、状态和日期时间的字典
+    """
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+
+    output_data = []
+    current_date = start_date
+
+    # 血糖记录模板（严格遵循补充后的数据格式）
+    tpl = {
+        "data_list": [
+            {"name": "血糖", "value": "6.4", "unit": "mmol/L"},
+            {"name": "状态", "value": "空腹", "unit": ""}  # 新增状态字段
+        ],
+        "summary": "血糖正常，继续保持。"
+    }
+
+    # 测量状态选项及对应正常范围（mmol/L）
+    measure_states = ["空腹", "餐后1小时", "餐后2小时", "随机"]
+    state_ranges = {
+        "空腹": (3.9, 6.1),
+        "餐后1小时": (3.9, 9.0),
+        "餐后2小时": (3.9, 7.8),
+        "随机": (3.9, 11.1)
+    }
+
+    while current_date <= end_date:
+        # 随机选择测量状态
+        state = random.choice(measure_states)
+        # 根据状态生成对应范围的血糖值（保留1位小数）
+        min_val, max_val = state_ranges[state]
+        glucose = round(random.uniform(min_val, max_val), 1)
+
+        # 根据血糖值和状态生成summary
+        if state == "空腹":
+            if glucose < 3.9:
+                summary = "空腹血糖偏低，建议适当补充碳水化合物。"
+            elif glucose <= 6.1:
+                summary = "空腹血糖正常，继续保持规律饮食。"
+            else:
+                summary = "空腹血糖略高，建议控制精制糖摄入并监测变化。"
+        elif state == "餐后2小时":
+            if glucose <= 7.8:
+                summary = "餐后2小时血糖正常，饮食搭配合理。"
+            else:
+                summary = "餐后2小时血糖略高，建议减少主食量并增加膳食纤维。"
+        else:  # 餐后1小时或随机
+            if glucose <= max_val:
+                summary = f"{state}血糖正常，继续保持健康生活方式。"
+            else:
+                summary = f"{state}血糖略高，注意控制饮食总量。"
+
+        # 复制模板并替换数据
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = f"{glucose}"  # 血糖值（字符串类型）
+        tmp["data_list"][1]["value"] = state  # 填充状态字段
+        tmp["summary"] = summary
+        # 设置创建时间
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "血糖记录"
+        tmp["图片识别内容"] = "-"
+
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
+
+
+
+
+def generate_respiratory_rate(start_date, end_date):
+    """
+    生成指定日期范围内的呼吸率记录数据
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+
+    返回:
+        list: 包含呼吸率记录的列表，每个元素为包含呼吸率信息、状态和日期时间的字典
+    """
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+
+    output_data = []
+    current_date = start_date
+
+    # 呼吸率记录模板
+    tpl = {
+        "data_list": [
+            {"name": "呼吸率", "value": 16, "unit": "次/分钟"},
+            {"name": "状态", "value": "静息", "unit": ""}
+        ],
+        "summary": "呼吸率正常，心肺功能稳定。"
+    }
+
+    # 可能的状态选项（影响呼吸率波动）
+    status_options = ["静息", "日常活动中", "睡眠中", "轻度运动后"]
+    # 不同状态下的呼吸率正常范围（次/分钟）
+    # 参考标准：成人静息12-20，活动后可能略高但通常不超过24
+    status_ranges = {
+        "静息": (12, 20),
+        "日常活动中": (14, 22),
+        "睡眠中": (12, 18),
+        "轻度运动后": (16, 24)
+    }
+
+    while current_date <= end_date:
+        # 随机选择状态（静息状态概率更高）
+        status = random.choices(
+            status_options,
+            weights=[0.5, 0.2, 0.2, 0.1],
+            k=1
+        )[0]
+        # 根据状态生成对应范围的呼吸率
+        min_rate, max_rate = status_ranges[status]
+        respiratory_rate = random.randint(min_rate, max_rate)
+
+        # 根据呼吸率和状态生成summary
+        if status == "静息":
+            if 12 <= respiratory_rate <= 20:
+                summary = "静息状态呼吸率正常，呼吸平稳。"
+            else:
+                summary = f"静息状态呼吸率{respiratory_rate}次/分钟，略偏离正常范围，建议观察。"
+        elif status == "睡眠中":
+            if 12 <= respiratory_rate <= 18:
+                summary = "睡眠中呼吸率正常，睡眠质量良好。"
+            else:
+                summary = f"睡眠中呼吸率{respiratory_rate}次/分钟，若伴随打鼾建议关注。"
+        else:  # 日常活动或轻度运动后
+            if respiratory_rate <= max_rate:
+                summary = f"{status}呼吸率正常，身体适应状态良好。"
+            else:
+                summary = f"{status}呼吸率{respiratory_rate}次/分钟，略快，建议适当休息。"
+
+        # 复制模板并替换数据
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = respiratory_rate  # 呼吸率值
+        tmp["data_list"][1]["value"] = status  # 状态值
+        tmp["summary"] = summary
+        # 设置创建时间
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "呼吸率记录"
+        tmp["图片识别内容"] = "-"
+
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
+
+
+def generate_uric_acid(start_date, end_date):
+    """
+    生成指定日期范围内的尿酸记录数据（不含性别字段）
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+
+    返回:
+        list: 包含尿酸记录的列表，每个元素为包含尿酸信息、状态和日期时间的字典
+    """
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+
+    output_data = []
+    current_date = start_date
+
+    # 尿酸记录模板（不含性别，新增测量状态字段）
+    tpl = {
+        "data_list": [
+            {"name": "尿酸", "value": 350, "unit": "μmol/L"},
+            {"name": "测量状态", "value": "空腹", "unit": ""}
+        ],
+        "summary": "尿酸值正常，建议保持低嘌呤饮食。"
+    }
+
+    # 测量状态选项（不影响数值范围，仅用于场景模拟）
+    status_options = ["空腹", "随机", "餐后2小时"]
+    # 通用成人尿酸正常范围（μmol/L）：150-420（覆盖男女常规正常区间）
+    uric_range = (150, 420)
+
+    while current_date <= end_date:
+        # 随机选择测量状态
+        status = random.choice(status_options)
+        # 生成正常范围的尿酸值（整数，符合检测精度）
+        uric_acid = random.randint(uric_range[0], uric_range[1])
+
+        # 根据尿酸值生成summary
+        if uric_acid < 150:
+            summary = f"尿酸值{uric_acid}μmol/L，略偏低，建议适当增加蛋白质摄入。"
+        elif 150 <= uric_acid <= 420:
+            summary = f"{status}尿酸值{uric_acid}μmol/L，在正常范围内，建议多饮水、少饮酒。"
+        else:
+            summary = f"尿酸值{uric_acid}μmol/L，略偏高，建议减少高嘌呤食物（如动物内脏、海鲜）摄入。"
+
+        # 复制模板并替换数据
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = uric_acid  # 尿酸值
+        tmp["data_list"][1]["value"] = status  # 测量状态
+        tmp["summary"] = summary
+        # 设置创建时间
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "尿酸记录"
+        tmp["图片识别内容"] = "-"
+
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
+
+def generate_height(start_date, end_date, age, gender):
+    """
+    生成指定日期范围内的身高记录数据，随年龄和时间动态变化
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+        age (int): 起始日期时的年龄（岁，需为正数）
+        gender (str): 性别，仅支持"男"或"女"
+
+    返回:
+        list: 包含身高记录的列表，每个元素为包含身高信息、生长状态和日期时间的字典
+    """
+    # 参数校验
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+    if not isinstance(age, int) or age < 0:
+        raise ValueError("年龄必须为非负整数")
+    if gender not in ["男", "女"]:
+        raise ValueError("性别仅支持'男'或'女'")
+
+    output_data = []
+    current_date = start_date
+    total_days = (end_date - start_date).days + 1  # 总记录天数
+
+    # 1. 定义年龄阶段及身高变化规则（基于通用生长规律）
+    # 阶段划分：生长阶段（0-18岁）、成年稳定阶段（18-60岁）、老年衰退阶段（60岁+）
+    # 初始身高参考范围（cm）：根据性别和初始年龄设定
+    def get_initial_height(age, gender):
+        """根据年龄和性别生成合理的初始身高"""
+        if age <= 1:
+            return random.randint(50, 75)  # 婴儿期
+        elif 2 <= age <= 6:
+            return random.randint(80, 120)  # 幼儿期
+        elif 7 <= age <= 12:
+            return random.randint(120, 155) if gender == "男" else random.randint(115, 150)  # 儿童期
+        elif 13 <= age <= 18:
+            return random.randint(150, 175) if gender == "男" else random.randint(145, 165)  # 青春期
+        elif 19 <= age <= 60:
+            return random.randint(165, 185) if gender == "男" else random.randint(155, 175)  # 成年期
+        else:  # 60岁以上
+            return random.randint(160, 180) if gender == "男" else random.randint(150, 170)  # 老年期
+
+    # 2. 计算初始身高及每日变化量
+    initial_height = get_initial_height(age, gender)
+    current_height = initial_height  # 记录当前身高，随时间动态更新
+
+    # 确定阶段及每日身高变化率（cm/天）
+    if age < 18:
+        stage = "生长期"
+        # 生长阶段：年龄越小增长越快（年增长率随年龄降低）
+        if age <= 3:
+            yearly_growth = random.uniform(10, 25)  # 婴幼儿期增长最快
+        elif 4 <= age <= 12:
+            yearly_growth = random.uniform(5, 8)    # 儿童期稳定增长
+        else:  # 13-17岁青春期
+            yearly_growth = random.uniform(6, 10) if gender == "男" else random.uniform(5, 8)
+        daily_change = yearly_growth / 365  # 日均增长量
+    elif 18 <= age <= 60:
+        stage = "稳定期"
+        # 成年期基本稳定，仅微小波动（±0.5cm/年）
+        daily_change = random.uniform(-0.5/365, 0.5/365)
+    else:  # 60岁以上
+        stage = "衰退期"
+        # 老年期逐年降低（年降低0.1-0.5cm）
+        yearly_decline = random.uniform(0.1, 0.5)
+        daily_change = -yearly_decline / 365  # 日均降低量
+
+    # 3. 生成每日记录
+    tpl = {
+        "data_list": [
+            {"name": "身高", "value": round(initial_height, 1), "unit": "cm"},
+            {"name": "生长状态", "value": stage, "unit": ""}
+        ],
+        "summary": f"{stage}，身高变化正常。"
+    }
+
+    for day in range(total_days):
+        # 更新当前身高（保留1位小数，模拟测量精度）
+        current_height += daily_change
+        # 老年期身高降低有上限（最多比初始值低5cm）
+        if stage == "衰退期" and current_height < (initial_height - 5):
+            current_height = initial_height - 5  # 限制最低值
+
+        # 生成summary（根据阶段和变化趋势）
+        if stage == "生长期":
+            growth_rate = round(daily_change * 365, 1)
+            summary = f"{gender}，{age}岁（生长期），身高{round(current_height, 1)}cm，年增长率约{growth_rate}cm，生长发育正常。"
+        elif stage == "稳定期":
+            summary = f"{gender}，{age}岁（成年稳定期），身高{round(current_height, 1)}cm，身体发育稳定。"
+        else:  # 衰退期
+            decline_rate = round(-daily_change * 365, 1)
+            summary = f"{gender}，{age}岁（老年衰退期），身高{round(current_height, 1)}cm，年降低约{decline_rate}cm，在正常范围内。"
+
+        # 复制模板并更新数据
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = round(current_height, 1)
+        tmp["summary"] = summary
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "身高记录"
+        tmp["图片识别内容"] = "-"
+
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
+
 if __name__ == "__main__":
     # 这里应该使用实际的input_data
     # 为简化示例，此处省略具体数据
