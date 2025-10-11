@@ -88,6 +88,9 @@ def shanghai_time_now_str():
     return shanghai_time_now().strftime("%H:%M:%S")
 
 
+def 北京月日():
+    return shanghai_time_now().strftime("%m-%d")
+
 def time_now():
     return shanghai_time_now_str()
 

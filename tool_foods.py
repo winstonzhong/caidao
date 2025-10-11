@@ -563,6 +563,230 @@ def generate_blood_oxygen(start_date, end_date):
 
 
 
+
+def generate_blood_pressure(start_date, end_date):
+    """
+    生成指定日期范围内的血压记录数据
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+
+    返回:
+        list: 包含血压记录的列表，每个元素为包含血压信息和日期时间的字典
+    """
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+
+    output_data = []
+    current_date = start_date
+
+    # 血压记录模板（严格遵循指定格式）
+    tpl = {
+        "data_list": [
+            {"name": "高压", "value": 135, "unit": "mmHg"},
+            {"name": "低压", "value": 94, "unit": "mmHg"},
+            {"name": "脉搏", "value": 83, "unit": "次/分"}
+        ],
+        "summary": "血压正常，继续监测。"
+    }
+
+    while current_date <= end_date:
+        # 生成正常范围血压值：
+        # 高压（收缩压）：90-139 mmHg
+        # 低压（舒张压）：60-89 mmHg
+        # 脉搏：60-100 次/分
+        systolic = random.randint(90, 169)
+        diastolic = random.randint(60, 109)
+        pulse = random.randint(60, 100)
+
+        # 根据血压值生成summary描述
+        if systolic < 120 and diastolic < 80:
+            summary = "血压正常，继续保持健康生活方式。"
+        elif 120 <= systolic <= 139 or 80 <= diastolic <= 89:
+            summary = "血压处于正常高值，建议定期监测。"
+        else:
+            summary = "血压略高，注意休息，减少盐分摄入。"
+
+        # 复制模板并替换数据
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = systolic  # 高压值
+        tmp["data_list"][1]["value"] = diastolic  # 低压值
+        tmp["data_list"][2]["value"] = pulse  # 脉搏值
+        tmp["summary"] = summary  # 更新summary
+        # 设置创建时间（使用工具函数生成随机北京时间）
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "血压记录"
+        tmp["图片识别内容"] = "-"
+
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
+
+
+def generate_blood_glucose(start_date, end_date):
+    """
+    生成指定日期范围内的血糖记录数据
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+
+    返回:
+        list: 包含血糖记录的列表，每个元素为包含血糖信息、状态和日期时间的字典
+    """
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+
+    output_data = []
+    current_date = start_date
+
+    # 血糖记录模板（严格遵循补充后的数据格式）
+    tpl = {
+        "data_list": [
+            {"name": "血糖", "value": "6.4", "unit": "mmol/L"},
+            {"name": "状态", "value": "空腹", "unit": ""}  # 新增状态字段
+        ],
+        "summary": "血糖正常，继续保持。"
+    }
+
+    # 测量状态选项及对应正常范围（mmol/L）
+    measure_states = ["空腹", "餐后1小时", "餐后2小时", "随机"]
+    state_ranges = {
+        "空腹": (3.9, 6.1),
+        "餐后1小时": (3.9, 9.0),
+        "餐后2小时": (3.9, 7.8),
+        "随机": (3.9, 11.1)
+    }
+
+    while current_date <= end_date:
+        # 随机选择测量状态
+        state = random.choice(measure_states)
+        # 根据状态生成对应范围的血糖值（保留1位小数）
+        min_val, max_val = state_ranges[state]
+        glucose = round(random.uniform(min_val, max_val), 1)
+
+        # 根据血糖值和状态生成summary
+        if state == "空腹":
+            if glucose < 3.9:
+                summary = "空腹血糖偏低，建议适当补充碳水化合物。"
+            elif glucose <= 6.1:
+                summary = "空腹血糖正常，继续保持规律饮食。"
+            else:
+                summary = "空腹血糖略高，建议控制精制糖摄入并监测变化。"
+        elif state == "餐后2小时":
+            if glucose <= 7.8:
+                summary = "餐后2小时血糖正常，饮食搭配合理。"
+            else:
+                summary = "餐后2小时血糖略高，建议减少主食量并增加膳食纤维。"
+        else:  # 餐后1小时或随机
+            if glucose <= max_val:
+                summary = f"{state}血糖正常，继续保持健康生活方式。"
+            else:
+                summary = f"{state}血糖略高，注意控制饮食总量。"
+
+        # 复制模板并替换数据
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = f"{glucose}"  # 血糖值（字符串类型）
+        tmp["data_list"][1]["value"] = state  # 填充状态字段
+        tmp["summary"] = summary
+        # 设置创建时间
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "血糖记录"
+        tmp["图片识别内容"] = "-"
+
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
+
+
+
+
+def generate_respiratory_rate(start_date, end_date):
+    """
+    生成指定日期范围内的呼吸率记录数据
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+
+    返回:
+        list: 包含呼吸率记录的列表，每个元素为包含呼吸率信息、状态和日期时间的字典
+    """
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+
+    output_data = []
+    current_date = start_date
+
+    # 呼吸率记录模板
+    tpl = {
+        "data_list": [
+            {"name": "呼吸率", "value": 16, "unit": "次/分钟"},
+            {"name": "状态", "value": "静息", "unit": ""}
+        ],
+        "summary": "呼吸率正常，心肺功能稳定。"
+    }
+
+    # 可能的状态选项（影响呼吸率波动）
+    status_options = ["静息", "日常活动中", "睡眠中", "轻度运动后"]
+    # 不同状态下的呼吸率正常范围（次/分钟）
+    # 参考标准：成人静息12-20，活动后可能略高但通常不超过24
+    status_ranges = {
+        "静息": (12, 20),
+        "日常活动中": (14, 22),
+        "睡眠中": (12, 18),
+        "轻度运动后": (16, 24)
+    }
+
+    while current_date <= end_date:
+        # 随机选择状态（静息状态概率更高）
+        status = random.choices(
+            status_options,
+            weights=[0.5, 0.2, 0.2, 0.1],
+            k=1
+        )[0]
+        # 根据状态生成对应范围的呼吸率
+        min_rate, max_rate = status_ranges[status]
+        respiratory_rate = random.randint(min_rate, max_rate)
+
+        # 根据呼吸率和状态生成summary
+        if status == "静息":
+            if 12 <= respiratory_rate <= 20:
+                summary = "静息状态呼吸率正常，呼吸平稳。"
+            else:
+                summary = f"静息状态呼吸率{respiratory_rate}次/分钟，略偏离正常范围，建议观察。"
+        elif status == "睡眠中":
+            if 12 <= respiratory_rate <= 18:
+                summary = "睡眠中呼吸率正常，睡眠质量良好。"
+            else:
+                summary = f"睡眠中呼吸率{respiratory_rate}次/分钟，若伴随打鼾建议关注。"
+        else:  # 日常活动或轻度运动后
+            if respiratory_rate <= max_rate:
+                summary = f"{status}呼吸率正常，身体适应状态良好。"
+            else:
+                summary = f"{status}呼吸率{respiratory_rate}次/分钟，略快，建议适当休息。"
+
+        # 复制模板并替换数据
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = respiratory_rate  # 呼吸率值
+        tmp["data_list"][1]["value"] = status  # 状态值
+        tmp["summary"] = summary
+        # 设置创建时间
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "呼吸率记录"
+        tmp["图片识别内容"] = "-"
+
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
+
 if __name__ == "__main__":
     # 这里应该使用实际的input_data
     # 为简化示例，此处省略具体数据
