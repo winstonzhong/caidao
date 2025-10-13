@@ -405,11 +405,9 @@ class SteadyDevice(DummyDevice):
             根据url的文件名匹配robot temp下的文件
             并且将此文件拷贝至download目录
             """
-            fpath = tool_static.链接到路径(url, base_dir="/sdcard/Download")
-            src = f"/sdcard/Download/{os.path.basename(fpath)}"
-            # src = self.adb.match_file_in_robot_temp(url)
+            src = f"/sdcard/Download/{os.path.basename(url)}"
+            fpath = tool_static.存储链接到文件(url, suffix=None, 返回路径=True, fpath=None)
             print("src:", src)
-            # self.adb.copy_file_to_download(src)
             time.sleep(0.1)
             self.adb.broadcast(src)
             return src
