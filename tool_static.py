@@ -150,8 +150,10 @@ def 路径到链接(fpath, base_dir=BASE_DIR_56T):
 
 def 存储文件(content, suffix, 返回路径=False, base_dir=BASE_DIR_56T):
     fpath = 得到一个不重复的文件路径(f".{suffix}")
+    print("保存文件:", fpath)
     with open(fpath, "wb") as fp:
         fp.write(content)
+    print('保存完毕===========================')
     return 路径到链接(fpath, base_dir=base_dir) if not 返回路径 else fpath
 
 
