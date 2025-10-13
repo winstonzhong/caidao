@@ -148,8 +148,10 @@ def 路径到链接(fpath, base_dir=BASE_DIR_56T):
     return fpath.replace("\\", "/").replace(base_dir.replace("\\", "/"), BASE_URL_56T)
 
 
-def 存储文件(content, suffix, 返回路径=False, base_dir=BASE_DIR_56T):
-    fpath = 得到一个不重复的文件路径(f".{suffix}")
+def 存储文件(content, suffix=None, 返回路径=False, base_dir=BASE_DIR_56T, fpath=None):
+    if fpath is None:
+        assert suffix, "suffix is empty!!!"
+        fpath = 得到一个不重复的文件路径(f".{suffix}")
     print("保存文件:", fpath)
     with open(fpath, "wb") as fp:
         fp.write(content)
@@ -167,8 +169,8 @@ def 转存文件(fpath):
     return 存储文件(content, 得到后缀(fpath), 返回路径=True)
 
 
-def 存储链接到文件(url, suffix, 返回路径=False, base_dir=BASE_DIR_56T):
-    return 存储文件(rget(url).content, suffix, 返回路径, base_dir=base_dir)
+def 存储链接到文件(url, suffix, 返回路径=False, base_dir=BASE_DIR_56T, fpath=None):
+    return 存储文件(rget(url).content, suffix, 返回路径, base_dir=base_dir, fpath=fpath)
 
 
 def 存储链接到文件_线程版(
@@ -207,8 +209,10 @@ def 链接到路径(url, base_dir=BASE_DIR_56T, safe=True):
         elif safe:
             raise ValueError(f"{url}不是56T的链接")
     else:
-        print("downloading:", url)
-        return 存储链接到文件(url, 得到后缀(url), 返回路径=True)
+        # print("downloading:", url)
+        # return 存储链接到文件(url, 得到后缀(url), 返回路径=True)
+        raise ValueError(f"{url}不是56T的链接")
+
 
 
 def 链接到相对路径(url, base_dir=BASE_DIR_56T):
