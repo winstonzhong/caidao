@@ -406,6 +406,7 @@ class SteadyDevice(DummyDevice):
             并且将此文件拷贝至download目录
             """
             src = self.adb.match_file_in_robot_temp(url)
+            print("src:", src)
             self.adb.copy_file_to_download(src)
 
     @property

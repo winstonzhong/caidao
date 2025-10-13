@@ -376,7 +376,7 @@ class BaseAdb(object):
 
     PICTURES_DIR = "/sdcard/Pictures"
 
-    ROBOT_TMP = "/sdcard/robot/temp"
+    ROBOT_TMP = DIR_UPLOAD#"/sdcard/robot/temp"
 
     if not os.path.lexists(DIR_CFG):
         os.makedirs(DIR_CFG, exist_ok=True)
