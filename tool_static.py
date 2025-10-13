@@ -209,9 +209,9 @@ def 链接到路径(url, base_dir=BASE_DIR_56T, safe=True):
         elif safe:
             raise ValueError(f"{url}不是56T的链接")
     else:
-        # print("downloading:", url)
-        # return 存储链接到文件(url, 得到后缀(url), 返回路径=True)
-        raise ValueError(f"{url}不是56T的链接")
+        print("downloading:", url)
+        return 存储链接到文件(url, 得到后缀(url), 返回路径=True)
+
 
 
 
