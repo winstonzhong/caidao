@@ -406,7 +406,7 @@ class SteadyDevice(DummyDevice):
             并且将此文件拷贝至download目录
             """
             src = f"/sdcard/Download/{os.path.basename(url)}"
-            fpath = tool_static.存储链接到文件(url, suffix=None, 返回路径=True, fpath=None)
+            fpath = tool_static.存储链接到文件(url, suffix=None, 返回路径=True, fpath=src)
             print("src:", src)
             time.sleep(0.1)
             self.adb.broadcast(src)
