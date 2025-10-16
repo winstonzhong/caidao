@@ -14,9 +14,10 @@ from django.utils import timezone
 import pandas
 import pytz
 
-from tool_env import is_string
+from tool_env import is_string, to_float
 from tool_ffmpeg import to_seconds
 import numpy
+from decimal import Decimal, InvalidOperation
 
 
 # from django.utils import timezone as datetime
@@ -608,6 +609,141 @@ def time_str_to_percentage(time_str: str, decimal_places: int = 2) -> float:
     # 3. 计算百分比并保留指定小数位数
     percentage = (current_seconds / total_seconds_per_day)
     return round(percentage, decimal_places)
+
+
+def 中文时长描述转秒数(描述):
+    """
+    将中文时长描述转换为对应的秒数。
+
+    >>> 中文时长描述转秒数('3小时')
+    10800
+    >>> 中文时长描述转秒数('45分钟')
+    2700
+    >>> 中文时长描述转秒数('50秒')
+    50
+    >>> 中文时长描述转秒数('2小时10分钟')
+    7800
+    >>> 中文时长描述转秒数('1小时30秒')
+    3630
+    >>> 中文时长描述转秒数('5分钟20秒')
+    320
+    >>> 中文时长描述转秒数('1小时2分钟3秒')
+    3723
+    >>> 中文时长描述转秒数('10小时20分钟30秒')
+    37230
+    >>> 中文时长描述转秒数('0小时5分钟')
+    300
+    >>> 中文时长描述转秒数('3小时0分钟10秒')
+    10810
+    >>> 中文时长描述转秒数('10分钟1小时')
+    4200
+    >>> 中文时长描述转秒数('5秒2小时3分钟')
+    7385
+    >>> 中文时长描述转秒数('0秒')
+    0
+    >>> 中文时长描述转秒数('')
+    0
+    >>> 中文时长描述转秒数('123')
+    0
+    """
+    小时 = 0
+    分钟 = 0
+    秒 = 0
+
+    # 提取小时数值
+    匹配小时 = re.search(r'(\d+)小时', 描述)
+    if 匹配小时:
+        小时 = int(匹配小时.group(1))
+
+    # 提取分钟数值
+    匹配分钟 = re.search(r'(\d+)分钟', 描述)
+    if 匹配分钟:
+        分钟 = int(匹配分钟.group(1))
+
+    # 提取秒数值
+    匹配秒 = re.search(r'(\d+)秒', 描述)
+    if 匹配秒:
+        秒 = int(匹配秒.group(1))
+
+    # 计算总秒数
+    return 小时 * 3600 + 分钟 * 60 + 秒
+
+
+
+def 中文时长描述转小时数(描述, 保留小数点位数=None):
+    """
+    将中文时长描述转换为对应的小时数（使用decimal保证精度），并支持指定保留小数点位数。
+
+    参数:
+        描述: 中文时长描述字符串（如'5小时19分钟'、'30秒'等）
+        保留小数点位数: 非负整数或None，指定返回结果保留的小数位数，
+                        默认为None（返回高精度原始值）
+
+    返回:
+        转换后的小时数（decimal.Decimal类型）
+
+    >>> 中文时长描述转小时数('3小时')
+    Decimal('3')
+    >>> 中文时长描述转小时数('60分钟')
+    Decimal('1')
+    >>> 中文时长描述转小时数('3600秒')
+    Decimal('1')
+    >>> 中文时长描述转小时数('1小时30分钟')  # 1.5小时
+    Decimal('1.5')
+    >>> 中文时长描述转小时数('2小时15分钟30秒')  # 2 + 15/60 + 30/3600 = 2.258333...
+    Decimal('2.258333333333333333333333333')
+    >>> 中文时长描述转小时数('0秒')
+    Decimal('0')
+    >>> 中文时长描述转小时数('')
+    Decimal('0')
+    >>> 中文时长描述转小时数('123')  # 无有效单位
+    Decimal('123')
+    >>> 中文时长描述转小时数('30分钟', 保留小数点位数=0)  # 0.5四舍五入为1
+    Decimal('0')
+    >>> 中文时长描述转小时数('45分钟', 保留小数点位数=1)  # 0.75保留1位→0.8
+    Decimal('0.8')
+    >>> 中文时长描述转小时数('1小时20分钟', 保留小数点位数=2)  # 1.333...保留2位→1.33
+    Decimal('1.33')
+    >>> 中文时长描述转小时数('5秒', 保留小数点位数=5)  # 5/3600≈0.0013888...保留5位→0.00139
+    Decimal('0.00139')
+    >>> 中文时长描述转小时数('10分钟', 保留小数点位数=-1)  # 无效参数（负数）
+    Traceback (most recent call last):
+    ...
+    ValueError: 保留小数点位数必须是非负整数或None
+    >>> 中文时长描述转小时数('1小时', 保留小数点位数=2.5)  # 无效参数（非整数）
+    Traceback (most recent call last):
+    ...
+    ValueError: 保留小数点位数必须是非负整数或None
+    """
+    
+    小时数 = to_float(描述)
+    if 小时数 is None:
+        # 1. 调用原函数获取总秒数
+        总秒数 = 中文时长描述转秒数(描述)
+        
+        # 2. 转换为小时数（使用Decimal保证高精度）
+        小时数 = Decimal(总秒数) / Decimal(3600)  # 除法用Decimal避免精度损失
+    else:
+        # 直接使用传入的数字作为小时数
+        小时数 = Decimal(小时数)
+    
+    # 3. 处理保留小数点位数
+    if 保留小数点位数 is None:
+        return 小时数
+    else:
+        # 校验参数合法性
+        if not isinstance(保留小数点位数, int) or 保留小数点位数 < 0:
+            raise ValueError("保留小数点位数必须是非负整数或None")
+        
+        # 构造精度格式（如保留2位→'0.00'）
+        精度格式 = Decimal('0.' + '0' * 保留小数点位数)
+        
+        # 使用quantize进行精确四舍五入（比round更可靠的十进制处理）
+        try:
+            return 小时数.quantize(精度格式)
+        except InvalidOperation as e:
+            raise ValueError(f"无法保留{保留小数点位数}位小数：{e}")
+
 
 if __name__ == "__main__":
     import doctest
