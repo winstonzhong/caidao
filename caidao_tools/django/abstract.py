@@ -239,6 +239,10 @@ class 抽象任务数据(BaseModel):
             ):
                 self.设置为处理中()
                 return True
+        else:
+            print(f"{self} 队列已满")
+            self.processing = 0
+            self.save()
         return False
 
     # @classmethod
