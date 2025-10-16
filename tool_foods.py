@@ -11,6 +11,33 @@ import tool_date
 import copy
 
 
+def health_status(score):
+    """
+    根据健康指数返回对应的文字状态
+
+    参数:
+        score (int/float): 健康指数，范围0-100
+
+    返回:
+        str: 对应的健康状态文字描述
+    """
+    # 验证输入有效性
+    if not (0 <= score <= 100):
+        raise ValueError("健康指数必须在0到100之间")
+
+    # 定义状态区间及对应描述（由低到高）
+    if score < 20:
+        return "严重不健康"
+    elif score < 40:
+        return "不健康"
+    elif score < 60:
+        return "一般"
+    elif score < 80:
+        return "健康"
+    else:
+        return "非常健康"
+
+
 def extract_value(value_str):
     """
     从字符串中提取数值部分，去除单位后缀
@@ -288,7 +315,7 @@ def generate_wx_steps(start_date, end_date):
         "data_list": [
             {"name": "微信步数", "value": 8984, "unit": "步"},
             {"name": "强度", "value": "中速", "unit": ""},
-            {"name": "耗能", "value": 0, "unit": "千卡"}
+            {"name": "耗能", "value": 0, "unit": "千卡"},
         ],
         "summary": "",
     }
@@ -463,7 +490,7 @@ def generate_heart_rate(start_date, end_date):
         "data_list": [
             {"name": "心率", "value": 75, "unit": "次/分钟"},
             {"name": "状态", "value": "静息", "unit": ""},
-            {"name": "测量时段", "value": "上午", "unit": ""}
+            {"name": "测量时段", "value": "上午", "unit": ""},
         ],
         "summary": "",
     }
@@ -477,9 +504,7 @@ def generate_heart_rate(start_date, end_date):
         heart_rate = random.randint(60, 100)
         # 随机选择状态（静息状态概率更高）
         status = random.choices(
-            status_options,
-            weights=[0.5, 0.2, 0.1, 0.2],  # 权重分配，静息占比最高
-            k=1
+            status_options, weights=[0.5, 0.2, 0.1, 0.2], k=1  # 权重分配，静息占比最高
         )[0]
         # 随机选择测量时段
         time_period = random.choice(time_periods)
@@ -499,7 +524,6 @@ def generate_heart_rate(start_date, end_date):
         current_date += timedelta(days=1)
 
     return output_data
-
 
 
 def generate_blood_oxygen(start_date, end_date):
@@ -524,7 +548,7 @@ def generate_blood_oxygen(start_date, end_date):
         "data_list": [
             {"name": "血氧饱和度", "value": 98, "unit": "%"},
             {"name": "状态", "value": "静息", "unit": ""},
-            {"name": "测量环境", "value": "室内", "unit": ""}
+            {"name": "测量环境", "value": "室内", "unit": ""},
         ],
         "summary": "",
     }
@@ -538,9 +562,7 @@ def generate_blood_oxygen(start_date, end_date):
         oxygen_level = random.randint(95, 100)
         # 随机选择状态（静息状态概率更高）
         status = random.choices(
-            status_options,
-            weights=[0.5, 0.2, 0.2, 0.1],  # 权重分配，静息占比最高
-            k=1
+            status_options, weights=[0.5, 0.2, 0.2, 0.1], k=1  # 权重分配，静息占比最高
         )[0]
         # 随机选择测量环境
         environment = random.choice(environment_options)
@@ -560,8 +582,6 @@ def generate_blood_oxygen(start_date, end_date):
         current_date += timedelta(days=1)
 
     return output_data
-
-
 
 
 def generate_blood_pressure(start_date, end_date):
@@ -586,9 +606,9 @@ def generate_blood_pressure(start_date, end_date):
         "data_list": [
             {"name": "高压", "value": 135, "unit": "mmHg"},
             {"name": "低压", "value": 94, "unit": "mmHg"},
-            {"name": "脉搏", "value": 83, "unit": "次/分"}
+            {"name": "脉搏", "value": 83, "unit": "次/分"},
         ],
-        "summary": "血压正常，继续监测。"
+        "summary": "血压正常，继续监测。",
     }
 
     while current_date <= end_date:
@@ -647,9 +667,9 @@ def generate_blood_glucose(start_date, end_date):
     tpl = {
         "data_list": [
             {"name": "血糖", "value": "6.4", "unit": "mmol/L"},
-            {"name": "状态", "value": "空腹", "unit": ""}  # 新增状态字段
+            {"name": "状态", "value": "空腹", "unit": ""},  # 新增状态字段
         ],
-        "summary": "血糖正常，继续保持。"
+        "summary": "血糖正常，继续保持。",
     }
 
     # 测量状态选项及对应正常范围（mmol/L）
@@ -658,7 +678,7 @@ def generate_blood_glucose(start_date, end_date):
         "空腹": (3.9, 6.1),
         "餐后1小时": (3.9, 9.0),
         "餐后2小时": (3.9, 7.8),
-        "随机": (3.9, 11.1)
+        "随机": (3.9, 11.1),
     }
 
     while current_date <= end_date:
@@ -704,8 +724,6 @@ def generate_blood_glucose(start_date, end_date):
     return output_data
 
 
-
-
 def generate_respiratory_rate(start_date, end_date):
     """
     生成指定日期范围内的呼吸率记录数据
@@ -727,9 +745,9 @@ def generate_respiratory_rate(start_date, end_date):
     tpl = {
         "data_list": [
             {"name": "呼吸率", "value": 16, "unit": "次/分钟"},
-            {"name": "状态", "value": "静息", "unit": ""}
+            {"name": "状态", "value": "静息", "unit": ""},
         ],
-        "summary": "呼吸率正常，心肺功能稳定。"
+        "summary": "呼吸率正常，心肺功能稳定。",
     }
 
     # 可能的状态选项（影响呼吸率波动）
@@ -740,16 +758,12 @@ def generate_respiratory_rate(start_date, end_date):
         "静息": (12, 20),
         "日常活动中": (14, 22),
         "睡眠中": (12, 18),
-        "轻度运动后": (16, 24)
+        "轻度运动后": (16, 24),
     }
 
     while current_date <= end_date:
         # 随机选择状态（静息状态概率更高）
-        status = random.choices(
-            status_options,
-            weights=[0.5, 0.2, 0.2, 0.1],
-            k=1
-        )[0]
+        status = random.choices(status_options, weights=[0.5, 0.2, 0.2, 0.1], k=1)[0]
         # 根据状态生成对应范围的呼吸率
         min_rate, max_rate = status_ranges[status]
         respiratory_rate = random.randint(min_rate, max_rate)
@@ -769,7 +783,9 @@ def generate_respiratory_rate(start_date, end_date):
             if respiratory_rate <= max_rate:
                 summary = f"{status}呼吸率正常，身体适应状态良好。"
             else:
-                summary = f"{status}呼吸率{respiratory_rate}次/分钟，略快，建议适当休息。"
+                summary = (
+                    f"{status}呼吸率{respiratory_rate}次/分钟，略快，建议适当休息。"
+                )
 
         # 复制模板并替换数据
         tmp = copy.deepcopy(tpl)
@@ -809,9 +825,9 @@ def generate_uric_acid(start_date, end_date):
     tpl = {
         "data_list": [
             {"name": "尿酸", "value": 350, "unit": "μmol/L"},
-            {"name": "测量状态", "value": "空腹", "unit": ""}
+            {"name": "测量状态", "value": "空腹", "unit": ""},
         ],
-        "summary": "尿酸值正常，建议保持低嘌呤饮食。"
+        "summary": "尿酸值正常，建议保持低嘌呤饮食。",
     }
 
     # 测量状态选项（不影响数值范围，仅用于场景模拟）
@@ -829,7 +845,9 @@ def generate_uric_acid(start_date, end_date):
         if uric_acid < 150:
             summary = f"尿酸值{uric_acid}μmol/L，略偏低，建议适当增加蛋白质摄入。"
         elif 150 <= uric_acid <= 420:
-            summary = f"{status}尿酸值{uric_acid}μmol/L，在正常范围内，建议多饮水、少饮酒。"
+            summary = (
+                f"{status}尿酸值{uric_acid}μmol/L，在正常范围内，建议多饮水、少饮酒。"
+            )
         else:
             summary = f"尿酸值{uric_acid}μmol/L，略偏高，建议减少高嘌呤食物（如动物内脏、海鲜）摄入。"
 
@@ -848,6 +866,7 @@ def generate_uric_acid(start_date, end_date):
         current_date += timedelta(days=1)
 
     return output_data
+
 
 def generate_height(start_date, end_date, age, gender, initial_height=None):
     """
@@ -884,16 +903,26 @@ def generate_height(start_date, end_date, age, gender, initial_height=None):
         elif 2 <= age <= 6:
             return random.randint(80, 120)  # 幼儿期
         elif 7 <= age <= 12:
-            return random.randint(120, 155) if gender == "男" else random.randint(115, 150)  # 儿童期
+            return (
+                random.randint(120, 155) if gender == "男" else random.randint(115, 150)
+            )  # 儿童期
         elif 13 <= age <= 18:
-            return random.randint(150, 175) if gender == "男" else random.randint(145, 165)  # 青春期
+            return (
+                random.randint(150, 175) if gender == "男" else random.randint(145, 165)
+            )  # 青春期
         elif 19 <= age <= 60:
-            return random.randint(165, 185) if gender == "男" else random.randint(155, 175)  # 成年期
+            return (
+                random.randint(165, 185) if gender == "男" else random.randint(155, 175)
+            )  # 成年期
         else:  # 60岁以上
-            return random.randint(160, 180) if gender == "男" else random.randint(150, 170)  # 老年期
+            return (
+                random.randint(160, 180) if gender == "男" else random.randint(150, 170)
+            )  # 老年期
 
     # 2. 计算初始身高及每日变化量
-    initial_height = get_initial_height(age, gender) if initial_height is None else initial_height
+    initial_height = (
+        get_initial_height(age, gender) if initial_height is None else initial_height
+    )
     current_height = initial_height  # 记录当前身高，随时间动态更新
 
     # 确定阶段及每日身高变化率（cm/天）
@@ -903,14 +932,16 @@ def generate_height(start_date, end_date, age, gender, initial_height=None):
         if age <= 3:
             yearly_growth = random.uniform(10, 25)  # 婴幼儿期增长最快
         elif 4 <= age <= 12:
-            yearly_growth = random.uniform(5, 8)    # 儿童期稳定增长
+            yearly_growth = random.uniform(5, 8)  # 儿童期稳定增长
         else:  # 13-17岁青春期
-            yearly_growth = random.uniform(6, 10) if gender == "男" else random.uniform(5, 8)
+            yearly_growth = (
+                random.uniform(6, 10) if gender == "男" else random.uniform(5, 8)
+            )
         daily_change = yearly_growth / 365  # 日均增长量
     elif 18 <= age <= 60:
         stage = "稳定期"
         # 成年期基本稳定，仅微小波动（±0.5cm/年）
-        daily_change = random.uniform(-0.5/365, 0.5/365)
+        daily_change = random.uniform(-0.5 / 365, 0.5 / 365)
     else:  # 60岁以上
         stage = "衰退期"
         # 老年期逐年降低（年降低0.1-0.5cm）
@@ -921,9 +952,9 @@ def generate_height(start_date, end_date, age, gender, initial_height=None):
     tpl = {
         "data_list": [
             {"name": "身高", "value": round(initial_height, 1), "unit": "cm"},
-            {"name": "生长状态", "value": stage, "unit": ""}
+            {"name": "生长状态", "value": stage, "unit": ""},
         ],
-        "summary": f"{stage}，身高变化正常。"
+        "summary": f"{stage}，身高变化正常。",
     }
 
     for day in range(total_days):
@@ -992,19 +1023,37 @@ def generate_weight(start_date, end_date, age, gender, initial_weight=None):
             return round(random.uniform(10.0, 25.0), 1)  # 幼儿期
         elif 7 <= age <= 12:
             # 儿童期：男略高于女
-            return round(random.uniform(22.0, 40.0), 1) if gender == "男" else round(random.uniform(20.0, 38.0), 1)
+            return (
+                round(random.uniform(22.0, 40.0), 1)
+                if gender == "男"
+                else round(random.uniform(20.0, 38.0), 1)
+            )
         elif 13 <= age <= 18:
             # 青春期：性别差异扩大
-            return round(random.uniform(45.0, 70.0), 1) if gender == "男" else round(random.uniform(40.0, 60.0), 1)
+            return (
+                round(random.uniform(45.0, 70.0), 1)
+                if gender == "男"
+                else round(random.uniform(40.0, 60.0), 1)
+            )
         elif 19 <= age <= 60:
             # 成年期：男性平均体重更高
-            return round(random.uniform(55.0, 85.0), 1) if gender == "男" else round(random.uniform(45.0, 70.0), 1)
+            return (
+                round(random.uniform(55.0, 85.0), 1)
+                if gender == "男"
+                else round(random.uniform(45.0, 70.0), 1)
+            )
         else:  # 60岁以上
             # 老年期：略低于成年期
-            return round(random.uniform(50.0, 80.0), 1) if gender == "男" else round(random.uniform(42.0, 65.0), 1)
+            return (
+                round(random.uniform(50.0, 80.0), 1)
+                if gender == "男"
+                else round(random.uniform(42.0, 65.0), 1)
+            )
 
     # 2. 确定体重变化阶段及每日变化率（kg/天）
-    initial_weight = get_initial_weight(age, gender) if initial_weight is None else initial_weight
+    initial_weight = (
+        get_initial_weight(age, gender) if initial_weight is None else initial_weight
+    )
     current_weight = initial_weight  # 记录当前体重，随时间动态更新
 
     if age < 18:
@@ -1016,7 +1065,9 @@ def generate_weight(start_date, end_date, age, gender, initial_weight=None):
             yearly_growth = random.uniform(1.5, 3.0)  # 儿童期稳定增长
         else:  # 13-17岁青春期
             # 青春期体重增长加速，男性略快
-            yearly_growth = random.uniform(3.0, 6.0) if gender == "男" else random.uniform(2.0, 5.0)
+            yearly_growth = (
+                random.uniform(3.0, 6.0) if gender == "男" else random.uniform(2.0, 5.0)
+            )
         daily_change = yearly_growth / 365  # 日均增长量
     elif 18 <= age <= 60:
         stage = "稳定期"
@@ -1033,15 +1084,15 @@ def generate_weight(start_date, end_date, age, gender, initial_weight=None):
     tpl = {
         "data_list": [
             {"name": "体重", "value": initial_weight, "unit": "kg"},
-            {"name": "体重状态", "value": stage, "unit": ""}
+            {"name": "体重状态", "value": stage, "unit": ""},
         ],
-        "summary": f"{stage}，体重变化在正常范围内。"
+        "summary": f"{stage}，体重变化在正常范围内。",
     }
 
     for day in range(total_days):
         # 更新当前体重（保留1位小数，模拟测量精度）
         current_weight += daily_change
-        
+
         # 限制极端值（避免体重过低/过高）
         if current_weight < 2.0:  # 最低体重限制（新生儿最低约2kg）
             current_weight = 2.0
@@ -1056,7 +1107,9 @@ def generate_weight(start_date, end_date, age, gender, initial_weight=None):
             summary = f"{gender}，{age}岁（生长期），体重{current_weight}kg，年增长约{yearly_rate}kg，生长发育正常。"
         elif stage == "稳定期":
             yearly_fluct = round(daily_change * 365, 1)
-            trend = "增长" if yearly_fluct > 0 else "下降" if yearly_fluct < 0 else "稳定"
+            trend = (
+                "增长" if yearly_fluct > 0 else "下降" if yearly_fluct < 0 else "稳定"
+            )
             summary = f"{gender}，{age}岁（成年稳定期），体重{current_weight}kg，年{trend}{abs(yearly_fluct)}kg，属正常波动。"
         else:  # 老年期
             yearly_trend = round(daily_change * 365, 1)
@@ -1075,6 +1128,7 @@ def generate_weight(start_date, end_date, age, gender, initial_weight=None):
         current_date += timedelta(days=1)
 
     return output_data
+
 
 def generate_sleep_report(start_date, end_date):
     """
@@ -1097,9 +1151,9 @@ def generate_sleep_report(start_date, end_date):
     tpl = {
         "data_list": [
             {"name": "实际睡眠时长", "value": "7.5", "unit": "小时"},
-            {"name": "睡眠质量", "value": "良好", "unit": ""}
+            {"name": "睡眠质量", "value": "良好", "unit": ""},
         ],
-        "summary": "睡眠时长充足，质量良好，建议保持规律作息。"
+        "summary": "睡眠时长充足，质量良好，建议保持规律作息。",
     }
 
     # 睡眠质量选项及对应时长范围（小时）
@@ -1108,9 +1162,9 @@ def generate_sleep_report(start_date, end_date):
     # 不同质量对应的时长范围（左闭右开）及概率权重
     quality_params = {
         "优质": {"range": (7.5, 9.0), "weight": 0.3},  # 时长充足且稳定
-        "良好": {"range": (7.0, 7.5), "weight": 0.3},   # 时长达标但略短
-        "一般": {"range": (6.0, 7.0), "weight": 0.2},   # 时长略不足
-        "较差": {"range": (5.0, 6.0), "weight": 0.2}    # 时长不足
+        "良好": {"range": (7.0, 7.5), "weight": 0.3},  # 时长达标但略短
+        "一般": {"range": (6.0, 7.0), "weight": 0.2},  # 时长略不足
+        "较差": {"range": (5.0, 6.0), "weight": 0.2},  # 时长不足
     }
 
     while current_date <= end_date:
@@ -1118,18 +1172,20 @@ def generate_sleep_report(start_date, end_date):
         quality = random.choices(
             quality_options,
             weights=[params["weight"] for params in quality_params.values()],
-            k=1
+            k=1,
         )[0]
-        
+
         # 2. 根据睡眠质量生成对应范围的实际睡眠时长（保留1位小数）
         min_hour, max_hour = quality_params[quality]["range"]
         sleep_hour = round(random.uniform(min_hour, max_hour), 1)
-        
+
         # 3. 生成summary（结合时长和质量）
         if quality == "优质":
             summary = f"实际睡眠时长{sleep_hour}小时，睡眠质量优质，深睡比例高，精力恢复良好。"
         elif quality == "良好":
-            summary = f"实际睡眠时长{sleep_hour}小时，睡眠质量良好，基本满足身体恢复需求。"
+            summary = (
+                f"实际睡眠时长{sleep_hour}小时，睡眠质量良好，基本满足身体恢复需求。"
+            )
         elif quality == "一般":
             summary = f"实际睡眠时长{sleep_hour}小时，睡眠质量一般，可能存在轻微夜间醒来，建议减少睡前使用电子设备。"
         else:  # 较差
@@ -1137,8 +1193,10 @@ def generate_sleep_report(start_date, end_date):
 
         # 4. 复制模板并更新数据
         tmp = copy.deepcopy(tpl)
-        tmp["data_list"][0]["value"] = f"{sleep_hour}"  # 睡眠时长（字符串类型，保留1位小数）
-        tmp["data_list"][1]["value"] = quality          # 睡眠质量
+        tmp["data_list"][0][
+            "value"
+        ] = f"{sleep_hour}"  # 睡眠时长（字符串类型，保留1位小数）
+        tmp["data_list"][1]["value"] = quality  # 睡眠质量
         tmp["summary"] = summary
         # 设置创建时间（对应睡眠结束时间，模拟早上记录）
         tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
@@ -1151,6 +1209,101 @@ def generate_sleep_report(start_date, end_date):
 
     return output_data
 
+
+def generate_health_status(start_date, end_date):
+    """
+    生成指定日期范围内的健康状态记录数据
+
+    参数:
+        start_date (datetime.date): 起始日期
+        end_date (datetime.date): 结束日期
+
+    返回:
+        list: 包含健康状态记录的列表，每个元素为包含三个核心指标及日期时间的字典
+    """
+    if start_date > end_date:
+        raise ValueError("起始日期必须早于或等于结束日期")
+
+    output_data = []
+    current_date = start_date
+
+    # 健康状态记录模板
+    tpl = {
+        "data_list": [
+            {"name": "情绪压力指数", "value": 75, "unit": "分"},
+            {"name": "疲劳回复指数", "value": 80, "unit": "分"},
+            {"name": "心脏抗压指数", "value": 70, "unit": "分"},
+        ],
+        "summary": "整体健康状态良好，情绪稳定，疲劳恢复能力强，心脏抗压能力正常。",
+    }
+
+    # 指标评分等级划分（分值越高越好）
+    # 用于生成针对性summary
+    def get_level(score):
+        """根据分数返回等级描述"""
+        if score >= 70:
+            return "优秀"
+        elif 50 <= score < 70:
+            return "良好"
+        elif 30 <= score < 50:
+            return "一般"
+        else:
+            return "较差"
+
+    while current_date <= end_date:
+        # 生成三个指标的随机评分（0-100分，整数）
+        stress_score = random.randint(0, 100)  # 情绪压力指数
+        fatigue_recovery = random.randint(0, 100)  # 疲劳回复指数
+        heart_resist = random.randint(0, 100)  # 心脏抗压指数
+
+        # 计算各指标等级
+        stress_level = get_level(stress_score)
+        fatigue_level = get_level(fatigue_recovery)
+        heart_level = get_level(heart_resist)
+
+        # 生成综合summary（结合三个指标的等级）
+        # 优先提示需要关注的指标
+        concerns = []
+        if stress_score < 50:
+            concerns.append(
+                f"情绪压力指数{stress_score}分（{stress_level}），建议适当放松"
+            )
+        if fatigue_recovery < 50:
+            concerns.append(
+                f"疲劳回复指数{fatigue_recovery}分（{fatigue_level}），建议增加休息"
+            )
+        if heart_resist < 50:
+            concerns.append(
+                f"心脏抗压指数{heart_resist}分（{heart_level}），建议适度运动增强心肺功能"
+            )
+
+        if not concerns:
+            # 所有指标均良好（≥50分）
+            summary = (
+                f"健康状态优秀：情绪压力指数{stress_score}分（{stress_level}），"
+                f"疲劳回复指数{fatigue_recovery}分（{fatigue_level}），"
+                f"心脏抗压指数{heart_resist}分（{heart_level}），继续保持健康生活方式。"
+            )
+        else:
+            # 存在需关注的指标
+            summary = f"健康状态需关注：{'; '.join(concerns)}。"
+
+        # 复制模板并更新数据
+        tmp = copy.deepcopy(tpl)
+        tmp["data_list"][0]["value"] = stress_score  # 情绪压力指数
+        tmp["data_list"][1]["value"] = fatigue_recovery  # 疲劳回复指数
+        tmp["data_list"][2]["value"] = heart_resist  # 心脏抗压指数
+        tmp["summary"] = summary
+        # 设置创建时间（模拟每日固定时段记录，如晚上）
+        tmp["create_time"] = tool_date.日期转随机北京时间(current_date)
+        tmp["是否测试数据"] = True
+        tmp["类型"] = "健康状态"
+        tmp["图片识别内容"] = "-"
+
+        output_data.append(tmp)
+        current_date += timedelta(days=1)
+
+    return output_data
 
 
 if __name__ == "__main__":
