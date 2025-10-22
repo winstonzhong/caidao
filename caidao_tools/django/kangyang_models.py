@@ -1087,3 +1087,30 @@ class AbstractApp(models.Model):
         abstract = True
         indexes = []
         verbose_name_plural = verbose_name = "应用"
+
+
+class AbstractPackage(models.Model):
+    name = models.CharField(max_length=50, verbose_name='套餐名称', default='', unique=True)
+    price = models.DecimalField(verbose_name='价格', max_digits=8, decimal_places=2, default=0)
+    update_time = models.DateTimeField(verbose_name='更新时间', auto_now=True)
+    create_time = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+    remark = models.TextField(verbose_name='备注', blank=True, null=True)
+    vip_level = models.IntegerField(default=1, verbose_name='vip等级')
+    days = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        abstract = True
+
+
+class AbstractPurchase(models.Model):
+    user_id = models.PositiveIntegerField(null=True, blank=True)
+    package = models.PositiveIntegerField(null=True, blank=True)
+    amount = models.DecimalField(verbose_name='总金额', max_digits=6, decimal_places=2, default=0)
+    # expire_time = models.DateTimeField(verbose_name='到期时间', null=True, blank=True)
+    out_trade_no = models.CharField(max_length=50, verbose_name='微信订单号', null=True, blank=True, unique=True)
+    create_time = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+    status = models.CharField(max_length=10, verbose_name='套餐状态', default='未支付')
+    remark = models.TextField(verbose_name='备注', blank=True, null=True)
+
+    class Meta:
+        abstract = True
