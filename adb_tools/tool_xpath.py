@@ -27,6 +27,7 @@ from tool_exceptions import (
     任务预检查不通过异常,
     达到最大重复次数异常,
     达到最大空白屏次数异常,
+    没有找到联系人异常,
 )
 
 from tool_remote_orm_model import RemoteModel
@@ -49,6 +50,7 @@ import tool_env
 
 import check_series_contains
 
+import tool_dict
 
 # def execute_lines(job, lines, self=None):
 #     if self is not None:
@@ -61,7 +63,7 @@ import check_series_contains
 #                 traceback.print_exc()
 #     else:
 #         exec(lines)
-global_cache = {}
+global_cache = tool_dict.PropDict()
 
 URL_TASK_QUEUE = f"https://{tool_env.HOST_TASK}"
 
@@ -108,8 +110,8 @@ def 上传结果字典(task_key, result_data):
     return response.json()
 
 
-def 回传结果到服务器(result_data):
-    return 上传结果字典(task_key="服务器回传结果队列", result_data=result_data)
+def 回传结果到服务器(result_data, **paras):
+    return 上传结果字典(task_key="服务器回传结果队列", result_data={**result_data, **paras})
 
 
 def execute_lines(job, lines, self=None):
@@ -699,7 +701,7 @@ class 基本任务(抽象持久序列):
         super().__init__(fpath_or_dict)
         self.status = None
         self.last_executed_block_id = None
-        self.cache = {}
+        self.cache = tool_dict.PropDict()
         self.remote_obj = 0
 
     # @classmethod

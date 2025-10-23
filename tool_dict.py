@@ -10,6 +10,8 @@ class PropDict(dict):
     >>> pd.aaa = 1
     >>> pd.aaa
     1
+    >>> pd.get('aaa') == 1
+    True
     >>> pd = PropDict({'a':2,'b':4})
     >>> pd.a
     2
@@ -19,6 +21,8 @@ class PropDict(dict):
     >>> pd['get'] == 100
     True
     >>> pd.bbb
+    >>> pd.clear()
+    >>> pd.aaa
     """
 
     def __setattr__(self, name, value):
