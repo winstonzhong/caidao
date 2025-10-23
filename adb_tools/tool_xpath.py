@@ -965,6 +965,9 @@ class 基本任务(抽象持久序列):
     def 清除缓存并重置(self):
         self.cache.update(缓存=None)
         self.cache.update(cnt_up=0)
+    
+    def 完成(self):
+        self.status = "完成"
 
 
 class 前置预检查任务(基本任务):
