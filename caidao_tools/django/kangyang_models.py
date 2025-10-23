@@ -1103,7 +1103,8 @@ class AbstractPackage(models.Model):
 
 
 class AbstractPurchase(models.Model):
-    user_id = models.PositiveIntegerField(null=True, blank=True)
+    # user_id = models.PositiveIntegerField(null=True, blank=True)
+    openid = models.CharField(max_length=64, null=True, db_index=True, blank=True)
     package = models.PositiveIntegerField(null=True, blank=True)
     amount = models.DecimalField(verbose_name='总金额', max_digits=6, decimal_places=2, default=0)
     # expire_time = models.DateTimeField(verbose_name='到期时间', null=True, blank=True)
