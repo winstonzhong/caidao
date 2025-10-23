@@ -399,10 +399,10 @@ class BaseAdb(object):
         self.current_key = None
 
     def __str__(self):
-        return str(self.device)
+        return f'{self.device},  设备ID：{self.serialno}'
 
     def __repr__(self):
-        return str(self.device)
+        return self.__str__()
 
     @cached_property
     def serialno(self):
