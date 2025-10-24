@@ -52,7 +52,7 @@ HOST_SERVER = os.getenv("HOST_SERVER", HOST_SERVER_DEFAULT)
 
 HEALTH_CARD_URL = f"https://{HOST_SERVER_DEFAULT}/wx_msgs/healthdoc"
 
-HEALTH_CARD_TAG = "您的健康档案已更新～"
+# HEALTH_CARD_TAG = "您的健康档案已更新～"
 
 class cached_property_for_cls:
     def __init__(self, method):
