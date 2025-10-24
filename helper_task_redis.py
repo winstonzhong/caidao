@@ -15,9 +15,9 @@ REDIS_CONN = None
 
 REDIS_DB_INDEX = int(os.getenv("REDIS_DB_INDEX_NUM", 15 if not tool_env.U4080 else 14))
 
-print('=' *80)
-print(f'using REDIS_DB_INDEX:{REDIS_DB_INDEX}, tool_env.U4080: {tool_env.U4080}')
-print('=' *80)
+# print('=' *80)
+# print(f'using REDIS_DB_INDEX:{REDIS_DB_INDEX}, tool_env.U4080: {tool_env.U4080}')
+# print('=' *80)
 
 def get_REDIS_CONN(max_retries=3):
     """

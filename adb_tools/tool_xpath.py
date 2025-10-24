@@ -243,7 +243,7 @@ class DummyDevice(object):
         return self.adb.swipe((fromx, fromy), (tox, toy))
 
     def long_click(self, *a, **k):
-        print(a, k)
+        # print(a, k)
         # return self.adb.ua2.long_click(*a, **k)
         self.adb.do_longclick(*a)
 
