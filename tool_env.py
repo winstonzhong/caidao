@@ -669,45 +669,6 @@ def remove_leading_whitespace(text):
     return re.sub(pattern, "", text, flags=re.M)
 
 
-# def replace_url_host(url, host_name):
-#     """
-#     替换URL中的主机名部分
-
-#     参数:
-#         url (str): 原始URL
-#         host_name (str): 新的主机名
-
-#     返回:
-#         str: 替换主机名后的新URL
-
-#     示例:
-#         >>> replace_url_host("https://crawler.j1.sale/admin/wx_msgs/", "coco.test.com")
-#         'https://coco.test.com/admin/wx_msgs/'
-
-#         >>> replace_url_host("http://oldhost/path", "newhost")
-#         'http://newhost/path'
-
-#         >>> replace_url_host("ftp://user:pass@oldhost:21/dir", "newhost")
-#         'ftp://newhost/dir'
-
-#         >>> replace_url_host("https://oldhost:8080", "newhost:9090")
-#         'https://newhost:9090'
-
-#         >>> replace_url_host("http://oldhost", "newhost")
-#         'http://newhost'
-#     """
-#     # 解析URL，获取各个组成部分
-#     parsed_url = urlparse(url)
-
-#     # 替换主机名部分（netloc）
-#     new_parsed = parsed_url._replace(netloc=host_name)
-
-#     # 重新组合URL的各个部分
-#     new_url = urlunparse(new_parsed)
-
-#     return new_url
-
-
 def replace_url_host(url, host_name):
     """
     替换URL中的主机名部分，支持路径形式URL和默认https协议
