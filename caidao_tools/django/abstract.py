@@ -565,24 +565,24 @@ class 抽象定时任务(BaseModel):
 
     @classmethod
     def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
-        print('----------------------------------执行所有定时任务')
+        # print('----------------------------------执行所有定时任务')
         while 1:
             q = cls.得到所有待执行的任务(**kwargs).order_by("-优先级", "update_time")
-            print('--------------', q.count())
+            # print('--------------', q.count())
 
             max_priority = 0
             for obj in q.iterator():
-                print('==============', obj, obj.id)
+                # print('==============', obj, obj.id)
                 if obj.优先级 < max_priority:
                     break
                 if obj.step() and obj.优先级 > max_priority:
                     max_priority = obj.优先级
 
-            print('--------------=====', q.count())
+            # print('--------------=====', q.count())
             if 单步:
                 break
             time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
-            print('--------------=====---------', q.count())
+            # print('--------------=====---------', q.count())
 
     def print_info(self, *a):
         if self.输出调试信息:
