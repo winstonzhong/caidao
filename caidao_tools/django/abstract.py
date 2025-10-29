@@ -571,6 +571,7 @@ class 抽象定时任务(BaseModel):
             print('--------------', q.count())
             max_priority = 0
             for obj in q.iterator():
+                print('==============', obj, obj.id)
                 if obj.优先级 < max_priority:
                     break
                 if obj.step() and obj.优先级 > max_priority:
