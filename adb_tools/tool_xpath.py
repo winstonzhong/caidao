@@ -82,7 +82,7 @@ def 在队列中是否有任务(task_key, 中继=False):
 
 def 拉取任务字典(task_key, 中继=False):
     url = 得到url(task_key, 中继)
-    # print("拉取任务字典:", url)
+    print("拉取任务字典:", url)
     return requests.get(url).json()
 
 

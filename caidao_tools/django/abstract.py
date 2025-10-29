@@ -569,6 +569,7 @@ class 抽象定时任务(BaseModel):
         while 1:
             q = cls.得到所有待执行的任务(**kwargs).order_by("-优先级", "update_time")
             print('--------------', q.count())
+
             max_priority = 0
             for obj in q.iterator():
                 print('==============', obj, obj.id)
