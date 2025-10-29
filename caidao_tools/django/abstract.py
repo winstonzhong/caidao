@@ -546,43 +546,21 @@ class 抽象定时任务(BaseModel):
             q = cls.objects.filter(id=kwargs["id"])
         return q if not exclude else q.exclude(id__in=exclude.strip().split(","))
 
-    # @classmethod
-    # def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
-    #     seconds_sleep_when_exception = 10
-    #     while 1:
-    #         q = cls.得到所有待执行的任务(**kwargs).order_by("-优先级", "update_time")
-    #         try:
-    #             for obj in q.iterator():
-    #                 if obj.step() and obj.优先级 > 0:
-    #                     break
-    #         except Exception:
-    #             print(traceback.format_exc())
-    #             print(f"发生异常, 等待{seconds_sleep_when_exception}秒后继续执行")
-    #             time.sleep(seconds_sleep_when_exception)
-    #         if 单步:
-    #             break
-    #         time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
-
     @classmethod
     def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
-        # print('----------------------------------执行所有定时任务')
         while 1:
             q = cls.得到所有待执行的任务(**kwargs).order_by("-优先级", "update_time")
-            # print('--------------', q.count())
 
             max_priority = 0
             for obj in q.iterator():
-                # print('==============', obj, obj.id)
                 if obj.优先级 < max_priority:
                     break
                 if obj.step() and obj.优先级 > max_priority:
                     max_priority = obj.优先级
 
-            # print('--------------=====', q.count())
             if 单步:
                 break
             time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
-            # print('--------------=====---------', q.count())
 
     def print_info(self, *a):
         if self.输出调试信息:
