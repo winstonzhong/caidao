@@ -576,9 +576,11 @@ class 抽象定时任务(BaseModel):
                 if obj.step() and obj.优先级 > max_priority:
                     max_priority = obj.优先级
 
+            print('--------------=====', q.count())
             if 单步:
                 break
             time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
+            print('--------------=====---------', q.count())
 
     def print_info(self, *a):
         if self.输出调试信息:
