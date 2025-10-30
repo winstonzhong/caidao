@@ -1760,8 +1760,8 @@ class BaseAdb(object):
         # self.execute(f'input tap {x} {y}&sleep 0.1;input tap {x} {y}')
         # return self
 
-    def do_double_click(self, x, y):
-        self.ua2.double_click(x, y, 0.01)
+    def do_double_click(self, x, y, duration=0.01):
+        self.ua2.double_click(x, y, duration)
 
     def do_click_element_top_center(self, e):
         return self.do_click(e.center()[0], e.rect[1]) if e is not None else None

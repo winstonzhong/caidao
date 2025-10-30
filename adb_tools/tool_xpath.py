@@ -492,6 +492,9 @@ class SteadyDevice(DummyDevice):
         name = self.wx_session_name
         return name, tool_wx.is_session_name(name)
 
+    def 四重击(self, x, y):
+        self.adb.do_double_click(x,y)
+        self.adb.特殊双击(x,y)
 
 class 基本输入字段对象(object):
     def __init__(self, d):
