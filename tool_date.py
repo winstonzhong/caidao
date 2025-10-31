@@ -499,7 +499,7 @@ def 日期转中文几日(tdate: datetime.date):
     return f"{tdate.day}日"
 
 
-def 日期列表转不重复的中文几月列表(dates: list[datetime.date]) -> list[str]:
+def 日期列表转不重复的中文几月列表(dates: list[datetime.date], include_year=False) -> list[str]:
     """
     将日期列表转换为不重复的中文几月列表
 
@@ -510,13 +510,15 @@ def 日期列表转不重复的中文几月列表(dates: list[datetime.date]) ->
     ['1月', '2月', '3月']
     >>> 日期列表转不重复的中文几月列表([datetime.date(2023, 1, 1), datetime.date(2023, 2, 1), datetime.date(2023, 3, 1), datetime.date(2024, 1, 1)])
     ['1月', '2月', '3月', '1月']
+    >>> 日期列表转不重复的中文几月列表([datetime.date(2023, 1, 1), datetime.date(2023, 2, 1), datetime.date(2023, 3, 1), datetime.date(2024, 1, 1)], True)
+    ['2023年-1月', '2023年-2月', '2023年-3月', '2024年-1月']
     """
     months = []
     for date in dates:
-        key = f"{date.year}-{date.month}月"
+        key = f"{date.year}年-{date.month}月"
         if key not in months:
             months.append(key)
-    return [item.split("-")[-1] for item in months]
+    return [item.split("-")[-1] for item in months] if not include_year else months
 
 
 def 获取日期范围(
