@@ -303,7 +303,7 @@ class 抽象任务数据(BaseModel):
                 Q(processing=False) | Q(update_time__lt=timeout_time),
                 **paras,
             )
-            .order_by("-update_time")
+            .order_by("update_time")
             .first()
         )
 
