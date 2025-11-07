@@ -67,6 +67,36 @@ class BaseAdmin(admin.ModelAdmin):
         self.request = request
         return super().get_queryset(request)
 
+
+    # def _format_float_fields(self):
+    #     """自动识别浮点数字段，生成格式化显示方法"""
+    #     # 遍历模型所有字段
+    #     for field in self.model._meta.get_fields():
+    #         # 只处理FloatField类型且在list_display中的字段
+    #         if (isinstance(field, models.FloatField) and 
+    #             hasattr(self, 'list_display') and 
+    #             field.name in self.list_display):
+                
+    #             # 生成格式化方法（保留4位小数）
+    #             def make_float_formatter(field_name):
+    #                 def formatter(obj):
+    #                     value = getattr(obj, field_name)
+    #                     if value is None:
+    #                         return ""  # 空值处理
+    #                     # 格式化保留4位小数（四舍五入）
+    #                     return f"{value:.4f}"
+    #                 # 设置列名（使用字段的verbose_name或字段名）
+    #                 formatter.short_description = field.verbose_name or field_name
+    #                 return formatter
+
+    #             # 动态给当前Admin类添加格式化方法
+    #             format_method_name = f"format_{field.name}"
+    #             setattr(self, format_method_name, make_float_formatter(field.name))
+
+    #             # 替换list_display中的字段名为格式化方法名
+    #             index = self.list_display.index(field.name)
+    #             self.list_display[index] = format_method_name
+
     class Media:
         js = []
 
