@@ -1097,6 +1097,8 @@ class AbstractPackage(models.Model):
     remark = models.TextField(verbose_name='备注', blank=True, null=True)
     vip_level = models.IntegerField(default=1, verbose_name='vip等级')
     days = models.PositiveIntegerField(default=0)
+    data = models.JSONField(verbose_name="数据", null=True)
+    is_shown = models.BooleanField(verbose_name="是否前端展示", default=True)
 
     class Meta:
         abstract = True
