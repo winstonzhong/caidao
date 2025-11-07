@@ -1032,7 +1032,8 @@ class BaseAdb(object):
         d = {
             "PBCM30": {"package_name":"com.coloros.filemanager", "activity": ".Main"},
             "MI_8_Lite": {"package_name": "com.android.fileexplorer", "activity": ".FileExplorerTabActivity"}
-        }.get(self.device_model)
+        }.get(self.device_model) or None
+        assert d is not None, f"{self.device_model} not in {d}"
         self.ua2.app_start(
             package_name=d.get("package_name"), activity=d.get("activity")
         )
