@@ -1027,6 +1027,16 @@ class BaseAdb(object):
         )
         self.ua2.app_start(package_name=d.get("package_name"), activity=d.get("a3"))
         return self
+    
+    def open_filemanager3(self):
+        d = {
+            "PBCM30": {"package_name":"com.coloros.filemanager", "activity": ".Main"},
+            "MI_8_Lite": {"package_name": "com.android.fileexplorer", "activity": ".FileExplorerTabActivity"}
+        }.get(self.device_model)
+        self.ua2.app_start(
+            package_name=d.get("package_name"), activity=d.get("activity")
+        )
+
 
     def save_page_content(self, path):
         content = self.page_content().encode("utf8")
@@ -1480,6 +1490,16 @@ class BaseAdb(object):
     @classmethod
     def get_devices_as_dict(cls):
         return list(tool_devices.parse_devices(BaseAdb.get_devices()[0]))
+    
+    @cached_property
+    def device_info(self):
+        data_list = self.get_devices_as_dict()
+        return {d.get('id'): d for d in data_list}.get(self.device.get('id'), {})
+    
+    @property
+    def device_model(self):
+        return self.device_info.get("model")
+
 
     @classmethod
     def get_devcie_wifi(cls):
