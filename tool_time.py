@@ -92,6 +92,7 @@ def shanghai_time_now_str():
 def 北京月日():
     return shanghai_time_now().strftime("%m-%d")
 
+
 def time_now():
     return shanghai_time_now_str()
 
@@ -607,7 +608,7 @@ def time_str_to_percentage(time_str: str, decimal_places: int = 2) -> float:
     # 2. 一天的总秒数（固定值：24小时×3600秒/小时）
     total_seconds_per_day = 24 * 3600  # 86400
     # 3. 计算百分比并保留指定小数位数
-    percentage = (current_seconds / total_seconds_per_day)
+    percentage = current_seconds / total_seconds_per_day
     return round(percentage, decimal_places)
 
 
@@ -655,23 +656,22 @@ def 中文时长描述转秒数(描述):
     秒 = 0
 
     # 提取小时数值
-    匹配小时 = re.search(r'(\d+)小时', 描述)
+    匹配小时 = re.search(r"(\d+)小时", 描述)
     if 匹配小时:
         小时 = int(匹配小时.group(1))
 
     # 提取分钟数值
-    匹配分钟 = re.search(r'(\d+)分钟', 描述)
+    匹配分钟 = re.search(r"(\d+)分钟", 描述)
     if 匹配分钟:
         分钟 = int(匹配分钟.group(1))
 
     # 提取秒数值
-    匹配秒 = re.search(r'(\d+)秒', 描述)
+    匹配秒 = re.search(r"(\d+)秒", 描述)
     if 匹配秒:
         秒 = int(匹配秒.group(1))
 
     # 计算总秒数
     return 小时 * 3600 + 分钟 * 60 + 秒
-
 
 
 def 中文时长描述转小时数(描述, 保留小数点位数=None):
@@ -719,18 +719,18 @@ def 中文时长描述转小时数(描述, 保留小数点位数=None):
     ...
     ValueError: 保留小数点位数必须是非负整数或None
     """
-    
+
     小时数 = to_float(描述)
     if 小时数 is None:
         # 1. 调用原函数获取总秒数
         总秒数 = 中文时长描述转秒数(描述)
-        
+
         # 2. 转换为小时数（使用Decimal保证高精度）
         小时数 = Decimal(总秒数) / Decimal(3600)  # 除法用Decimal避免精度损失
     else:
         # 直接使用传入的数字作为小时数
         小时数 = Decimal(小时数)
-    
+
     # 3. 处理保留小数点位数
     if 保留小数点位数 is None:
         return 小时数
@@ -738,10 +738,10 @@ def 中文时长描述转小时数(描述, 保留小数点位数=None):
         # 校验参数合法性
         if not isinstance(保留小数点位数, int) or 保留小数点位数 < 0:
             raise ValueError("保留小数点位数必须是非负整数或None")
-        
+
         # 构造精度格式（如保留2位→'0.00'）
-        精度格式 = Decimal('0.' + '0' * 保留小数点位数)
-        
+        精度格式 = Decimal("0." + "0" * 保留小数点位数)
+
         # 使用quantize进行精确四舍五入（比round更可靠的十进制处理）
         try:
             return 小时数.quantize(精度格式)

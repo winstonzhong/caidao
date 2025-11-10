@@ -499,7 +499,9 @@ def 日期转中文几日(tdate: datetime.date):
     return f"{tdate.day}日"
 
 
-def 日期列表转不重复的中文几月列表(dates: list[datetime.date], include_year=False) -> list[str]:
+def 日期列表转不重复的中文几月列表(
+    dates: list[datetime.date], include_year=False
+) -> list[str]:
     """
     将日期列表转换为不重复的中文几月列表
 
@@ -552,7 +554,7 @@ def 获取日期范围(
         raise ValueError("总天数必须是非负整数")
 
     # 计算开始日期（取日期部分，忽略时间）
-    开始日期 = (截止日期 - datetime.timedelta(days=总天数 - 1))
+    开始日期 = 截止日期 - datetime.timedelta(days=总天数 - 1)
     # 提取截止日期的日期部分（忽略时间）
     结束日期 = 截止日期
 
@@ -565,7 +567,8 @@ def 获取日期范围(
 
     return 日期列表
 
-def 获取日周月年期范围(类型:str, 截止日期: datetime.datetime = None):
+
+def 获取日周月年期范围(类型: str, 截止日期: datetime.datetime = None):
     总天数 = {
         "日": 1,
         "周": 7,
@@ -594,8 +597,68 @@ def 日期转随机北京时间(current_date, start_hour=0, end_hour=23):
 
     return timezone.make_aware(
         target,
-        timezone=timezone.get_current_timezone()  # 使用 Django 配置的时区（如 Asia/Shanghai）
+        timezone=timezone.get_current_timezone(),  # 使用 Django 配置的时区（如 Asia/Shanghai）
     )
+
+
+def 是否在时间段内(
+    起始时间: str = "00:00:00", 结束时间: str = "24:00:00", 当前时间: str = None
+) -> bool:
+    """
+    判断当前时间是否在起始时间和结束时间之间（包含边界）。
+
+    参数:
+        起始时间: 格式为"%H:%M:%S"的字符串，默认为'00:00:00'
+        结束时间: 格式为"%H:%M:%S"的字符串，默认为'24:00:00'
+        当前时间: 格式为"%H:%M:%S"的字符串，若为None则使用当前上海时间，默认为None
+
+    返回:
+        bool: 当前时间在时间段内返回True，否则返回False
+
+    示例:
+        >>> 是否在时间段内('08:00:00', '18:00:00', '12:00:00')
+        True
+        >>> 是否在时间段内('08:00:00', '18:00:00', '07:59:59')
+        False
+        >>> 是否在时间段内('08:00:00', '18:00:00', '08:00:00')
+        True
+        >>> 是否在时间段内('08:00:00', '18:00:00', '18:00:00')
+        True
+        >>> 是否在时间段内('23:00:00', '01:00:00', '23:30:00')
+        True
+        >>> 是否在时间段内('23:00:00', '01:00:00', '00:30:00')
+        True
+        >>> 是否在时间段内('23:00:00', '01:00:00', '02:00:00')
+        False
+        >>> 是否在时间段内('24:00:00', '00:00:00', '00:00:00')
+        True
+        >>> 是否在时间段内('00:00:00', '24:00:00', '12:34:56')
+        True
+        >>> 是否在时间段内('12:34:56', '12:34:56', '12:34:56')
+        True
+        >>> 是否在时间段内('12:34:55', '12:34:55', '12:34:56')
+        False
+    """
+    # 确定当前时间
+    if 当前时间 is None:
+        当前时间 = time_now()
+
+    # 辅助函数：将时间字符串转换为秒数
+    def to_seconds(time_str: str) -> int:
+        hours, minutes, seconds = map(int, time_str.split(":"))
+        return hours * 3600 + minutes * 60 + seconds
+
+    # 转换所有时间为秒数
+    start_sec = to_seconds(起始时间)
+    end_sec = to_seconds(结束时间)
+    current_sec = to_seconds(当前时间)
+
+    # 判断当前时间是否在时间段内
+    if start_sec <= end_sec:
+        return start_sec <= current_sec <= end_sec
+    else:
+        return current_sec >= start_sec or current_sec <= end_sec
+
 
 if __name__ == "__main__":
     import doctest

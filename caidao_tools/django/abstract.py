@@ -34,6 +34,8 @@ import json
 
 import helper_task_redis
 
+import tool_date
+
 NEW_RECORD = 0
 DOWNLOADED_RECORD = 1
 PRODUCED_RECORD = 2
@@ -132,7 +134,7 @@ class BaseModel(models.Model):
         # print(fields)
         # print(d)
         rtn = {k: v for k, v in d.items() if cls.是否数据库字段(k, fields)}
-        print('rtn', rtn)
+        print("rtn", rtn)
         return rtn
 
     @classmethod
@@ -226,7 +228,7 @@ class 抽象任务数据(BaseModel):
     def 写入任务队列(self, 队列名称, 数据, 队列容量=None, 设备相关=False):
 
         队列名称 = 队列名称 if not 设备相关 else self.获取设备相关队列名称(队列名称)
-        print('队列名称:', 队列名称)
+        print("队列名称:", 队列名称)
 
         if (
             队列容量 is None
@@ -294,9 +296,15 @@ class 抽象任务数据(BaseModel):
 
     @classmethod
     def 获取需要处理的记录(cls, **paras):
-        timeout_time = timezone.now() - datetime.timedelta(
-            seconds=cls.get_seconds_expiring()
-        )
+        起始时间 = paras.pop("_起始时间", "00:00:00")
+        结束时间 = paras.pop("_结束时间", "24:00:00")
+
+        if not tool_date.是否在时间段内(起始时间, 结束时间):
+            return
+
+        过期秒数 = paras.pop("_过期秒数", cls.get_seconds_expiring())
+
+        timeout_time = timezone.now() - datetime.timedelta(seconds=过期秒数)
 
         obj = (
             cls.objects.filter(
