@@ -660,7 +660,38 @@ def 是否在时间段内(
         return current_sec >= start_sec or current_sec <= end_sec
 
 
+def generate_health_audio_filename(
+    time_format="weekday", content_templates="{0}健康资讯每日听.mp3"
+):
+    """
+    生成健康资讯音频的文件名，适配中老年用户和微信文件场景
+
+    参数:
+        time_format: 时间格式，可选"weekday"(默认，如"周一")或"month_day"(如"11.10")
+
+    返回:
+        字符串，生成的文件名（含.mp3后缀）
+    """
+    # 1. 定义时间标识（周几/月.日）
+    today = datetime.datetime.today()
+
+    # 周几格式（如"周一"到"周日"）
+    weekday_map = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+    weekday = weekday_map[today.weekday()]  # today.weekday()返回0-6，对应周一到周日
+
+    # 月.日格式（如"11.10"）
+    month_day = today.strftime("%m.%d")  # %m是两位数月份，%d是两位数日期
+
+    # 根据格式选择时间前缀
+    time_prefix = weekday if time_format == "weekday" else month_day
+
+    # 4. 组合文件名
+    return content_templates.format(time_prefix)
+
+
 if __name__ == "__main__":
     import doctest
 
     print(doctest.testmod(verbose=False, report=False))
+
+

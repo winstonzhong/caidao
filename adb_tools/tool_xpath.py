@@ -238,6 +238,9 @@ class DummyDevice(object):
 
     def click(self, *a, **k):
         return self.adb.ua2.click(*a, **k)
+    
+    def click_element(self, element):
+        self.click(*bounds_to_rect(element.attrib["bounds"]).center)
 
     def swipe(self, fromx, fromy, tox, toy):
         return self.adb.swipe((fromx, fromy), (tox, toy))
@@ -407,7 +410,7 @@ class SteadyDevice(DummyDevice):
             根据url的文件名匹配robot temp下的文件
             并且将此文件拷贝至download目录
             """
-            src = f"/sdcard/Download/{os.path.basename(url)}"
+            src = f"/sdcard/Download/{fname or os.path.basename(url)}"
             fpath = tool_static.存储链接到文件(url, suffix=None, 返回路径=True, fpath=src)
             print("src:", src)
             time.sleep(0.1)
@@ -616,6 +619,9 @@ class 操作块(基本输入字段对象):
 
     def is_precheck(self):
         return not bool(self.tpls)
+    
+    def 清除重复计数器(self):
+        self.num_conti_repeated = 0
 
     # def 刷新参数(self, paras):
     #     self.paras = paras
