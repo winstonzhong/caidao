@@ -239,8 +239,15 @@ class DummyDevice(object):
     def click(self, *a, **k):
         return self.adb.ua2.click(*a, **k)
     
-    def click_element(self, element):
-        self.click(*bounds_to_rect(element.attrib["bounds"]).center)
+    def click_element(self, element,offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
+        rect = bounds_to_rect(element.attrib["bounds"])
+        if rect is not None:
+            x, y = rect.offset(offset_x, offset_y)
+            x += abs_x
+            y += abs_y
+            # print("clicking:", x, y)
+            self.click(x, y)
+        # self.click(*bounds_to_rect(element.attrib["bounds"]).center)
 
     def swipe(self, fromx, fromy, tox, toy):
         return self.adb.swipe((fromx, fromy), (tox, toy))
