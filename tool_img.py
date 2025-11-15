@@ -17,7 +17,8 @@ from helper_net import get_with_random_agent
 from tool_rect import Rect
 from tool_env import is_string
 import numpy as np
-
+import matplotlib
+matplotlib.use('TkAgg')
 # import matplotlib.pyplot as plt
 
 
