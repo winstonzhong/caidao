@@ -236,6 +236,8 @@ class 单条容器(list):
         '公众号名片'
         """
         text = ",".join(l)
+        if "微信转账" in l:
+            return "微信转账"
 
         if "微信红包" in l:
             return "微信红包"
@@ -283,6 +285,9 @@ class 单条容器(list):
 
     @cached_property
     def 正文(self):
+        if self.类型 == "微信转账":
+            return f"[发起转账]{self.获取所有文本或描述('微信转账')}"
+
         if self.类型 == "微信红包":
             return "[发了一个微信红包]"
 
@@ -480,6 +485,9 @@ class 元素(object):
         "小程序卡片注脚": [
             'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.FrameLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
         ],
+        "微信转账":[
+            'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.RelativeLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
+        ]
     }
 
     types = {}

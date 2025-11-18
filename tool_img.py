@@ -17,8 +17,8 @@ from helper_net import get_with_random_agent
 from tool_rect import Rect
 from tool_env import is_string
 import numpy as np
-import matplotlib
-matplotlib.use('TkAgg')
+
+
 # import matplotlib.pyplot as plt
 
 
@@ -291,6 +291,8 @@ def show(img, max_length=900, force_resize=True):
 
 
 def show_in_plt(img):
+    import matplotlib
+    matplotlib.use('TkAgg')
     from matplotlib import pyplot as plt
     from skimage.io import imshow
 
@@ -307,6 +309,8 @@ def show_plt_safe(
     h_stack=True,
     cfg={},
 ):
+    import matplotlib
+    matplotlib.use('TkAgg')
     from matplotlib import pyplot as plt
 
     if len(imgs) > 1:
@@ -343,6 +347,8 @@ def show_plt_safe(
 
 
 def to_plot_img(img, cmap=None):
+    import matplotlib
+    matplotlib.use('TkAgg')
     from matplotlib import pyplot as plt
 
     plt.tight_layout()

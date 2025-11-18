@@ -160,16 +160,19 @@ def opus2wav(fpath, fpath_wav=None):
     process.wait()
 
 
-# def amr2mp3(input_path, output_path):
-#     import ffmpy
-#     ff = ffmpy.FFmpeg(inputs={input_path: None}, outputs={output_path: None})
-#     ff.run()
-
-    # ffmpeg -i input.amr -ab 192k output.mp3
 def amr2mp3(fpath, fpath_output=None):
     fpath_output = change_suffix(fpath, 'mp3') if fpath_output is None else fpath_output
     process = subprocess.Popen(
         f'''ffmpeg -i {fpath} -ab 192k {fpath_output} -y''',
+        shell=True)
+    process.wait()
+
+
+def mp42wav(fpath, fpath_wav=None):
+    fpath_wav = change_suffix(fpath, 'wav') if fpath_wav is None else fpath_wav
+    # ffmpeg -i 输入文件.mp4 -vn -acodec pcm_s16le -ar 44100 -ac 2 输出文件.wav
+    process = subprocess.Popen(
+        f'''ffmpeg -i {fpath} -vn -acodec pcm_s16le -ar 44100 -ac 2 {fpath_wav} -y''',
         shell=True)
     process.wait()
 
