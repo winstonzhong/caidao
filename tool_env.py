@@ -38,13 +38,13 @@ ptn_not_number = re.compile("[^\d^\.^\s]+")
 
 MAIN_HOST_J_ONE = os.environ.get("MAIN_HOST_J_ONE", "https://coco.j1.sale")
 
-U4080 = os.path.lexists('/home/yka-003/zwd')
+U4080 = os.path.lexists("/home/yka-003/zwd")
 
 # U4080 = True
 
-HOST_TASK_DEFAULT = 'task.j1.sale' if not U4080 else 'task-test.j1.sale'
+HOST_TASK_DEFAULT = "task.j1.sale" if not U4080 else "task-test.j1.sale"
 
-HOST_SERVER_DEFAULT = "coco.j1.sale" if not U4080 else 'crawler.j1.sale'
+HOST_SERVER_DEFAULT = "coco.j1.sale" if not U4080 else "crawler.j1.sale"
 
 HOST_TASK = os.environ.get("HOST_TASK", HOST_TASK_DEFAULT)
 
@@ -53,6 +53,7 @@ HOST_SERVER = os.getenv("HOST_SERVER", HOST_SERVER_DEFAULT)
 HEALTH_CARD_URL = f"https://{HOST_SERVER_DEFAULT}/wx_msgs/healthdoc"
 
 # HEALTH_CARD_TAG = "您的健康档案已更新～"
+
 
 class cached_property_for_cls:
     def __init__(self, method):
@@ -712,7 +713,7 @@ def replace_url_host(url, host_name):
     parsed_url = urlparse(url)
 
     # 处理协议：如果原URL没有协议，默认使用https
-    scheme = parsed_url.scheme if parsed_url.scheme else 'https'
+    scheme = parsed_url.scheme if parsed_url.scheme else "https"
 
     # 替换主机名（无论原URL是否有主机名）
     new_netloc = host_name
@@ -724,11 +725,13 @@ def replace_url_host(url, host_name):
         parsed_url.path,
         parsed_url.params,
         parsed_url.query,
-        parsed_url.fragment
+        parsed_url.fragment,
     )
 
     new_url = urlunparse(new_components)
     return new_url
+
+
 
 if __name__ == "__main__":
     import doctest
