@@ -701,6 +701,41 @@ def generate_health_audio_filename(
     return content_templates.format(time_prefix)
 
 
+def 判断是否在多个时间段内(时间段):
+    for 开始, 结束 in 时间段:
+        if 是否在时间段内(开始, 结束):
+            return True
+    return False
+
+def 循环执行并保证严格的时间差(func, 间隔秒=3, 时间段=(("09:15:00", "11:30:00"), ("13:00:00", "15:00:00"))):
+    """
+    循环执行函数func，并保证每次执行的开始时间间隔尽可能接近设定的间隔秒
+
+    参数:
+        func: 需要循环执行的函数
+        间隔秒: 两次执行开始时间的目标间隔（秒）
+    """
+    while True:
+        if 判断是否在多个时间段内(时间段):
+            # 记录当前轮次的开始时间
+            开始时间 = time.time()
+
+            # 执行目标函数
+            func()
+
+            # 计算函数执行花费的时间
+            执行耗时 = time.time() - 开始时间
+
+            # 计算需要休眠的时间（确保下一轮开始时间与本轮开始时间的间隔为设定值）
+            需休眠时间 = 间隔秒 - 执行耗时
+
+            # 如果需要休眠的时间为正数，则进行休眠
+            if 需休眠时间 > 0:
+                time.sleep(需休眠时间)
+        else:
+            time.sleep(1)
+
+
 if __name__ == "__main__":
     import doctest
 
