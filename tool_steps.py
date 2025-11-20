@@ -213,7 +213,7 @@ def 按日期分组并选择值最大的行记录返回(
     df_copy["create_time"] = df_copy["create_time"].dt.date
 
     # 筛选出日期在起始日期及之后的记录
-    df_filtered = df_copy[df_copy["create_time"] >= start_date]
+    df_filtered = df_copy[(df_copy["create_time"] >= start_date) & (df_copy["create_time"] <= today)]
 
     # 如果筛选后没有数据，返回空DataFrame（移除临时date列）
     if df_filtered.empty:
