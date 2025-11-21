@@ -127,10 +127,6 @@ def 得到一个不重复的文件名(fpath):
 
 
 def 得到一个不重复的文件路径(fpath="", sub_dir=None, base_dir=None):
-    # time.sleep(0.01)
-    # 后缀 = 得到后缀(fpath)
-    # 后缀 = f".{后缀}" if 后缀 else ""
-    # name = f"{time.time():.6f}{random.random():.4f}{后缀}"
     return os.path.join(
         当前路径(base_dir=base_dir, sub_dir=sub_dir), 得到一个不重复的文件名(fpath)
     )
