@@ -735,6 +735,43 @@ def 循环执行并保证严格的时间差(func, 间隔秒=3, 时间段=(("09:1
         else:
             time.sleep(1)
 
+def 增强版时间段配置worker函数(时间段配置):
+    '''
+    时间段配置 = {
+        ("09:15:00", "11:30:00"): 指数成分.下载tick,
+        ("13:00:00", "15:00:00"): 指数成分.下载tick,
+        ("18:00:00", "18:10:00"): 批量更新,
+        ("00:00:00", "00:00:10"): 早间非交易时间睡眠,
+    }
+    '''
+    def 获取并执行函数():
+        for 时间段, v in 时间段配置.items():
+            if 是否在时间段内(时间段[0], 时间段[1]):
+                return bool(v()) or True
+    while True:
+        if not 获取并执行函数():
+            time.sleep(1)
+
+
+def is_weekend(date=None) -> bool:
+    """
+    判断日期是否是周末（周六/周日）
+    :param date: 日期，支持字符串（如'2025-11-21'）或datetime.date对象
+    :return: True=周末，False=非周末
+    :raises ValueError: 日期格式错误
+    >>> is_weekend('2025-11-21')
+    False
+    >>> is_weekend('2025-11-22')
+    True
+    >>> is_weekend('2025-11-23')
+    True
+    >>> is_weekend('2025-11-24')
+    False
+    """
+    return to_date(date or 今天()).weekday() >= 5
+
+
+
 
 if __name__ == "__main__":
     import doctest
