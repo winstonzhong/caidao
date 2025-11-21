@@ -111,7 +111,9 @@ def 上传结果字典(task_key, result_data):
 
 
 def 回传结果到服务器(result_data, **paras):
-    return 上传结果字典(task_key="服务器回传结果队列", result_data={**result_data, **paras})
+    return 上传结果字典(
+        task_key="服务器回传结果队列", result_data={**result_data, **paras}
+    )
 
 
 def execute_lines(job, lines, self=None):
@@ -238,8 +240,8 @@ class DummyDevice(object):
 
     def click(self, *a, **k):
         return self.adb.ua2.click(*a, **k)
-    
-    def click_element(self, element,offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
+
+    def click_element(self, element, offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
         rect = bounds_to_rect(element.attrib["bounds"])
         if rect is not None:
             x, y = rect.offset(offset_x, offset_y)
@@ -418,12 +420,13 @@ class SteadyDevice(DummyDevice):
             并且将此文件拷贝至download目录
             """
             src = f"/sdcard/Download/{fname or os.path.basename(url)}"
-            fpath = tool_static.存储链接到文件(url, suffix=None, 返回路径=True, fpath=src)
+            fpath = tool_static.存储链接到文件(
+                url, suffix=None, 返回路径=True, fpath=src
+            )
             print("src:", src)
             time.sleep(0.1)
             self.adb.broadcast(src)
             return src
-
 
     @property
     def container_wx(self):
@@ -441,8 +444,8 @@ class SteadyDevice(DummyDevice):
     def merge_wx_df(self, upper_page, lower_page):
         rtn = tool_wx_df.合并上下两个df(上一页=upper_page, 当前页=lower_page, safe=True)
         rtn["新增"] = True
-        if '自己' not in rtn.columns:
-            rtn['自己'] = False
+        if "自己" not in rtn.columns:
+            rtn["自己"] = False
         else:
             rtn.自己 = rtn.自己.fillna(False)
         return rtn
@@ -503,8 +506,9 @@ class SteadyDevice(DummyDevice):
         return name, tool_wx.is_session_name(name)
 
     def 四重击(self, x, y):
-        self.adb.do_double_click(x,y)
-        self.adb.特殊双击(x,y)
+        self.adb.do_double_click(x, y)
+        self.adb.特殊双击(x, y)
+
 
 class 基本输入字段对象(object):
     def __init__(self, d):
@@ -626,7 +630,7 @@ class 操作块(基本输入字段对象):
 
     def is_precheck(self):
         return not bool(self.tpls)
-    
+
     def 清除重复计数器(self):
         self.num_conti_repeated = 0
 
@@ -711,6 +715,7 @@ class 抽象持久序列(基本输入字段对象):
 class 基本任务(抽象持久序列):
     URL_TASK_PULL = "https://task.j1.sale/pull/{task_key}"
     URL_TASK_PUSH = "https://task.j1.sale/push"
+    持久对象 = None
 
     def __init__(self, fpath_or_dict, device_pointed=None):
         self.device_pointed = device_pointed
@@ -742,7 +747,11 @@ class 基本任务(抽象持久序列):
     @classmethod
     def 处理历史记录(cls, df, lst):
         tmp = df[~df.自己]
-        i = check_series_contains.find_matching_i(tmp.唯一值, lst) if not tmp.empty else None
+        i = (
+            check_series_contains.find_matching_i(tmp.唯一值, lst)
+            if not tmp.empty
+            else None
+        )
         if i is not None:
             df.loc[tmp.index[:i], "已处理"] = True
             df.loc[tmp.index[:i], "新增"] = False
@@ -983,7 +992,7 @@ class 基本任务(抽象持久序列):
     def 清除缓存并重置(self):
         self.cache.update(缓存=None)
         self.cache.update(cnt_up=0)
-    
+
     def 完成(self):
         self.status = "完成"
 
@@ -993,16 +1002,14 @@ class 前置预检查任务(基本任务):
 
 
 class 基本任务列表(抽象持久序列):
-    def __init__(self, fpath_or_dict, device_pointed=None):
+    def __init__(self, fpath_or_dict, device_pointed=None, 持久对象=None):
         self.device_pointed = device_pointed
+        基本任务.持久对象 = 持久对象
         super().__init__(fpath_or_dict)
 
     def init(self, list_of_dict):
         self.jobs = [基本任务(d, self.device_pointed) for d in list_of_dict]
 
-    # def 刷新参数(self, paras):
-    #     for job in self.jobs:
-    #         job.刷新参数(paras)
 
     def 执行任务(self, 单步=False):
         global_cache.clear()
@@ -1020,9 +1027,6 @@ class 基本任务列表(抽象持久序列):
                     num_executed += job.执行任务(单步=False)
             except 任务预检查不通过异常:
                 pass
-                # print('---------------')
-
-            # print('=====================', num_executed)
             return num_executed > 0
 
 
