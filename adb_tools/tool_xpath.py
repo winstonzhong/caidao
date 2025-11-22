@@ -717,6 +717,8 @@ class 基本任务(抽象持久序列):
     URL_TASK_PUSH = "https://task.j1.sale/push"
     持久对象 = None
 
+    集成的队列任务数据 = {}
+
     def __init__(self, fpath_or_dict, device_pointed=None):
         self.device_pointed = device_pointed
         super().__init__(fpath_or_dict)
@@ -725,9 +727,11 @@ class 基本任务(抽象持久序列):
         self.cache = tool_dict.PropDict()
         self.remote_obj = 0
 
-    # @classmethod
-    # def 是否已经匹配历史(cls, series, lst):
-    #     return check_series_contains(series, lst)
+    @classmethod
+    def 推入总队列(cls, 队列名称, 队列数据):
+        # 队列名称 = self.获取设备相关队列名称(队列名称)
+        cls.集成的队列任务数据.setdefault(队列名称, []).append(队列数据)
+
     @classmethod
     def 队列拉取地址(cls, task_key):
         return cls.URL_TASK_PULL.format(task_key=task_key)
@@ -738,6 +742,19 @@ class 基本任务(抽象持久序列):
 
     def 获取设备相关队列名称(self, name):
         return f"{name}_{self.serialno}"
+
+    @property
+    def 队列名称(self):
+        return (
+            self.持久对象.队列名称
+            if not self.持久对象.设备相关
+            else self.获取设备相关队列名称(self.持久对象.队列名称)
+        )
+
+    def 直接获取任务(self):
+        data_list = self.集成的队列任务数据.setdefault(self.队列名称, [])
+        global_cache.task_data = data_list.pop(0) if data_list else None
+        return global_cache.task_data
 
     def 拉取任务(self, task_key, 是否设备相关=True):
         task_key = task_key if not 是否设备相关 else self.获取设备相关队列名称(task_key)
@@ -807,6 +824,9 @@ class 基本任务(抽象持久序列):
                 activity=self.activity,
                 stop=True,
             )
+    
+    def 切回应用(self):
+        self.device.adb.ua2.app_start(self.package)
 
     def 关闭应用(self):
         script = f"am force-stop {self.package}"
@@ -996,6 +1016,20 @@ class 基本任务(抽象持久序列):
     def 完成(self):
         self.status = "完成"
 
+    def 创建提示词(self, **kwargs):
+        prompt = self.paras.get("提示词")
+        k = {
+            **kwargs,
+            **self.paras,
+        }
+        return prompt.format(**k)
+
+    def 创建提示词临时文件链接(self, **kwargs):
+        prompt = self.创建提示词(**kwargs)
+        return tool_static.upload_file(
+            prompt, self.持久对象.TOKEN, ".html", project_name="tmp"
+        )
+
 
 class 前置预检查任务(基本任务):
     pass
@@ -1009,7 +1043,6 @@ class 基本任务列表(抽象持久序列):
 
     def init(self, list_of_dict):
         self.jobs = [基本任务(d, self.device_pointed) for d in list_of_dict]
-
 
     def 执行任务(self, 单步=False):
         global_cache.clear()
