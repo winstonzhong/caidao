@@ -1855,6 +1855,10 @@ class BaseAdb(object):
         w, h = self.get_sys_width_height()
         self.ua2.swipe(w // 2, h // 2, w // 2, 0, duration, steps)
 
+    def 顶部下拉(self, duration=None, steps=None):
+        w, h = self.get_sys_width_height()
+        self.ua2.swipe(w // 2, 0, w // 2, h // 2, duration, steps)
+    
     def scroll_bottom(self):
         self.page_down(duration=10, steps=2)
 

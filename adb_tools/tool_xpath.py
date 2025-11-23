@@ -753,10 +753,17 @@ class 基本任务(抽象持久序列):
             else self.获取设备相关队列名称(self.持久对象.队列名称)
         )
 
-    def 直接获取任务(self):
-        data_list = self.集成的队列任务数据.setdefault(self.队列名称, [])
+    @classmethod
+    def 直接获取其他队列任务(cls, 队列名称):
+        data_list = cls.集成的队列任务数据.setdefault(队列名称, [])
         global_cache.task_data = data_list.pop(0) if data_list else None
         return global_cache.task_data
+    
+    def 直接获取任务(self):
+        # data_list = self.集成的队列任务数据.setdefault(self.队列名称, [])
+        # global_cache.task_data = data_list.pop(0) if data_list else None
+        # return global_cache.task_data
+        return self.直接获取其他队列任务(self.队列名称)
 
     def 拉取任务(self, task_key, 是否设备相关=True):
         task_key = task_key if not 是否设备相关 else self.获取设备相关队列名称(task_key)
@@ -1028,11 +1035,12 @@ class 基本任务(抽象持久序列):
         self.device.adb.page_down()
 
     def 创建提示词(self, **kwargs):
-        prompt = self.paras.get("提示词")
+        # prompt = self.paras.get("提示词")
         k = {
-            **kwargs,
             **self.paras,
+            **kwargs,
         }
+        prompt = k.get("提示词")
         return prompt.format(**k)
 
     def 创建提示词临时文件链接(self, **kwargs):
