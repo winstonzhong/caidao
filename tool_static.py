@@ -25,6 +25,8 @@ elif not OS_WIN:
     BASE_DIR_56T = "/mnt/56T/file"
 elif os.path.lexists("v:/file"):
     BASE_DIR_56T = "v:/file"
+elif os.path.lexists("c:/home_zwd"):
+    BASE_DIR_56T = "d:/file"
 elif os.path.lexists("d:/file"):
     BASE_DIR_56T = "d:/file"
     BASE_URL_56T = "https://127.0.0.1:8000/media"
