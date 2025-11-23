@@ -1745,10 +1745,24 @@ class BaseAdb(object):
             raise ScreenShotEmpty
         return img
 
-    def save_screen_shot(self, chrop=False, img_dir=None):
-        cv2.imwrite(
-            str(img_dir / ("%d.png" % int(time.time()))), self.screen_shot(chrop=chrop)
-        )
+    def save_screen_shot(self, chrop=False, img_dir=None, fname=None, 不覆盖=False):
+        raise ValueError
+        import tool_date
+        fname = fname if fname is not None else int(time.time())
+        img_dir = img_dir or tool_date.today()
+        fpath = str(img_dir / f"{fname}.png")
+        cv2.imwrite(fpath, self.screen_shot(chrop=chrop))
+
+    def 截图保存(self, fname, img_dir='/mnt/56T/tmp', 不覆盖=True):
+        import tool_date
+        img_dir = Path(img_dir) / tool_date.today()
+        if not img_dir.exists():
+            img_dir.mkdir(parents=True, exist_ok=True)
+        fname = fname if fname is not None else int(time.time())
+        fpath = str(img_dir / f"{fname}.png")
+        if not 不覆盖 and os.path.isfile(fpath):
+            return
+        cv2.imwrite(fpath, self.screen_shot_safe())
 
     def find_template(self, img, img_shot=None):
         img_shot = img_shot if img_shot is not None else self.screen_shot()
