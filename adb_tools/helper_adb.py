@@ -1753,16 +1753,27 @@ class BaseAdb(object):
         fpath = str(img_dir / f"{fname}.png")
         cv2.imwrite(fpath, self.screen_shot(chrop=chrop))
 
-    def 截图保存(self, fname, img_dir='/mnt/56T/tmp', 不覆盖=True):
+    def 得到截图路径(self, fname, img_dir=None):
         import tool_date
         img_dir = Path(img_dir) / tool_date.today()
         if not img_dir.exists():
             img_dir.mkdir(parents=True, exist_ok=True)
         fname = fname if fname is not None else int(time.time())
-        fpath = str(img_dir / f"{fname}.png")
-        if not 不覆盖 and os.path.isfile(fpath):
-            return
-        cv2.imwrite(fpath, self.screen_shot_safe())
+        return img_dir / f"{fname}.png"
+    
+    def 是否截图存在(self, fname, img_dir='/mnt/56T/tmp'):
+        return self.得到截图路径(fname, img_dir).exists()
+    
+    def 截图保存(self, fname=None, img_dir='/mnt/56T/tmp'):
+        # import tool_date
+        # img_dir = Path(img_dir) / tool_date.today()
+        # if not img_dir.exists():
+        #     img_dir.mkdir(parents=True, exist_ok=True)
+        # fname = fname if fname is not None else int(time.time())
+        # fpath = img_dir / f"{fname}.png"
+        fpath = self.得到截图路径(fname, img_dir)
+        if not fpath.exists():
+            cv2.imwrite(str(fpath), self.screen_shot_safe())
 
     def find_template(self, img, img_shot=None):
         img_shot = img_shot if img_shot is not None else self.screen_shot()
@@ -1869,6 +1880,10 @@ class BaseAdb(object):
         w, h = self.get_sys_width_height()
         self.ua2.swipe(w // 2, h // 2, w // 2, 0, duration, steps)
 
+    def 顶部下拉(self, duration=None, steps=None):
+        w, h = self.get_sys_width_height()
+        self.ua2.swipe(w // 2, 0, w // 2, h // 2, duration, steps)
+    
     def scroll_bottom(self):
         self.page_down(duration=10, steps=2)
 
