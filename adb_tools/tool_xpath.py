@@ -52,6 +52,8 @@ import check_series_contains
 
 import tool_dict
 
+import random
+
 # def execute_lines(job, lines, self=None):
 #     if self is not None:
 #         if self.matched:
@@ -831,6 +833,9 @@ class 基本任务(抽象持久序列):
     def 关闭应用(self):
         script = f"am force-stop {self.package}"
         return self.device.adb.execute(script)
+    
+    def 输入(self, text, clear=True):
+        self.device.send_keys(text, clear)
 
     @property
     def paras(self):
@@ -1015,6 +1020,12 @@ class 基本任务(抽象持久序列):
 
     def 完成(self):
         self.status = "完成"
+
+    def 点击(self, el, offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
+        self.device.click_element(el, offset_x, offset_y, abs_x, abs_y)
+    
+    def 向下翻页(self):
+        self.device.adb.page_down()
 
     def 创建提示词(self, **kwargs):
         prompt = self.paras.get("提示词")
