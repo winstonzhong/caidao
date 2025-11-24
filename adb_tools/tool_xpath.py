@@ -54,6 +54,8 @@ import tool_dict
 
 import random
 
+import re
+
 # def execute_lines(job, lines, self=None):
 #     if self is not None:
 #         if self.matched:
