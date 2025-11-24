@@ -758,7 +758,7 @@ class 基本任务(抽象持久序列):
     @classmethod
     def 直接获取其他队列任务(cls, 队列名称):
         data_list = cls.集成的队列任务数据.setdefault(队列名称, [])
-        global_cache.task_data = data_list.pop(0) if data_list else None
+        global_cache.task_data = data_list.pop(-1) if data_list else None
         return global_cache.task_data
     
     def 直接获取任务(self):
