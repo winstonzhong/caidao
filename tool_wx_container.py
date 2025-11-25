@@ -358,6 +358,15 @@ class 单条容器(list):
             上下文 = f"{self.发言者_无别名}:{self.正文}".replace("\n", "").strip()
         return get_hash(f"{上下文}_{self.时间}")
 
+    
+    @property
+    def 代表矩形(self):
+        return self.rect
+    
+    @property
+    def 代表高宽(self):
+        return self.代表矩形.shape
+    
     @property
     def 容器字典(self):
         return {
@@ -411,6 +420,10 @@ class 单条容器(list):
 
     def 是否靠右侧消息容器(self):
         return self.most_right > self.rect_big.width * 0.95
+    
+    @property
+    def 所有图片(self):
+        return [x for x in self if x.类型 == "图片"]
 
 
 class 元素(object):
