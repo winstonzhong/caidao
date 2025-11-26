@@ -1043,6 +1043,9 @@ class 基本任务(抽象持久序列):
             **kwargs,
         }
         prompt = k.get("提示词")
+        历史记录 = k.pop('历史记录', None)
+        if 历史记录 is not None and isinstance(历史记录, list):
+            k['历史记录'] = '\n'.join(历史记录)
         return prompt.format(**k)
 
     def 创建提示词临时文件链接(self, **kwargs):
