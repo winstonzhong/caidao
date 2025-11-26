@@ -69,6 +69,8 @@ import re
 #         exec(lines)
 global_cache = tool_dict.PropDict()
 
+全局缓存 = global_cache
+
 URL_TASK_QUEUE = f"https://{tool_env.HOST_TASK}"
 
 namespaces = {"re": "http://exslt.org/regular-expressions"}
@@ -439,11 +441,6 @@ class SteadyDevice(DummyDevice):
     @property
     def df_wx(self):
         return self.container_wx.上下文df
-        # df = self.container_wx.上下文df
-        # df["已处理"] = False
-        # df["链接"] = None
-        # df.自己 = df.自己.fillna(False).astype(bool)
-        # return df
 
     def merge_wx_df(self, upper_page, lower_page):
         rtn = tool_wx_df.合并上下两个df(上一页=upper_page, 当前页=lower_page, safe=True)
@@ -760,7 +757,7 @@ class 基本任务(抽象持久序列):
         data_list = cls.集成的队列任务数据.setdefault(队列名称, [])
         global_cache.task_data = data_list.pop(-1) if data_list else None
         return global_cache.task_data
-    
+
     def 直接获取任务(self):
         # data_list = self.集成的队列任务数据.setdefault(self.队列名称, [])
         # global_cache.task_data = data_list.pop(0) if data_list else None
@@ -835,14 +832,14 @@ class 基本任务(抽象持久序列):
                 activity=self.activity,
                 stop=True,
             )
-    
+
     def 切回应用(self):
         self.device.adb.ua2.app_start(self.package)
 
     def 关闭应用(self):
         script = f"am force-stop {self.package}"
         return self.device.adb.execute(script)
-    
+
     def 输入(self, text, clear=True):
         self.device.send_keys(text, clear)
 
@@ -1032,7 +1029,7 @@ class 基本任务(抽象持久序列):
 
     def 点击(self, el, offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
         self.device.click_element(el, offset_x, offset_y, abs_x, abs_y)
-    
+
     def 向下翻页(self):
         self.device.adb.page_down()
 
@@ -1043,9 +1040,9 @@ class 基本任务(抽象持久序列):
             **kwargs,
         }
         prompt = k.get("提示词")
-        历史记录 = k.pop('历史记录', None)
+        历史记录 = k.pop("历史记录", None)
         if 历史记录 is not None and isinstance(历史记录, list):
-            k['历史记录'] = '\n'.join(历史记录)
+            k["历史记录"] = "\n".join(历史记录)
         return prompt.format(**k)
 
     def 创建提示词临时文件链接(self, **kwargs):
@@ -1053,6 +1050,20 @@ class 基本任务(抽象持久序列):
         return tool_static.upload_file(
             prompt, self.持久对象.TOKEN, ".html", project_name="tmp"
         )
+
+    @property
+    def 微信容器(self):
+        return self.device.container_wx
+
+    @property
+    def 微信df(self):
+        return self.微信容器.上下文df
+
+    @property
+    def 第一条未处理语音(self):
+        df = self.微信df
+        tmp = df[(df.类型 == "语音") & (~df.已处理)]
+        return tmp.iloc[0] if not tmp.empty else None
 
 
 class 前置预检查任务(基本任务):
