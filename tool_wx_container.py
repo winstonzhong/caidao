@@ -136,7 +136,7 @@ class 单条容器(list):
             return False
 
         if self.类型 == "语音":
-            print('============', [self.语音转文字文本])
+            # print('============', [self.语音转文字文本])
             return bool(self.语音转文字文本)
 
         return True
