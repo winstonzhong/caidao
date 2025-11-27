@@ -365,6 +365,13 @@ class OffiAccount:
     def get_material_count(self):
         return self.client.material.get_count()
 
+    def get_voice_material(self):
+        return self.client.material.batchget('voice')
+
+    def get_image_material(self):
+        return self.client.material.batchget('image')
+
+
     def add_tmp_img(self, fpath):
         return self.client.media.upload('image', open(fpath, 'rb'))
 
@@ -494,6 +501,14 @@ class OffiAccount:
                    'picurl': pic_url}
         return self.client.message.send_link(open_id, article)
 
+    def reply_voice_by_mid(self, open_id, media_id):
+        """发送语音卡片消息"""
+        return self.client.message.send_voice(open_id, media_id)
+
+    def reply_article(self, open_id, media_id):
+        return self.client.message.send_articles(open_id, media_id)
+
+
     def add_draft_article(self, thumb_url, article):
         """添加文章到草稿箱
         article = {
@@ -530,6 +545,9 @@ class OffiAccount:
         """发布文章删除, 通过get_article方法获取"""
         return self.client.freepublish.delete(article_id)
 
+    def get_drafts(self):
+        return self.client.draft.batchget()
+
     def upload_voice_for_text(self, voice_id, url):
         """上传音频转文字"""
         media_file = url_to_memory(url, fname='1.mp3')
@@ -552,8 +570,10 @@ class OffiAccount:
 if __name__ == '__main__':
     # oa = OffiAccount()
 
-    oa = OffiAccount('123', '123')
-    print(oa.access_token)
+    # oa = OffiAccount('123', '123')
+    oa = OffiAccount('wx074ce80c1ccb866d', '65e2e1357502f3c7db99e1a18e1ae048')
+
+    # print(oa.access_token)
     # test()
     # img_url = oa.upload_tmp_img('/mnt/d/1.png')
     # print(img_url)
@@ -567,11 +587,13 @@ if __name__ == '__main__':
 
     # url = oa.get_tmp_img_url('l_Avysz1YLAa4t5EZjAIYGA0KWaqFkqz8FTCsPoFEB7AN-ohEVslOBxrF7z7dUrI')
     # print(url)
-    oa.reply_page_card('orRSd56HefLUut_ia-xwXGlmCH68', '鱼跃(yuwell)血糖仪580 家用医用款 语音免调码低痛采血 糖尿病血糖测试仪（50片血糖试纸+50支采血针）', '查看详情', 'https://chat-live.j1.sale/product?id=8', 'https://file.j1.sale/api/file/2024-09-12/84286a4e-70d9-11ef-9f41-0242ac120002.png')
+
+    # print(oa.get_voice_material())
+    # print(oa.get_image_material())
     # oa.reply_img('orRSd56HefLUut_ia-xwXGlmCH68', 'Ru5HW9LTcmgRCixmZ3_CdenSfac1JtXS1LoxWMVEViYDVx3ScpuHMrV3fGgOGvh9')
-    # x = oa.get_tmp_img_media_id_by_url('https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png')
+    x = oa.get_tmp_img_media_id_by_url('https://file.j1.sale/api/file/static/crawler/img/icon_summary.png')
+    print(x)
     # x = oa.get_tmp_img_url('rEAssefTyr8MuDPtyugp5dr7Urew2P7u25pGK9M4Z-2Uo3FfVKkOguogIWHXLci7')
-    # print(x)
     # print(x)
     # menu_data = {
     #         "button": [
@@ -683,9 +705,21 @@ if __name__ == '__main__':
     # print(data)
     # x = oa.get_tmp_img_url(data['media_id'])
 
+    # oa.reply_page_card('orRSd56HefLUut_ia-xwXGlmCH68', '测试音频', '查看详情', 'https://res.wx.qq.com/voice/getvoice?mediaid=Mzg4NTgzMTM0MV8yMjQ3NDg0MDM2', 'https://file.j1.sale/api/file/2024-09-12/84286a4e-70d9-11ef-9f41-0242ac120002.png')
+    # oa.reply_voice_by_mid('orRSd56HefLUut_ia-xwXGlmCH68',
+    #                       'ILWSWmW3bP6zCwjvxO7jEQOQBTArA7oa5DQ_k6xSrUtakgGHevJtbf0PVPOD0kGD')
+    # oa.reply_article('orRSd56HefLUut_ia-xwXGlmCH68', 'ILWSWmW3bP6zCwjvxO7jEbrr3ULmGcbKntnBkBtNp7CBNI3K9spHd3e2loXqnxPt')
 
+    # print(oa.get_drafts())
 
-    #
-    # with open('/mnt/d/1_1.jpg', 'wb') as f:
-    #     f.write(x.content)
-    # print(x.content)
+    # oa.client.message.send_music('orRSd5wz3QpQCN1rhREg9dPDOSWo',
+    #                              'https://file.j1.sale/api/file/2025-11-14/1763050011.9967080.5406.mp3',
+    #                              'https://file.j1.sale/api/file/2025-11-14/1763050011.9967080.5406.mp3',
+    #                              'ILWSWmW3bP6zCwjvxO7jEbjHGA_7mPRxLRko4PV_KKKuCH9xeKJzcjC7vb2Qxp-m',
+    #                              'test_title',
+    #                              'test_desc',
+    #                              )
+
+    # print(oa.publish_article('ILWSWmW3bP6zCwjvxO7jEbjHGA_7mPRxLRko4PV_KKKuCH9xeKJzcjC7vb2Qxp-m'))
+    print(oa.client.freepublish.batchget(0, 20))
+    # print(oa.client.freepublish.get('2247484058'))
