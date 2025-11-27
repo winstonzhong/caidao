@@ -444,10 +444,9 @@ class SteadyDevice(DummyDevice):
     @property
     def container_wx(self):
         return 解析器(xml=self.source)
-    
+
     # def 记录容器快照(self):
     #     self.容器列表.append(self.container_wx)
-    
 
     @property
     def df_wx(self):
@@ -1078,15 +1077,6 @@ class 基本任务(抽象持久序列):
         df["容器key"] = 容器.key
         return df
 
-    @property
-    def 最后一条未处理语音(self):
-        df = self.微信df
-        # last_key = 全局缓存.最后处理语音key or None
-        keys = 全局缓存.setdefault("最后处理语音key", [])
-        tmp = df[(df.类型 == "语音") & (~df.已处理) & (~df.唯一值带时间.isin(keys))]
-        return tmp.iloc[-1] if not tmp.empty else None
-
-
     def 是否微信容器发生了变化(self):
         # if 全局缓存.缓存页 is None:
         #     return True
@@ -1099,18 +1089,29 @@ class 基本任务(抽象持久序列):
         #     return False
 
         # return True
-        return 全局缓存.前容器唯一值 is None or 全局缓存.前容器唯一值 != self.微信容器.key
+        return (
+            全局缓存.前容器唯一值 is None or 全局缓存.前容器唯一值 != self.微信容器.key
+        )
+
+    def 微信容器结束本轮(self, 标记的操作=None):
+        全局缓存.最后执行动作 = 标记的操作
+        全局缓存.前容器唯一值 = self.微信容器.key
+        if 标记的操作 == "微信容器向下翻页":
+            self.向下翻页()
+        elif 标记的操作 == "微信容器向上翻页":
+            self.向上翻页()
 
     def 微信容器向下翻页(self):
-        全局缓存.前容器唯一值 = self.微信容器.key
-        全局缓存.最后执行动作 = "微信容器向下翻页"
-        self.向下翻页()
+        # 全局缓存.前容器唯一值 = self.微信容器.key
+        # 全局缓存.最后执行动作 = "微信容器向下翻页"
+        # self.向下翻页()
+        self.微信容器结束本轮("微信容器向下翻页")
 
     def 微信容器向上翻页(self):
-        全局缓存.前容器唯一值 = self.微信容器.key
-        全局缓存.最后执行动作 = "微信容器向上翻页"
-        self.向上翻页()
-
+        # 全局缓存.前容器唯一值 = self.微信容器.key
+        # 全局缓存.最后执行动作 = "微信容器向上翻页"
+        # self.向上翻页()
+        self.微信容器结束本轮("微信容器向上翻页")
 
     def 得到当前缓存页(self):
         df = self.微信df
@@ -1136,30 +1137,52 @@ class 基本任务(抽象持久序列):
     def 处理当前同步流程(self):
         if not self.是否微信容器发生了变化():
             if 全局缓存.最后执行动作 == "微信容器向下翻页":
-                # 容器已到底 = True
                 return False
             else:
                 self.微信容器向下翻页()
                 return True
+        else:
+            self.点击第一张未处理图片()
 
-        全局缓存.向下翻页中 = False
-        self.点击第一张未处理图片()
+    @property
+    def 最后一条未处理语音(self):
+        df = self.微信df
+        keys = 全局缓存.setdefault("最后处理语音key", [])
+        tmp = df[(df.类型 == "语音") & (~df.已处理) & (~df.唯一值带时间.isin(keys))]
+        # print('=========================================================')
+        # print(df)
+        # print(keys)
+        # print(tmp)
+        # print('=========================================================')
+        return tmp.iloc[-1] if not tmp.empty else None
+
+
+    def 长按最后一条未处理语音(self):
+        s = self.最后一条未处理语音
+        if s is not None:
+            self.device.long_click(*s.xy)
+            全局缓存.setdefault("最后处理语音key", []).append(s.唯一值带时间)
+            return True
 
     def 处理历史对齐流程(self):
-        if not self.是否微信容器发生了变化():
-            if 全局缓存.最后执行动作 == "微信容器向上翻页":
-                raise 对齐历史到顶部异常
-            else:
-                self.微信容器向上翻页()
+        if not self.是否微信容器发生了变化() and 全局缓存.最后执行动作 == "微信容器向上翻页":
+            raise 对齐历史到顶部异常
+            # if 全局缓存.最后执行动作 == "微信容器向上翻页":
+            #     raise 对齐历史到顶部异常
+            # else:
+            #     self.微信容器向上翻页()
         else:
-            s = self.最后一条未处理语音
-            if s is not None:
-                self.device.long_click(*s.xy)
-                全局缓存.setdefault("最后处理语音key", []).append(s.唯一值带时间)
+            # s = self.最后一条未处理语音
+            # if s is not None:
+            #     self.device.long_click(*s.xy)
+            #     全局缓存.setdefault("最后处理语音key", []).append(s.唯一值带时间)
+            #     self.微信容器结束本轮('处理语音')
+            # else:
+            #     self.微信容器向上翻页()
+            if self.长按最后一条未处理语音():
+                self.微信容器结束本轮("处理语音")
             else:
                 self.微信容器向上翻页()
-
-
 
 
 class 前置预检查任务(基本任务):
