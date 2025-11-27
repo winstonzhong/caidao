@@ -99,7 +99,7 @@ class 单条容器(list):
     @property
     def 和微信容器底边间距(self):
         return abs(self.rect_big.bottom - self.rect.bottom)
-    
+
     def 是否底部被截断(self):
         return self.和微信容器底边间距 <= 0
 
@@ -134,6 +134,11 @@ class 单条容器(list):
 
         if self.语音转文字控件 is not None:
             return False
+
+        if self.类型 == "语音":
+            print('============', [self.语音转文字文本])
+            return bool(self.语音转文字文本)
+
         return True
 
     @property
@@ -250,7 +255,7 @@ class 单条容器(list):
 
         if "公众号文章标题" in l:
             return "公众号文章"
-        
+
         if "公众号名片" in l:
             return "公众号名片"
 
@@ -282,6 +287,11 @@ class 单条容器(list):
     # @property
     # def 图片唯一值正文(self):
     #     return self.唯一值
+
+    @property
+    def 语音转文字文本(self):
+        if self.类型 == "语音":
+            return self.获取所有文本或描述("语音转文字")
 
     @cached_property
     def 正文(self):
@@ -318,7 +328,7 @@ class 单条容器(list):
 
         if self.类型 == "小程序":
             return f"""[分享了一个小程序]{self.获取所有文本或描述()}"""
-        
+
         if self.类型 == "公众号名片":
             return f"""[分享了一个公众号名片]{self.获取所有文本或描述('公众号名片')}"""
 
@@ -329,8 +339,6 @@ class 单条容器(list):
             return convert_chinese_datetime(e.文本).strftime("%Y-%m-%d %H:%M:%S")
         return numpy.nan
 
-    
-    
     def 是否合法容器(self, 忽略顶部探头=False):
         if self.类型 == "文本":
             return (
@@ -359,6 +367,14 @@ class 单条容器(list):
         return get_hash(f"{上下文}_{self.时间}")
 
     @property
+    def 代表矩形(self):
+        return self.rect
+
+    @property
+    def 代表高宽(self):
+        return self.代表矩形.shape
+
+    @property
     def 容器字典(self):
         return {
             "上下文": self.上下文,
@@ -372,6 +388,8 @@ class 单条容器(list):
             "xy头像": self.xy头像,
             "已处理": self.是否已处理(),
             "链接": None,
+            "图片key": None,
+            "重试次数": 0,
         }
 
     @property
@@ -388,14 +406,18 @@ class 单条容器(list):
             #     if e is not None:
             #         return bounds_to_rect(e.bounds).offset(0, 0)
             #     # return bounds_to_rect(self.头像.bounds).offset(1, 0.5)
-            if (
-                not self.是否自己消息()
-                and self.头像 is not None
-                and self.语音转文字控件 is not None
-            ):
-                return self.语音转文字控件.rect.offset(0, 0)
-                # return bounds_to_rect(self.头像.bounds).offset(1, 0.5)
-            return None, None
+            if self.是否自己消息() or self.头像 is None:
+                return None, None
+            return self.头像.rect.offset(1, 0.5)
+
+            # if (
+            #     not self.是否自己消息()
+            #     and self.头像 is not None
+            #     and self.语音转文字控件 is not None
+            # ):
+            #     return self.语音转文字控件.rect.offset(0, 0)
+            #     # return bounds_to_rect(self.头像.bounds).offset(1, 0.5)
+            # return None, None
         elif self.类型 == "图片":
             if self.是否自己消息():
                 return bounds_to_rect(self.头像.bounds).offset(-1.1, 0.5)
@@ -411,6 +433,10 @@ class 单条容器(list):
 
     def 是否靠右侧消息容器(self):
         return self.most_right > self.rect_big.width * 0.95
+
+    @property
+    def 所有图片(self):
+        return [x for x in self if x.类型 == "图片"]
 
 
 class 元素(object):
@@ -485,9 +511,9 @@ class 元素(object):
         "小程序卡片注脚": [
             'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.FrameLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
         ],
-        "微信转账":[
+        "微信转账": [
             'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.RelativeLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
-        ]
+        ],
     }
 
     types = {}
