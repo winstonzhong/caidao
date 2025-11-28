@@ -499,9 +499,7 @@ def 日期转中文几日(tdate: datetime.date):
     return f"{tdate.day}日"
 
 
-def 日期列表转不重复的中文几月列表(
-    dates: list[datetime.date], include_year=False
-) -> list[str]:
+def 日期列表转不重复的中文几月列表(dates, include_year=False):
     """
     将日期列表转换为不重复的中文几月列表
 
@@ -523,9 +521,7 @@ def 日期列表转不重复的中文几月列表(
     return [item.split("-")[-1] for item in months] if not include_year else months
 
 
-def 获取日期范围(
-    总天数: int, 截止日期: datetime.datetime = None
-) -> list[datetime.date]:
+def 获取日期范围(总天数, 截止日期=None):
     """
     生成从开始日期到截止日期（包含两端）的所有日期列表
 
