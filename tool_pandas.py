@@ -158,9 +158,6 @@ def query_df(df, **k):
     return df
 
 
-
-
-
 def 自动补齐后续缺失时间并自动加1秒(df: pd.DataFrame) -> pd.DataFrame:
     """
     处理DataFrame的"时间"列，完成格式转换、缺失填充和组内秒数递增
@@ -251,20 +248,21 @@ def 自动补齐后续缺失时间并自动加1秒(df: pd.DataFrame) -> pd.DataF
     """
     # 复制原数据，避免修改输入DataFrame
     df_copy = df.copy()
-    
-    # 1. 字符串转datetime（无法转换的设为NaT）
-    df_copy['时间'] = pd.to_datetime(df_copy['时间'], errors='coerce')
-    
-    # 2. 前向填充缺失时间
-    df_copy['时间'] = df_copy['时间'].ffill()
-    
-    # 3. 组内按位置递增秒数（cumcount()返回组内索引：0,1,2...）
-    df_copy['时间'] += pd.to_timedelta(df_copy.groupby('时间').cumcount(), unit='s')
-    
-    df_copy['时间'] = df_copy['时间'].dt.strftime('%Y-%m-%d %H:%M:%S')
 
-    
+    df_copy["原始时间"] = df_copy["时间"]
+    # 1. 字符串转datetime（无法转换的设为NaT）
+    df_copy["时间"] = pd.to_datetime(df_copy["时间"], errors="coerce")
+
+    # 2. 前向填充缺失时间
+    df_copy["时间"] = df_copy["时间"].ffill()
+
+    # 3. 组内按位置递增秒数（cumcount()返回组内索引：0,1,2...）
+    df_copy["时间"] += pd.to_timedelta(df_copy.groupby("时间").cumcount(), unit="s")
+
+    df_copy["时间"] = df_copy["时间"].dt.strftime("%Y-%m-%d %H:%M:%S")
+
     return df_copy
+
 
 if __name__ == "__main__":
     import doctest
