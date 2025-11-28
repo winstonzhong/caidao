@@ -13,6 +13,7 @@ from uiautomator2.xpath import XPath, XMLElement
 from helper_hash import get_hash
 from tool_env import bounds_to_rect
 from tool_img import get_template_points, show, pil2cv2, cv2pil, b642cv2
+import image_hash_comparison
 from lxml import etree
 
 import functools
@@ -57,6 +58,8 @@ import tool_dict
 import random
 
 import re
+
+from urllib.parse import urljoin
 
 # def execute_lines(job, lines, self=None):
 #     if self is not None:
@@ -158,6 +161,12 @@ def retrying(tries):
         return wrapper
 
     return decorator
+
+
+@retrying(3)
+def 查询图片url(key):
+    url = urljoin(tool_env.HOST_URL, "wx_msgs/img_query")
+    return requests.get(url, params={"key": key}).json().get("url")
 
 
 def 解析列表条目(e, debug=False):
@@ -496,6 +505,35 @@ class SteadyDevice(DummyDevice):
             src = self.adb.get_latest_file(base_dir=self.remote_fpath_wx_images)
             self.adb.move_file_to_robot_temp(src, fname)
             return url
+
+    def 下载微信图片并返回链接和唯一码_内网(self):
+        fpath = self.adb.pull_lastest_file_until(
+            base_dir=self.remote_fpath_wx_images, to_56T=True
+        )
+        return tool_static.路径到链接(
+            fpath
+        ), image_hash_comparison.compute_noise_robust_hash_fpath(fpath)
+
+    def 下载微信图片并返回链接和唯一码_外网(self, token):
+        fpath = self.adb.pull_lastest_file_until(
+            base_dir=self.remote_fpath_wx_images, to_56T=False
+        )
+        img_key = image_hash_comparison.compute_noise_robust_hash_fpath(fpath)
+        url = 查询图片url(img_key)
+
+        if url is None:
+            url = tool_static.upload_file_by_path(fpath, token)
+            # fname = url.split("/")[-1]
+            # src = self.adb.get_latest_file(base_dir=self.remote_fpath_wx_images)
+            # self.adb.move_file_to_robot_temp(src, fname)
+        return url, img_key
+    
+    def 下载微信图片并返回链接和唯一码(self, token):
+        if tool_static.is_inner():
+            return self.下载微信图片并返回链接和唯一码_内网()
+        else:
+            return self.下载微信图片并返回链接和唯一码_外网(token)
+            
 
     def cut_wx_df(self, df):
         tmp = df[df.自己]
@@ -1062,11 +1100,11 @@ class 基本任务(抽象持久序列):
             k["历史记录"] = "\n".join(历史记录)
         return prompt.format(**k)
 
-    
     def 上传文件(self, content, suffix=".html", project_name="tmp"):
-        return tool_static.upload_file(content, self.持久对象.TOKEN, suffix, project_name=project_name)
-    
-    
+        return tool_static.upload_file(
+            content, self.持久对象.TOKEN, suffix, project_name=project_name
+        )
+
     def 创建提示词临时文件链接(self, **kwargs):
         # prompt = self.创建提示词(**kwargs)
         # return tool_static.upload_file(
@@ -1135,7 +1173,7 @@ class 基本任务(抽象持久序列):
                 全局缓存.缓存页 = df
 
         return 全局缓存.缓存页
-    
+
     def 得到历史页(self):
         if 全局缓存.历史页 is None:
             全局缓存.历史页 = self.微信df
@@ -1152,14 +1190,13 @@ class 基本任务(抽象持久序列):
     def 合并历史和当前页(self):
         历史页 = self.得到历史页()
         content = {
-            '历史页': 历史页.to_csv(),
-            '当前页': self.得到当前缓存页().to_csv(),
+            "历史页": 历史页.to_csv(),
+            "当前页": self.得到当前缓存页().to_csv(),
         }
         content = json.dumps(content, ensure_ascii=False)
         print(self.上传文件(content, ".json", project_name="tmp"))
         raise ValueError
-        
-    
+
     def 处理当前同步流程(self):
         if (
             not self.是否微信容器发生了变化()

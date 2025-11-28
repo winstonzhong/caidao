@@ -50,7 +50,9 @@ HOST_TASK = os.environ.get("HOST_TASK", HOST_TASK_DEFAULT)
 
 HOST_SERVER = os.getenv("HOST_SERVER", HOST_SERVER_DEFAULT)
 
-HEALTH_CARD_URL = f"https://{HOST_SERVER_DEFAULT}/wx_msgs/healthdoc"
+HOST_URL = f"https://{HOST_SERVER}"
+
+HEALTH_CARD_URL = f"{HOST_URL}/wx_msgs/healthdoc"
 
 # HEALTH_CARD_TAG = "您的健康档案已更新～"
 
