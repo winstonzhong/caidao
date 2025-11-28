@@ -5,29 +5,6 @@ from pathlib import Path
 import itertools
 import tool_env
 
-UT_DIR = Path(__file__).parent.resolve() / "ut"
-
-# SELF_MAP = {
-#     "True": 1,
-#     "False": 0,
-#     True: 1,
-#     False: 0,
-# }
-
-
-def load_ut_df(name):
-    return pandas.read_csv(UT_DIR / f"{str(name).split('.', maxsplit=1)[0]}.csv")
-
-
-def save_ut_df(df, name=None):
-    name = name if name else f"{time.time():.0f}"
-    df.to_csv(UT_DIR / f"{name}.csv", index=False)
-    return name
-
-
-def save_ut_df_phone(phone, name=None):
-    return save_ut_df(phone.微信_获取当前页df(), name)
-
 
 def 是否匹配(上一页, 当前页):
     """
@@ -214,7 +191,8 @@ def 合并上下两个df(上一页, 当前页, safe=False):
 
         return rtn.sort_index()
     elif safe:
-        return 直接暴力合并(上一页, 当前页)
+        return pandas.concat([上一页, 当前页], ignore_index=True)
+        # return 直接暴力合并(上一页, 当前页)
 
 
 def 将当前页和缓存融合并匹配历史表(当前页df, 历史df=None, 缓存df=None):
