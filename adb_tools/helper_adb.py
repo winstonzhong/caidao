@@ -357,6 +357,23 @@ class NoAdbDeviceError(Exception):
     pass
 
 
+def remove_files_in_directory_os(directory_path):
+    """使用os模块删除目录下所有文件"""
+    if not os.path.isdir(directory_path):
+        raise ValueError(f"路径不存在或不是目录: {directory_path}")
+    
+    for filename in os.listdir(directory_path):
+        file_path = os.path.join(directory_path, filename)
+        
+        # 判断是否为文件（不是目录）
+        if os.path.isfile(file_path):
+            try:
+                os.remove(file_path)
+                print(f"已删除: {file_path}")
+            except Exception as e:
+                print(f"删除失败 {file_path}: {e}")
+
+
 class BaseAdb(object):
     # app_name = None
     # activity = None
@@ -740,10 +757,15 @@ class BaseAdb(object):
         # clear_base_dir=False,
         fpath=None,
         to_56T=False,
+        clear_tmp_dir=False,
     ):
         old_size = None
         # if clear_base_dir:
         #     self.clear_temp_dir(base_dir)
+
+        if not to_56T and clear_tmp_dir:
+            remove_files_in_directory_os(to_dir)
+
         for i in range(max_retry):
             new_size = self.get_latest_file_size(base_dir)
             if new_size and new_size == old_size:

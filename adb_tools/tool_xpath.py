@@ -516,8 +516,9 @@ class SteadyDevice(DummyDevice):
 
     def 下载微信图片并返回链接和唯一码_外网(self, token):
         fpath = self.adb.pull_lastest_file_until(
-            base_dir=self.remote_fpath_wx_images, to_56T=False
+            base_dir=self.remote_fpath_wx_images, to_56T=False, clear_tmp_dir=True
         )
+        # print("fpath:", fpath)
         img_key = image_hash_comparison.compute_noise_robust_hash_fpath(fpath)
         url = 查询图片url(img_key)
 
@@ -1187,6 +1188,11 @@ class 基本任务(抽象持久序列):
             全局缓存.最后图片index = tmp.index[0]
             return True
 
+    def 处理并保存图片(self):
+        url, img_key = self.下载微信图片并返回链接和唯一码()
+
+
+
     def 合并历史和当前页(self):
         历史页 = self.得到历史页()
         content = {
@@ -1235,6 +1241,11 @@ class 基本任务(抽象持久序列):
                 self.微信容器结束本轮("处理语音")
             else:
                 self.微信容器向上翻页()
+    
+    def 下载微信图片并返回链接和唯一码(self):
+        return self.device.下载微信图片并返回链接和唯一码(self.持久对象.TOKEN)
+    
+        
 
 
 class 前置预检查任务(基本任务):
