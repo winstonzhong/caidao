@@ -41,6 +41,8 @@ import itertools
 
 import tool_wx_df
 
+import tool_wx_df3
+
 import tool_static
 
 import traceback
@@ -528,13 +530,12 @@ class SteadyDevice(DummyDevice):
             # src = self.adb.get_latest_file(base_dir=self.remote_fpath_wx_images)
             # self.adb.move_file_to_robot_temp(src, fname)
         return url, img_key
-    
+
     def 下载微信图片并返回链接和唯一码(self, token):
         if tool_static.is_inner():
             return self.下载微信图片并返回链接和唯一码_内网()
         else:
             return self.下载微信图片并返回链接和唯一码_外网(token)
-            
 
     def cut_wx_df(self, df):
         tmp = df[df.自己]
@@ -1177,7 +1178,7 @@ class 基本任务(抽象持久序列):
 
     def 得到历史页(self):
         if 全局缓存.历史页 is None:
-            全局缓存.历史页 = self.微信df
+            全局缓存.历史页 = pandas.DataFrame(columns=["原始时间", "唯一值", "图片key"])
         return 全局缓存.历史页
 
     def 点击第一张未处理图片(self):
@@ -1186,28 +1187,46 @@ class 基本任务(抽象持久序列):
         if not tmp.empty:
             self.device.click(*tmp.iloc[0].xy)
             全局缓存.最后图片index = tmp.index[0]
+            全局缓存.最后图片信息 = tmp.index[0], tmp.iloc[0].容器key
             return True
 
     def 处理并保存图片(self):
         url, img_key = self.下载微信图片并返回链接和唯一码()
+        # df = self.得到当前缓存页()
+        df = 全局缓存.缓存页
+        图片index, 容器key = 全局缓存.最后图片信息
+        assert (
+            图片index is not None and df.iloc[0].容器key == 容器key
+        ), "图片处理错误, 容器不一致"
+        df.loc[图片index, ["链接", "图片key", "已处理"]] = (url, img_key, True)
 
+    def 合并历史和当前页(self, debug=False):
 
-
-    def 合并历史和当前页(self):
         历史页 = self.得到历史页()
-        content = {
-            "历史页": 历史页.to_csv(),
-            "当前页": self.得到当前缓存页().to_csv(),
-        }
-        content = json.dumps(content, ensure_ascii=False)
-        print(self.上传文件(content, ".json", project_name="tmp"))
-        raise ValueError
+        当前页 = self.得到当前缓存页()
+        if debug:
+            content = {
+                "历史页": 历史页.to_csv(),
+                "当前页": 当前页.to_csv(),
+            }
+            content = json.dumps(content, ensure_ascii=False)
+            url = self.上传文件(content, ".json", project_name="tmp")
+            print(url)
+            print(tool_static.链接到路径(url))
+        # raise ValueError
+        全局缓存.历史页 = tool_wx_df3.合并上下df(历史页, 当前页)
+        全局缓存.缓存页 = None
+        print("合并完成======================")
+        print(全局缓存.历史页)
+        
 
     def 处理当前同步流程(self):
         if (
             not self.是否微信容器发生了变化()
             and 全局缓存.最后执行动作 == "微信容器向下翻页"
         ):
+            print("最后结果======================")
+            print(全局缓存.历史页)
             raise 同步消息到底部异常
         else:
             if self.点击第一张未处理图片():
@@ -1241,11 +1260,9 @@ class 基本任务(抽象持久序列):
                 self.微信容器结束本轮("处理语音")
             else:
                 self.微信容器向上翻页()
-    
+
     def 下载微信图片并返回链接和唯一码(self):
         return self.device.下载微信图片并返回链接和唯一码(self.持久对象.TOKEN)
-    
-        
 
 
 class 前置预检查任务(基本任务):
