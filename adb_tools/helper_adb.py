@@ -1898,9 +1898,45 @@ class BaseAdb(object):
         w, h = self.get_sys_width_height()
         self.ua2.swipe(w // 2, h // 2, w // 2, h, duration, steps)
 
-    def page_down(self, duration=None, steps=None):
+    # def page_down(self, duration=None, steps=None):
+    #     w, h = self.get_sys_width_height()
+    #     self.ua2.swipe(w // 2, h // 2, w // 2, 0, duration, steps)
+
+
+    def page_down(self, duration=None, steps=None, randomize=False):
+        """
+        模拟向下滑动（翻页）操作。
+
+        参数:
+            duration (float, 可选): 滑动持续时间（毫秒）。
+            steps (int, 可选): 滑动步数。
+            randomize (bool, 可选): 是否启用随机偏移。若为 True，
+                则在起始和结束点的 y 坐标上添加小幅随机偏移，
+                使得每次滑动轨迹略有不同，但不影响整体翻页效果。
+
+        说明:
+            当 randomize=True 时，起始 y 坐标会在屏幕中线附近 ±10% 屏幕高度范围内随机波动，
+            结束 y 坐标会在 0 附近 ±10% 屏幕高度范围内随机波动，
+            从而保证滑动方向始终向下且翻页有效，同时增加了操作的随机性。
+        """
         w, h = self.get_sys_width_height()
-        self.ua2.swipe(w // 2, h // 2, w // 2, 0, duration, steps)
+        mid_x = w // 2
+        mid_y = h // 2
+
+        if randomize:
+            # 随机偏移量控制在 ±10% 屏幕高度
+            # offset_range_y = int(h * 0.1)
+            # offset_range_x = int(w * 0.1)
+            start_y = mid_y + random.randint(0, int(h * 0.2))
+            end_y = random.randint(0, int(h * 0.01))
+            start_x = mid_x + random.randint(-int(w * 0.1), int(w * 0.1))
+            end_x = mid_x + random.randint(-int(w * 0.1), int(w * 0.1))
+        else:
+            start_y = mid_y
+            end_y = 0
+            start_x = end_x = mid_x
+        print(start_x, start_y, end_x, end_y)
+        self.ua2.swipe(start_x, start_y, end_x, end_y, duration, steps)
 
     def 顶部下拉(self, duration=None, steps=None):
         w, h = self.get_sys_width_height()

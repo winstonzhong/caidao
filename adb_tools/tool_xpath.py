@@ -1084,8 +1084,8 @@ class 基本任务(抽象持久序列):
     def 点击(self, el, offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
         self.device.click_element(el, offset_x, offset_y, abs_x, abs_y)
 
-    def 向下翻页(self):
-        self.device.adb.page_down()
+    def 向下翻页(self, 模拟人工=False):
+        self.device.adb.page_down(randomize=模拟人工)
 
     def 向上翻页(self):
         self.device.adb.page_up()
@@ -1096,6 +1096,12 @@ class 基本任务(抽象持久序列):
             **self.paras,
             **kwargs,
         }
+
+        文件名 = k.get("文件名", None)
+        if 文件名 is not None:
+            with open(文件名, "r", encoding="utf8") as fp:
+                k["提示词"] = fp.read()
+
         prompt = k.get("提示词")
         历史记录 = k.pop("历史记录", None)
         if 历史记录 is not None and isinstance(历史记录, list):
