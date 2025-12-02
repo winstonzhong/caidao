@@ -198,11 +198,12 @@ class 单条容器(list):
             if type_name in x.类型:
                 return x
 
-    def 获取所有文本或描述(self, type_name=None):
+    def 获取所有文本或描述(self, type_name=None, not_inlcude=("时间", "头像")):
         rtn = []
         for x in self:
             if type_name is None or type_name in x.类型:
-                if "头像" not in x.类型:
+                if not list(filter(lambda t: t  in x.类型, not_inlcude)):
+                # if "头像" not in x.类型:
                     rtn.append(x)
         return " ".join([x.文本或者描述 for x in rtn if x.文本或者描述])
 
@@ -295,6 +296,9 @@ class 单条容器(list):
 
     @cached_property
     def 正文(self):
+        if self.是否自己消息():
+            return  self.获取所有文本或描述()
+        
         if self.类型 == "微信转账":
             return f"[发起转账]{self.获取所有文本或描述('微信转账')}"
 
@@ -514,6 +518,10 @@ class 元素(object):
         "微信转账": [
             'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.RelativeLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
         ],
+        
+        # "文件图片": [
+        #     'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.FrameLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.RelativeLayout"]/node[@class="android.widget.ImageView"]',
+        # ]
     }
 
     types = {}

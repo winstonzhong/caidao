@@ -8,6 +8,9 @@ import platform
 import re
 import time
 
+from pathlib import Path
+
+
 import numpy
 from numpy.lib._iotools import _is_string_like
 import pandas
@@ -55,6 +58,36 @@ HOST_URL = f"https://{HOST_SERVER}"
 HEALTH_CARD_URL = f"{HOST_URL}/wx_msgs/healthdoc"
 
 # HEALTH_CARD_TAG = "您的健康档案已更新～"
+
+
+def get_filename(file_path: str) -> str:
+    """
+    从Windows或Linux文件路径中提取文件名（包含扩展名），彻底解决跨平台兼容问题
+    支持：带盘符的Windows路径、Linux路径、网络共享路径、混合分隔符路径
+
+    Args:
+        file_path: Windows或Linux格式的文件路径字符串（普通字符串/原始字符串均可）
+
+    Returns:
+        路径中的文件名（包含扩展名）
+
+    Examples:
+        >>> get_filename(w_fpath)
+        '1764469092.9023788.xml'
+        >>> get_filename('/mnt/aaa/b.xml')  # Linux路径
+        'b.xml'
+    """
+    # 1. 处理Windows路径：替换反斜杠为正斜杠，去掉盘符（如 C:/ → /）
+    # 匹配 Windows 盘符（如 C:、D:）或网络共享路径（// 开头）
+    windows_path_pattern = r"^([A-Za-z]:)?[\\/]"
+    if re.match(windows_path_pattern, file_path):
+        # 替换所有反斜杠为正斜杠
+        file_path = file_path.replace("\\", "/")
+        # 去掉盘符（如 C:/ → /，保留网络共享路径的 //）
+        file_path = re.sub(r"^[A-Za-z]:/", "/", file_path)
+
+    # 2. 用 Path 提取文件名（此时路径已统一为 / 分隔符，跨平台兼容）
+    return Path(file_path).name
 
 
 class cached_property_for_cls:
@@ -734,7 +767,6 @@ def replace_url_host(url, host_name):
     return new_url
 
 
-
 if __name__ == "__main__":
     import doctest
 
@@ -745,4 +777,5 @@ if __name__ == "__main__":
     mulline_text = r"人家\r\n磁带非但没被淘汰，容量还比硬盘大了123"
     s1 = "aa bb\ncc dd ee"
     mulline_text1 = "人家 1213\r\n磁带非但没被淘汰 容量还比硬盘大了123"
+    w_fpath = 'D:\\workspace\\db\\sg\\meida\\0\\1764469092.9023788.xml'
     print(doctest.testmod(verbose=False, report=False))
