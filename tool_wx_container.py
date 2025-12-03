@@ -96,6 +96,11 @@ class 单条容器(list):
     def 是否底部触底(self):
         return self.rect.bottom >= self.rect_big.bottom and self.类型 != "文本"
 
+    def 是否非文本容器超长(self):
+        v = self.rect.height / self.rect_big.height
+        print(f'容器高度占比: {v:.2f}')
+        return self.类型 != "文本" and (self.rect.height / self.rect_big.height) >= 0.40
+    
     @property
     def 和微信容器底边间距(self):
         return abs(self.rect_big.bottom - self.rect.bottom)
@@ -202,8 +207,8 @@ class 单条容器(list):
         rtn = []
         for x in self:
             if type_name is None or type_name in x.类型:
-                if not list(filter(lambda t: t  in x.类型, not_inlcude)):
-                # if "头像" not in x.类型:
+                if not list(filter(lambda t: t in x.类型, not_inlcude)):
+                    # if "头像" not in x.类型:
                     rtn.append(x)
         return " ".join([x.文本或者描述 for x in rtn if x.文本或者描述])
 
@@ -297,8 +302,8 @@ class 单条容器(list):
     @cached_property
     def 正文(self):
         if self.是否自己消息():
-            return  self.获取所有文本或描述()
-        
+            return self.获取所有文本或描述()
+
         if self.类型 == "微信转账":
             return f"[发起转账]{self.获取所有文本或描述('微信转账')}"
 
@@ -343,12 +348,15 @@ class 单条容器(list):
             return convert_chinese_datetime(e.文本).strftime("%Y-%m-%d %H:%M:%S")
         return numpy.nan
 
+    def 是否包含时间(self):
+        return pandas.notna(self.时间)
+
     def 是否合法容器(self, 忽略顶部探头=False):
         if self.类型 == "文本":
             return (
                 bool(self.发言者)
                 and bool(self.正文)
-                # and (not self.是否顶部探头() or 忽略顶部探头)
+                and (not self.是否顶部探头() or 忽略顶部探头 or self.是否包含时间())
                 # and not self.是否底部触底()
             )
         return (
@@ -518,7 +526,6 @@ class 元素(object):
         "微信转账": [
             'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.RelativeLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.TextView"]',
         ],
-        
         # "文件图片": [
         #     'node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.FrameLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.LinearLayout"]/node[@class="android.widget.RelativeLayout"]/node[@class="android.widget.ImageView"]',
         # ]
@@ -745,6 +752,9 @@ class 解析器(object):
         recycler = self.tree.xpath(ptn_recycler, namespaces=namespaces)
         assert recycler, "没有找到recycler"
         return get_hash_bytes(etree.tostring(recycler[0]))
+
+    def 是否一半向下翻页(self):
+        return self.elements and self.elements[-1].是否底部触底() and self.elements[-1].是否非文本容器超长()
 
 
 if __name__ == "__main__":

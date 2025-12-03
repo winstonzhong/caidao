@@ -51,16 +51,17 @@ from urllib.parse import unquote
 from uiautomator2 import Device
 from uiautomator2.version import __apk_version__
 
+
 def _package_version(self, package_name):
-    if self.shell(['pm', 'path', package_name]).exit_code != 0:
+    if self.shell(["pm", "path", package_name]).exit_code != 0:
         return None
-    dump_output = self.shell(['dumpsys', 'package', package_name]).output
-    m = re.compile(r'versionName=(?P<name>[\d.]+)').search(dump_output)
-    print('match is:', m, package_name)
-    print(m.group('name') if m else "")
+    dump_output = self.shell(["dumpsys", "package", package_name]).output
+    m = re.compile(r"versionName=(?P<name>[\d.]+)").search(dump_output)
+    print("match is:", m, package_name)
+    print(m.group("name") if m else "")
     # print(dump_output)
     # return packaging.version.parse(m.group('name') if m else "")
-    return packaging.version.parse(m.group('name')) if m else None
+    return packaging.version.parse(m.group("name")) if m else None
 
 
 def _is_apk_required(self) -> bool:
@@ -72,6 +73,7 @@ def _is_apk_required(self) -> bool:
     # if self._package_version("com.github.uiautomator.test") is None:
     #     return True
     return False
+
 
 def _is_apk_outdated(self):
     # 检查被测应用是否存在
@@ -92,6 +94,7 @@ def _is_apk_outdated(self):
 Device._package_version = _package_version
 Device._is_apk_required = _is_apk_required
 Device._is_apk_outdated = _is_apk_outdated
+
 
 # from base_adb import tool_devices
 # from common.exceptions import ElementNotFoundError, TplNotFoundError, NotNeedFurtherActions
@@ -361,10 +364,10 @@ def remove_files_in_directory_os(directory_path):
     """使用os模块删除目录下所有文件"""
     if not os.path.isdir(directory_path):
         raise ValueError(f"路径不存在或不是目录: {directory_path}")
-    
+
     for filename in os.listdir(directory_path):
         file_path = os.path.join(directory_path, filename)
-        
+
         # 判断是否为文件（不是目录）
         if os.path.isfile(file_path):
             try:
@@ -393,7 +396,7 @@ class BaseAdb(object):
 
     PICTURES_DIR = "/sdcard/Pictures"
 
-    ROBOT_TMP = DIR_UPLOAD#"/sdcard/robot/temp"
+    ROBOT_TMP = DIR_UPLOAD  # "/sdcard/robot/temp"
 
     if not os.path.lexists(DIR_CFG):
         os.makedirs(DIR_CFG, exist_ok=True)
@@ -416,7 +419,7 @@ class BaseAdb(object):
         self.current_key = None
 
     def __str__(self):
-        return f'{self.device},  设备ID：{self.serialno}'
+        return f"{self.device},  设备ID：{self.serialno}"
 
     def __repr__(self):
         return self.__str__()
@@ -782,7 +785,7 @@ class BaseAdb(object):
     def pull_latest_picture(self, to_dir, base_dir="/sdcard/Pictures"):
         # return self.pull_lastest_file_until(base_dir=base_dir, to_dir)
         return self.pull_lastest_file_until(to_dir, base_dir)
-    
+
     def pull_latest_picture_weixin(
         self,
         to_dir=TMP_DIR,
@@ -820,7 +823,9 @@ class BaseAdb(object):
             rtn.append(路径到链接(local))
         return rtn
 
-    def copy_file_to_temp(self, fpath, sleep_span=0.1, tmp_dir=None, clear_expired=True):
+    def copy_file_to_temp(
+        self, fpath, sleep_span=0.1, tmp_dir=None, clear_expired=True
+    ):
         tmp_dir = tmp_dir or self.DIR_TMP
         src = fpath
         fname = 得到一个不重复的文件名(fpath)
@@ -843,7 +848,7 @@ class BaseAdb(object):
 
     def copy_file_to_robot_temp(self, fpath):
         self.copy_file_to_temp(fpath, tmp_dir=self.ROBOT_TMP)
-        
+
     def copy_file_to_download(self, fpath):
         self.copy_file_to_temp(fpath, tmp_dir=self.DIR_UPLOAD, clear_expired=False)
 
@@ -852,7 +857,6 @@ class BaseAdb(object):
 
     def match_file_in_robot_temp(self, url):
         return f"{self.ROBOT_TMP}/{os.path.basename(url)}"
-        
 
     def change_file_suffix(self, fpath, new_suffix):
         base = fpath.rsplit(".", maxsplit=1)[0]
@@ -1049,17 +1053,19 @@ class BaseAdb(object):
         )
         self.ua2.app_start(package_name=d.get("package_name"), activity=d.get("a3"))
         return self
-    
+
     def open_filemanager3(self):
         d = {
-            "PBCM30": {"package_name":"com.coloros.filemanager", "activity": ".Main"},
-            "MI_8_Lite": {"package_name": "com.android.fileexplorer", "activity": ".FileExplorerTabActivity"}
+            "PBCM30": {"package_name": "com.coloros.filemanager", "activity": ".Main"},
+            "MI_8_Lite": {
+                "package_name": "com.android.fileexplorer",
+                "activity": ".FileExplorerTabActivity",
+            },
         }.get(self.device_model) or None
         assert d is not None, f"{self.device_model} not in {d}"
         self.ua2.app_start(
             package_name=d.get("package_name"), activity=d.get("activity")
         )
-
 
     def save_page_content(self, path):
         content = self.page_content().encode("utf8")
@@ -1513,16 +1519,15 @@ class BaseAdb(object):
     @classmethod
     def get_devices_as_dict(cls):
         return list(tool_devices.parse_devices(BaseAdb.get_devices()[0]))
-    
+
     @cached_property
     def device_info(self):
         data_list = self.get_devices_as_dict()
-        return {d.get('id'): d for d in data_list}.get(self.device.get('id'), {})
-    
+        return {d.get("id"): d for d in data_list}.get(self.device.get("id"), {})
+
     @property
     def device_model(self):
         return self.device_info.get("model")
-
 
     @classmethod
     def get_devcie_wifi(cls):
@@ -1770,6 +1775,7 @@ class BaseAdb(object):
     def save_screen_shot(self, chrop=False, img_dir=None, fname=None, 不覆盖=False):
         raise ValueError
         import tool_date
+
         fname = fname if fname is not None else int(time.time())
         img_dir = img_dir or tool_date.today()
         fpath = str(img_dir / f"{fname}.png")
@@ -1777,16 +1783,17 @@ class BaseAdb(object):
 
     def 得到截图路径(self, fname, img_dir=None):
         import tool_date
+
         img_dir = Path(img_dir) / tool_date.today()
         if not img_dir.exists():
             img_dir.mkdir(parents=True, exist_ok=True)
         fname = fname if fname is not None else int(time.time())
         return img_dir / f"{fname}.png"
-    
-    def 是否截图存在(self, fname, img_dir='/mnt/56T/tmp'):
+
+    def 是否截图存在(self, fname, img_dir="/mnt/56T/tmp"):
         return self.得到截图路径(fname, img_dir).exists()
-    
-    def 截图保存(self, fname=None, img_dir='/mnt/56T/tmp'):
+
+    def 截图保存(self, fname=None, img_dir="/mnt/56T/tmp"):
         # import tool_date
         # img_dir = Path(img_dir) / tool_date.today()
         # if not img_dir.exists():
@@ -1894,16 +1901,57 @@ class BaseAdb(object):
         w, h = self.get_sys_width_height()
         self.ua2.swipe(w // 2, h // 2, w // 2, (h // 2) + distance, duration=duration)
 
-    def page_up(self, duration=None, steps=None):
-        w, h = self.get_sys_width_height()
-        self.ua2.swipe(w // 2, h // 2, w // 2, h, duration, steps)
+    # def page_up(self, duration=None, steps=None):
+    #     w, h = self.get_sys_width_height()
+    #     self.ua2.swipe(w // 2, h // 2, w // 2, h, duration, steps)
 
     # def page_down(self, duration=None, steps=None):
     #     w, h = self.get_sys_width_height()
     #     self.ua2.swipe(w // 2, h // 2, w // 2, 0, duration, steps)
+    def page_up(self, duration=None, steps=None, randomize=False, half=False):
+        """
+        模拟向上滑动（翻页）操作。
+
+        参数:
+            duration (float, 可选): 滑动持续时间（毫秒）。
+            steps (int, 可选): 滑动步数。
+            randomize (bool, 可选): 是否启用随机偏移。若为 True，
+                则在起始和结束点的 y 坐标上添加小幅随机偏移，
+                使得每次滑动轨迹略有不同，但不影响整体翻页效果。
+            half (bool, 可选): 是否只滑动半页。若为 True，滑动距离减半，
+                仅完成半页翻页操作。
+
+        说明:
+            当 randomize=True 时，起始 y 坐标会在屏幕中线附近 -0~20% 屏幕高度范围内随机波动（不小于0），
+            结束 y 坐标会在屏幕底部（h）附近 -0~1% 屏幕高度范围内随机波动（不大于h），
+            从而保证滑动方向始终向上且翻页有效，同时增加了操作的随机性。
+        """
+        w, h = self.get_sys_width_height()
+        mid_x = w // 2
+        mid_y = h // 2
+
+        if randomize:
+            # 随机偏移量控制：x轴±10%屏幕宽度，y轴符合向上滑动逻辑
+            start_x = mid_x + random.randint(-int(w * 0.1), int(w * 0.1))
+            end_x = mid_x + random.randint(-int(w * 0.1), int(w * 0.1))
+            # 起始y在中线附近，结束y在底部附近（不大于h）
+            start_y = mid_y + random.randint(-int(h * 0.1), int(h * 0.1))
+            end_y = min(h, h - random.randint(0, int(h * 0.01)))
+        else:
+            # 默认无偏移，保持原page_up的滑动轨迹
+            start_x = end_x = mid_x
+            start_y = mid_y
+            end_y = h
+
+        if half:
+            # 滑动距离减半，与page_down保持一致的计算逻辑
+            end_y = end_y + (start_y - end_y) // 2
+
+        print(start_x, start_y, end_x, end_y)
+        self.ua2.swipe(start_x, start_y, end_x, end_y, duration, steps)
 
 
-    def page_down(self, duration=None, steps=None, randomize=False):
+    def page_down(self, duration=None, steps=None, randomize=False, half=False):
         """
         模拟向下滑动（翻页）操作。
 
@@ -1924,10 +1972,7 @@ class BaseAdb(object):
         mid_y = h // 2
 
         if randomize:
-            # 随机偏移量控制在 ±10% 屏幕高度
-            # offset_range_y = int(h * 0.1)
-            # offset_range_x = int(w * 0.1)
-            start_y = mid_y + random.randint(0, int(h * 0.2))
+            start_y = mid_y + random.randint(-int(h * 0.1), int(h * 0.1))
             end_y = random.randint(0, int(h * 0.01))
             start_x = mid_x + random.randint(-int(w * 0.1), int(w * 0.1))
             end_x = mid_x + random.randint(-int(w * 0.1), int(w * 0.1))
@@ -1935,13 +1980,17 @@ class BaseAdb(object):
             start_y = mid_y
             end_y = 0
             start_x = end_x = mid_x
+
+        if half:
+            end_y = end_y + (start_y - end_y) // 2
+
         print(start_x, start_y, end_x, end_y)
         self.ua2.swipe(start_x, start_y, end_x, end_y, duration, steps)
 
     def 顶部下拉(self, duration=None, steps=None):
         w, h = self.get_sys_width_height()
         self.ua2.swipe(w // 2, 0, w // 2, h // 2, duration, steps)
-    
+
     def scroll_bottom(self):
         self.page_down(duration=10, steps=2)
 

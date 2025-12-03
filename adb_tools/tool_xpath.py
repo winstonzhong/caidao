@@ -63,6 +63,8 @@ import re
 
 from urllib.parse import urljoin
 
+import tool_wx_groupname
+
 # def execute_lines(job, lines, self=None):
 #     if self is not None:
 #         if self.matched:
@@ -333,6 +335,9 @@ class SteadyDevice(DummyDevice):
             if text or desc:
                 rtn.append(f"{text} {desc}")
         return rtn
+    
+    def element2text(self, e):
+        return ' '.join([x.strip() for x in self.parse_element(e) if x.strip()])
 
     def print_results(self, results):
         records = []
@@ -1084,11 +1089,12 @@ class 基本任务(抽象持久序列):
     def 点击(self, el, offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
         self.device.click_element(el, offset_x, offset_y, abs_x, abs_y)
 
-    def 向下翻页(self, 模拟人工=False):
-        self.device.adb.page_down(randomize=模拟人工)
+    def 向下翻页(self, 模拟人工=False, 是否一半翻=False):
+        print("向下翻页",模拟人工,是否一半翻)
+        self.device.adb.page_down(randomize=模拟人工, half=是否一半翻)
 
-    def 向上翻页(self):
-        self.device.adb.page_up()
+    def 向上翻页(self, 模拟人工=False, 是否一半翻=False):
+        self.device.adb.page_up(randomize=模拟人工, half=是否一半翻)
 
     def 创建提示词(self, **kwargs):
         # prompt = self.paras.get("提示词")
@@ -1149,24 +1155,22 @@ class 基本任务(抽象持久序列):
             全局缓存.前容器唯一值 is None or 全局缓存.前容器唯一值 != self.微信容器.key
         )
 
+    def 是否一半向下翻页(self):
+        c = self.微信容器
+        return c.elements and c.elements[-1].是否底部触底() and c.elements[-1].是否非文本容器超长()
+    
     def 微信容器结束本轮(self, 标记的操作=None):
         全局缓存.最后执行动作 = 标记的操作
         全局缓存.前容器唯一值 = self.微信容器.key
         if 标记的操作 == "微信容器向下翻页":
-            self.向下翻页()
+            self.向下翻页(是否一半翻=self.微信容器.是否一半向下翻页())
         elif 标记的操作 == "微信容器向上翻页":
             self.向上翻页()
 
     def 微信容器向下翻页(self):
-        # 全局缓存.前容器唯一值 = self.微信容器.key
-        # 全局缓存.最后执行动作 = "微信容器向下翻页"
-        # self.向下翻页()
         self.微信容器结束本轮("微信容器向下翻页")
 
     def 微信容器向上翻页(self):
-        # 全局缓存.前容器唯一值 = self.微信容器.key
-        # 全局缓存.最后执行动作 = "微信容器向上翻页"
-        # self.向上翻页()
         self.微信容器结束本轮("微信容器向上翻页")
 
     def 得到当前缓存页(self):
@@ -1198,8 +1202,7 @@ class 基本任务(抽象持久序列):
 
     def 处理并保存图片(self):
         url, img_key = self.下载微信图片并返回链接和唯一码()
-        # df = self.得到当前缓存页()
-        df = 全局缓存.缓存页
+        df = 全局缓存.历史页
         图片index, 容器key = 全局缓存.最后图片信息
         assert (
             图片index is not None and df.iloc[0].容器key == 容器key
@@ -1223,8 +1226,8 @@ class 基本任务(抽象持久序列):
         全局缓存.历史页 = tool_wx_df3.合并上下df(历史页, 当前页)
         全局缓存.缓存页 = None
         print("合并完成======================")
-        print(全局缓存.历史页)
-        
+        print(全局缓存.历史页[['上下文','时间','原始时间']])
+
 
     def 处理当前同步流程(self):
         if (
@@ -1235,11 +1238,16 @@ class 基本任务(抽象持久序列):
             print(全局缓存.历史页)
             raise 同步消息到底部异常
         else:
+            self.合并历史和当前页()
             if self.点击第一张未处理图片():
                 self.微信容器结束本轮("点击图片")
             else:
-                self.合并历史和当前页()
                 self.微信容器向下翻页()
+            # if self.点击第一张未处理图片():
+            #     self.微信容器结束本轮("点击图片")
+            # else:
+            #     self.合并历史和当前页()
+            #     self.微信容器向下翻页()
 
     @property
     def 最后一条未处理语音(self):
@@ -1269,6 +1277,9 @@ class 基本任务(抽象持久序列):
 
     def 下载微信图片并返回链接和唯一码(self):
         return self.device.下载微信图片并返回链接和唯一码(self.持久对象.TOKEN)
+    
+    def 生成随机微信群名称(self):
+        return tool_wx_groupname.随机生成健康微信群名字()
 
 
 class 前置预检查任务(基本任务):
