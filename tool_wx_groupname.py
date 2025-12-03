@@ -490,7 +490,7 @@ def 随机生成健康微信群名字():
     随机科室 = random.choice(科室列表)
     随机姓氏 = random.choice(姓氏列表)
 
-    return f"{随机医院}{随机科室}{随机姓氏}医生{当前月日}{random.choice(管理目的列表)}"
+    return f"__{随机医院}{随机科室}{随机姓氏}医生{random.choice(管理目的列表)}"
 
 
 # 测试函数（生成10个示例）
