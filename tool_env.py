@@ -767,6 +767,121 @@ def replace_url_host(url, host_name):
     return new_url
 
 
+def truncate_at_last_punct_if_question(text: str) -> str:
+    """
+    若文本末尾（允许尾随空白）以半角?/全角？结尾，截断到最后一个中文标点（。？！）或半角?!的位置。
+
+    Doctest 测试用例：
+    >>> truncate_at_last_punct_if_question("这是第一段。这是第二段？")  # 最后标点是。
+    '这是第一段。'
+    >>> truncate_at_last_punct_if_question("测试1？测试2！   ")  # 末尾带空白，最后标点是？
+    '测试1？测试2！'
+    >>> truncate_at_last_punct_if_question("示例！结尾是？")  # 最后标点是！
+    '示例！'
+    >>> truncate_at_last_punct_if_question("半角!结尾？")  # 半角!匹配
+    '半角!'
+    >>> truncate_at_last_punct_if_question("无目标标点？   ")  # 无匹配标点，返回原文
+    '无目标标点'
+    >>> truncate_at_last_punct_if_question("无问号结尾！")  # 非问号结尾，返回原文
+    '无问号结尾！'
+    >>> truncate_at_last_punct_if_question("")  # 空字符串边界Case
+    ''
+    >>> truncate_at_last_punct_if_question("混合标点。a?b！c？")  # 多标点取最后一个
+    '混合标点。a?b！'
+    """
+    # 匹配末尾的半角?/全角？，允许尾随空白
+    question_end_pattern = r"[?？]\s*$"
+    if not re.search(question_end_pattern, text):
+        return text.strip()
+
+    # 定义需要查找的标点（全角。？！ + 半角?!）
+    text = text.strip()[:-1]
+    target_puncts = "。？！?!"
+    # 遍历所有标点，找到最后出现的位置
+    last_punct_idx = -1
+    for punct in target_puncts:
+        current_idx = text.rfind(punct)
+        if current_idx > last_punct_idx:
+            last_punct_idx = current_idx
+
+    # 找到标点则截断，否则返回原文
+    return text[: last_punct_idx + 1] if last_punct_idx != -1 else text
+
+
+def has_valid_result(txt):
+    """
+    判断输入文本去除非汉字后是否不以“无”结尾（即存在有效结果），同时处理引号包裹“无”的情况。
+
+    核心规则：
+    1. 先去除文本首尾空白字符；
+    2. 若清洗后的文本包含「“无”」「"无"」「‘无’」「'无'」，直接返回False；
+    3. 过滤出文本中所有汉字（Unicode范围：\u4e00-\u9fa5）；
+    4. 若过滤后的汉字字符串为空 → 返回False；
+    5. 若过滤后的汉字字符串是「无」或以「无」结尾 → 返回False；
+    6. 其他情况返回True（表示有有效结果）。
+
+    Doctest单元测试（覆盖所有核心场景）：
+    >>> has_valid_result("")  # 空字符串
+    False
+    >>> has_valid_result("   ")  # 全空白字符
+    False
+    >>> has_valid_result("无")  # 仅含「无」
+    False
+    >>> has_valid_result("查询结果无")  # 汉字结尾为「无」
+    False
+    >>> has_valid_result("查询结果无123￥%")  # 结尾「无」+非汉字
+    False
+    >>> has_valid_result("“无”")  # 中文双引号包裹「无」
+    False
+    >>> has_valid_result('"无"')  # 英文双引号包裹「无」
+    False
+    >>> has_valid_result("‘无’")  # 中文单引号包裹「无」
+    False
+    >>> has_valid_result("'无'")  # 英文单引号包裹「无」
+    False
+    >>> has_valid_result("包含“无”的无效文本")  # 文本中含中文双引号「无」
+    False
+    >>> has_valid_result("包含'无'的无效文本")  # 文本中含英文单引号「无」
+    False
+    >>> has_valid_result("查询结果为合格")  # 正常有效结尾
+    True
+    >>> has_valid_result("查询结果为合格123@")  # 有效结尾+非汉字
+    True
+    >>> has_valid_result("  测试结果正常  ")  # 首尾空白+有效结尾
+    True
+    >>> has_valid_result("无有效内容但结尾合格")  # 开头「无」+结尾有效
+    True
+    >>> has_valid_result("123测试456")  # 非汉字包围有效汉字
+    True
+    >>> has_valid_result("abc123￥%")  # 全非汉字
+    False
+    >>> has_valid_result("结果无无")  # 过滤后结尾为「无」
+    False
+    """
+    # 步骤1：去除首尾空白字符
+    cleaned_txt = txt.strip()
+
+    # 步骤2：检查是否包含引号包裹的「无」（中英文单/双引号）
+    invalid_quote_patterns = {"“无”", '"无"', "‘无’", "'无'"}
+    if any(pattern in cleaned_txt for pattern in invalid_quote_patterns):
+        return False
+
+    # 步骤3：过滤出所有汉字（仅保留Unicode汉字范围的字符）
+    chinese_chars = [char for char in cleaned_txt if "\u4e00" <= char <= "\u9fa5"]
+    chinese_str = "".join(chinese_chars)
+
+    # 步骤4：过滤后无汉字 → 无有效结果
+    if not chinese_str:
+        return False
+
+    # 步骤5：过滤后是「无」或结尾为「无」→ 无有效结果
+    if chinese_str == "无" or chinese_str.endswith("无"):
+        return False
+
+    # 步骤6：其他情况 → 有有效结果
+    return True
+
+
 if __name__ == "__main__":
     import doctest
 
@@ -777,5 +892,5 @@ if __name__ == "__main__":
     mulline_text = r"人家\r\n磁带非但没被淘汰，容量还比硬盘大了123"
     s1 = "aa bb\ncc dd ee"
     mulline_text1 = "人家 1213\r\n磁带非但没被淘汰 容量还比硬盘大了123"
-    w_fpath = 'D:\\workspace\\db\\sg\\meida\\0\\1764469092.9023788.xml'
+    w_fpath = "D:\\workspace\\db\\sg\\meida\\0\\1764469092.9023788.xml"
     print(doctest.testmod(verbose=False, report=False))

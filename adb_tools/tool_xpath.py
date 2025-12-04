@@ -1096,6 +1096,26 @@ class 基本任务(抽象持久序列):
     def 向上翻页(self, 模拟人工=False, 是否一半翻=False):
         self.device.adb.page_up(randomize=模拟人工, half=是否一半翻)
 
+    def 读取文件内容(self, fname):
+        with open(fname, "r") as fp:
+            content = fp.read()
+        return content
+    
+    def 处理提示词(self, prompt):
+        if prompt.strip().startswith("<!DOCTYPE html>"):
+            return prompt
+        return tool_env.remove_leading_whitespace('''
+        <!DOCTYPE html>
+        <html lang="zh-CN">
+        <head>
+        <meta charset="UTF-8">
+        </head>
+        <body>
+        {prompt}
+        </body>
+        </html>
+        ''').format(prompt=prompt)
+
     def 创建提示词(self, **kwargs):
         # prompt = self.paras.get("提示词")
         k = {
@@ -1108,7 +1128,7 @@ class 基本任务(抽象持久序列):
             with open(文件名, "r", encoding="utf8") as fp:
                 k["提示词"] = fp.read()
 
-        prompt = k.get("提示词")
+        prompt = self.处理提示词(k.get("提示词"))
         历史记录 = k.pop("历史记录", None)
         if 历史记录 is not None and isinstance(历史记录, list):
             k["历史记录"] = "\n".join(历史记录)
@@ -1280,6 +1300,12 @@ class 基本任务(抽象持久序列):
     
     def 生成随机微信群名称(self):
         return tool_wx_groupname.随机生成健康微信群名字()
+    
+    def 是否聚焦(self, results):
+        if not isinstance(results, list):
+            results = [results]
+        return sum([e.attrib.get('focused') == "true" for e in results]) > 0
+
 
 
 class 前置预检查任务(基本任务):

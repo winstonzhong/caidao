@@ -1758,6 +1758,12 @@ class BaseAdb(object):
             b = b.replace(b"\r\n", b"\n")
         return bin2img(b)
 
+    def screen_shot_local(self):
+        fpath = f'{self.DIR_UPLOAD}/{int(time.time())}.png'
+        cmd = f'screencap -p {fpath}'.encode("utf8")
+        self.execute(script=cmd, encoding=None)
+        return self.broadcast(fpath)
+
     def screen_shot_safe(self):
         img = self.screen_shot()
 
