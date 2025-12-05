@@ -859,12 +859,14 @@ def has_valid_result(txt):
     False
     >>> has_valid_result("结果无无")  # 过滤后结尾为「无」
     False
+    >>> has_valid_result("请你明确一下具体需求，比如对这段文本进行润色、概括、提取关键信息、分析观点等，这样我才能更准确地为你提供服务呀。")
+    False
     """
     # 步骤1：去除首尾空白字符
     cleaned_txt = txt.strip()
 
     # 步骤2：检查是否包含引号包裹的「无」（中英文单/双引号）
-    invalid_quote_patterns = {"“无”", '"无"', "‘无’", "'无'"}
+    invalid_quote_patterns = {"“无”", '"无"', "‘无’", "'无'", "具体需求"}
     if any(pattern in cleaned_txt for pattern in invalid_quote_patterns):
         return False
 
