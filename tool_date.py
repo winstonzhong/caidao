@@ -471,6 +471,78 @@ def 北京时间字符串转UTC(time_str):
         return utc_time
     return time_str
 
+def UTC转北京时间字符串(utc_time):
+    """
+    将UTC时区的datetime对象转换为北京时间字符串
+
+    参数:
+        utc_time (datetime|None): 带UTC时区信息的datetime对象（aware datetime）
+                                或None。如果是naive datetime，则假定为UTC时间。
+
+    返回:
+        str: 北京时间字符串，格式为 "%Y-%m-%d %H:%M:%S"，例如 "2025-01-01 16:29:00"
+             如果输入为None或无效，则原样返回输入值
+
+    Examples:
+        >>> # 测试1: 标准UTC时间转换
+        >>> utc = pytz.UTC.localize(datetime.datetime(2025, 1, 1, 8, 29, 0))
+        >>> UTC转北京时间字符串(utc)
+        '2025-01-01 16:29:00'
+
+        >>> # 测试2: UTC零点转换
+        >>> utc = pytz.UTC.localize(datetime.datetime(2025, 1, 1, 0, 0, 0))
+        >>> UTC转北京时间字符串(utc)
+        '2025-01-01 08:00:00'
+
+        >>> # 测试3: 跨日期转换
+        >>> utc = pytz.UTC.localize(datetime.datetime(2025, 1, 1, 20, 0, 0))
+        >>> UTC转北京时间字符串(utc)
+        '2025-01-02 04:00:00'
+
+        >>> # 测试4: 处理None输入
+        >>> UTC转北京时间字符串(None) is None
+        True
+
+        >>> # 测试5: 处理空字符串输入
+        >>> UTC转北京时间字符串('')
+        ''
+
+        >>> # 测试6: 处理naive datetime（假定UTC）
+        >>> naive_utc = datetime.datetime(2025, 6, 15, 12, 0, 0)
+        >>> UTC转北京时间字符串(naive_utc)
+        '2025-06-15 20:00:00'
+
+        >>> # 测试7: 夏令时边界测试（北京时间不实行夏令时）
+        >>> utc = pytz.UTC.localize(datetime.datetime(2025, 7, 15, 12, 0, 0))
+        >>> UTC转北京时间字符串(utc)
+        '2025-07-15 20:00:00'
+
+        >>> # 测试8: 与原始函数互转验证
+        >>> original_str = "2025-01-01 08:29:00"
+        >>> utc = 北京时间字符串转UTC(original_str)
+        >>> converted_back = UTC转北京时间字符串(utc)
+        >>> converted_back == original_str
+        True
+    """
+    if utc_time is None:
+        return None
+
+    if isinstance(utc_time, str):
+        return utc_time
+
+    if isinstance(utc_time, datetime.datetime):
+        # 如果是naive datetime，假定其为UTC时间
+        if utc_time.tzinfo is None or utc_time.tzinfo.utcoffset(utc_time) is None:
+            utc_time = pytz.UTC.localize(utc_time)
+
+        # 转换为北京时间
+        beijing_tz = pytz.timezone("Asia/Shanghai")
+        beijing_time = utc_time.astimezone(beijing_tz)
+
+        # 格式化为字符串
+        return beijing_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    return utc_time
 
 def 日期转中文周几(tdate: datetime.date):
     """
@@ -773,78 +845,7 @@ def is_weekend(date=None) -> bool:
     return to_date(date or 今天()).weekday() >= 5
 
 
-def UTC转北京时间字符串(utc_time):
-    """
-    将UTC时区的datetime对象转换为北京时间字符串
 
-    参数:
-        utc_time (datetime|None): 带UTC时区信息的datetime对象（aware datetime）
-                                或None。如果是naive datetime，则假定为UTC时间。
-
-    返回:
-        str: 北京时间字符串，格式为 "%Y-%m-%d %H:%M:%S"，例如 "2025-01-01 16:29:00"
-             如果输入为None或无效，则原样返回输入值
-
-    Examples:
-        >>> # 测试1: 标准UTC时间转换
-        >>> utc = pytz.UTC.localize(datetime.datetime(2025, 1, 1, 8, 29, 0))
-        >>> UTC转北京时间字符串(utc)
-        '2025-01-01 16:29:00'
-
-        >>> # 测试2: UTC零点转换
-        >>> utc = pytz.UTC.localize(datetime.datetime(2025, 1, 1, 0, 0, 0))
-        >>> UTC转北京时间字符串(utc)
-        '2025-01-01 08:00:00'
-
-        >>> # 测试3: 跨日期转换
-        >>> utc = pytz.UTC.localize(datetime.datetime(2025, 1, 1, 20, 0, 0))
-        >>> UTC转北京时间字符串(utc)
-        '2025-01-02 04:00:00'
-
-        >>> # 测试4: 处理None输入
-        >>> UTC转北京时间字符串(None) is None
-        True
-
-        >>> # 测试5: 处理空字符串输入
-        >>> UTC转北京时间字符串('')
-        ''
-
-        >>> # 测试6: 处理naive datetime（假定UTC）
-        >>> naive_utc = datetime.datetime(2025, 6, 15, 12, 0, 0)
-        >>> UTC转北京时间字符串(naive_utc)
-        '2025-06-15 20:00:00'
-
-        >>> # 测试7: 夏令时边界测试（北京时间不实行夏令时）
-        >>> utc = pytz.UTC.localize(datetime.datetime(2025, 7, 15, 12, 0, 0))
-        >>> UTC转北京时间字符串(utc)
-        '2025-07-15 20:00:00'
-
-        >>> # 测试8: 与原始函数互转验证
-        >>> original_str = "2025-01-01 08:29:00"
-        >>> utc = 北京时间字符串转UTC(original_str)
-        >>> converted_back = UTC转北京时间字符串(utc)
-        >>> converted_back == original_str
-        True
-    """
-    if utc_time is None:
-        return None
-
-    if isinstance(utc_time, str):
-        return utc_time
-
-    if isinstance(utc_time, datetime.datetime):
-        # 如果是naive datetime，假定其为UTC时间
-        if utc_time.tzinfo is None or utc_time.tzinfo.utcoffset(utc_time) is None:
-            utc_time = pytz.UTC.localize(utc_time)
-
-        # 转换为北京时间
-        beijing_tz = pytz.timezone("Asia/Shanghai")
-        beijing_time = utc_time.astimezone(beijing_tz)
-
-        # 格式化为字符串
-        return beijing_time.strftime("%Y-%m-%d %H:%M:%S")
-
-    return utc_time
 
 
 if __name__ == "__main__":

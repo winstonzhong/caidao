@@ -873,7 +873,7 @@ def has_valid_result(txt):
     cleaned_txt = txt.strip()
 
     # 步骤2：检查是否包含引号包裹的「无」（中英文单/双引号）
-    invalid_quote_patterns = {"“无”", '"无"', "‘无’", "'无'", "具体需求"}
+    invalid_quote_patterns = {"“无”", '"无"', "‘无’", "'无'", "具体需求", "链接"}
     if any(pattern in cleaned_txt for pattern in invalid_quote_patterns):
         return False
 
