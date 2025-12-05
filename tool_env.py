@@ -766,6 +766,11 @@ def replace_url_host(url, host_name):
     new_url = urlunparse(new_components)
     return new_url
 
+# 这个视频还挺有意思的，充满了搞笑的对话和情节呢，让人感觉很欢乐。不知道你具体想要了解哪些关于这个视频的信息呀？比如对里面的某个情节的讨论，还是其他方面呢？
+
+def is_endswith_question(text: str) -> bool:
+    question_end_pattern = r"[?？]\s*$"
+    return re.search(question_end_pattern, text)
 
 def truncate_at_last_punct_if_question(text: str) -> str:
     """
@@ -790,24 +795,26 @@ def truncate_at_last_punct_if_question(text: str) -> str:
     '混合标点。a?b！'
     >>> truncate_at_last_punct_if_question("从视频里能感机这件事的小得～不知，有的小作品呀？")
     '从视频里能感机这件事的小得～'
+    >>> truncate_at_last_punct_if_question("这个视频还, 于。这个视频的信息呀？比如对里面的某个情节的讨论，还是其他方面呢？")
+    '这个视频还, 于。'
     """
-    # 匹配末尾的半角?/全角？，允许尾随空白
-    question_end_pattern = r"[?？]\s*$"
-    if not re.search(question_end_pattern, text):
-        return text.strip()
+    # if not is_endswith_question(text):
+    #     return text.strip()
+    
+    while is_endswith_question(text):
+        # 定义需要查找的标点（全角。？！ + 半角?!）
+        text = text.strip()[:-1]
+        target_puncts = "。？！?!～"
+        # 遍历所有标点，找到最后出现的位置
+        last_punct_idx = -1
+        for punct in target_puncts:
+            current_idx = text.rfind(punct)
+            if current_idx > last_punct_idx:
+                last_punct_idx = current_idx
 
-    # 定义需要查找的标点（全角。？！ + 半角?!）
-    text = text.strip()[:-1]
-    target_puncts = "。？！?!～"
-    # 遍历所有标点，找到最后出现的位置
-    last_punct_idx = -1
-    for punct in target_puncts:
-        current_idx = text.rfind(punct)
-        if current_idx > last_punct_idx:
-            last_punct_idx = current_idx
-
-    # 找到标点则截断，否则返回原文
-    return text[: last_punct_idx + 1] if last_punct_idx != -1 else text
+        # 找到标点则截断，否则返回原文
+        text = text[: last_punct_idx + 1] if last_punct_idx != -1 else text
+    return text.strip()
 
 
 def has_valid_result(txt):
