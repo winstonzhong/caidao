@@ -788,6 +788,8 @@ def truncate_at_last_punct_if_question(text: str) -> str:
     ''
     >>> truncate_at_last_punct_if_question("混合标点。a?b！c？")  # 多标点取最后一个
     '混合标点。a?b！'
+    >>> truncate_at_last_punct_if_question("从视频里能感机这件事的小得～不知，有的小作品呀？")
+    '从视频里能感机这件事的小得～'
     """
     # 匹配末尾的半角?/全角？，允许尾随空白
     question_end_pattern = r"[?？]\s*$"
@@ -796,7 +798,7 @@ def truncate_at_last_punct_if_question(text: str) -> str:
 
     # 定义需要查找的标点（全角。？！ + 半角?!）
     text = text.strip()[:-1]
-    target_puncts = "。？！?!"
+    target_puncts = "。？！?!～"
     # 遍历所有标点，找到最后出现的位置
     last_punct_idx = -1
     for punct in target_puncts:
