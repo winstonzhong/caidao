@@ -22,6 +22,8 @@ import json
 
 import pandas
 
+import lxml
+
 from functools import cached_property
 
 import tool_pandas
@@ -64,6 +66,8 @@ import re
 from urllib.parse import urljoin
 
 import tool_wx_groupname
+
+from douyin.tool_dy_score import 精确获取文本中的数字, 计算评论价值评分, 计算下一次运行等待秒数
 
 # def execute_lines(job, lines, self=None):
 #     if self is not None:
@@ -329,7 +333,8 @@ class SteadyDevice(DummyDevice):
 
     def parse_element(self, e):
         rtn = []
-        for x in e.elem.xpath(".//*"):
+        e = e if isinstance(e, lxml.etree._Element) else e.elem
+        for x in e.xpath(".//*"):
             text = x.attrib.get("text") or ""
             desc = x.attrib.get("content-desc") or ""
             if text or desc:
@@ -1306,7 +1311,8 @@ class 基本任务(抽象持久序列):
             results = [results]
         return sum([e.attrib.get('focused') == "true" for e in results]) > 0
 
-
+    def 持久对象写入数据记录字典(self, d: dict):
+        self.持久对象.写入数据记录字典(d)
 
 class 前置预检查任务(基本任务):
     pass
