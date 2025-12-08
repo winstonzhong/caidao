@@ -36,6 +36,10 @@ import helper_task_redis
 
 import tool_date
 
+import pandas
+
+from douyin.tool_dy_score import 计算下一次运行等待秒数
+
 NEW_RECORD = 0
 DOWNLOADED_RECORD = 1
 PRODUCED_RECORD = 2
@@ -179,6 +183,40 @@ class BaseModel(models.Model):
     @classmethod
     def get_filters(cls, **k):
         return get_filters(cls.get_fields(), **k)
+
+    @property
+    def df_数据记录(self):
+        df = pandas.DataFrame(self.数据.get("数据记录", []))
+        return df if df.empty else df.sort_values(by="时间")
+
+    def 写入数据记录字典(self, d: dict):
+        records = self.数据.setdefault("数据记录", [])
+        d.update({"时间": int(time.time())})
+        records.append(d)
+        self.save()
+
+    def 变更间隔秒数(self, 每小时最多运行次数: int = 8, 两次运行最小间隔秒数=10 * 60, 间隔秒数=None):
+        if 间隔秒数 is not None:
+            self.间隔秒 = 间隔秒数
+        else:
+            self.间隔秒 = 计算下一次运行等待秒数(
+                df=self.df_数据记录,
+                两次运行最小间隔秒数=两次运行最小间隔秒数,
+                每小时最多运行次数=每小时最多运行次数,
+            )
+        self.save()
+        
+    def 获取其他记录(self, 名称):
+        if 'name' in self.get_fields():
+            paras = {'name':名称}
+        else:
+            paras = {'名称':名称}
+        return self.__class__.objects.filter(**paras).first()
+    
+    def __getattr__(self, name):
+        return self.获取其他记录(name)
+    
+
 
     class Meta:
         abstract = True
