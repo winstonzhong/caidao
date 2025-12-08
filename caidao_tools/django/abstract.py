@@ -502,7 +502,7 @@ class 抽象定时任务(BaseModel):
         if self.是否到了执行时间():
             update_time = timezone.localtime(self.update_time)
             self.update_time = calculate_rtn(
-                update_time, self.间隔秒, shanghai_time_now(), safe=True
+                update_time, self.间隔秒 or 1, shanghai_time_now(), safe=True
             )
 
     def save(self, *args, **kwargs):
