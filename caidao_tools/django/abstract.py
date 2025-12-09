@@ -195,7 +195,9 @@ class BaseModel(models.Model):
         records.append(d)
         self.save()
 
-    def 变更间隔秒数(self, 每小时最多运行次数: int = 8, 两次运行最小间隔秒数=10 * 60, 间隔秒数=None):
+    def 变更间隔秒数(
+        self, 每小时最多运行次数: int = 8, 两次运行最小间隔秒数=10 * 60, 间隔秒数=None
+    ):
         if 间隔秒数 is not None:
             self.间隔秒 = 间隔秒数
         else:
@@ -205,18 +207,16 @@ class BaseModel(models.Model):
                 每小时最多运行次数=每小时最多运行次数,
             )
         self.save()
-        
-    def 获取其他记录(self, 名称):
-        if 'name' in self.get_fields():
-            paras = {'name':名称}
-        else:
-            paras = {'名称':名称}
-        return self.__class__.objects.filter(**paras).first()
-    
-    def __getattr__(self, name):
-        return self.获取其他记录(name)
-    
 
+    def 获取其他记录(self, 名称):
+        if "name" in self.get_fields():
+            paras = {"name": 名称}
+        else:
+            paras = {"名称": 名称}
+        return self.__class__.objects.filter(**paras).first()
+
+    # def __getattr__(self, name):
+    #     return self.获取其他记录(name)
 
     class Meta:
         abstract = True
@@ -592,11 +592,9 @@ class 抽象定时任务(BaseModel):
             q = cls.objects.filter(id=kwargs["id"])
         return q if not exclude else q.exclude(id__in=exclude.strip().split(","))
 
-
     @classmethod
     def 动态初始化(cls, **kwargs):
         pass
-
 
     @classmethod
     def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):

@@ -67,7 +67,11 @@ from urllib.parse import urljoin
 
 import tool_wx_groupname
 
-from douyin.tool_dy_score import 精确获取文本中的数字, 计算评论价值评分, 计算下一次运行等待秒数
+from douyin.tool_dy_score import (
+    精确获取文本中的数字,
+    计算评论价值评分,
+    计算下一次运行等待秒数,
+)
 
 # def execute_lines(job, lines, self=None):
 #     if self is not None:
@@ -340,9 +344,9 @@ class SteadyDevice(DummyDevice):
             if text or desc:
                 rtn.append(f"{text} {desc}")
         return rtn
-    
+
     def element2text(self, e):
-        return ' '.join([x.strip() for x in self.parse_element(e) if x.strip()])
+        return " ".join([x.strip() for x in self.parse_element(e) if x.strip()])
 
     def print_results(self, results):
         records = []
@@ -1095,7 +1099,7 @@ class 基本任务(抽象持久序列):
         self.device.click_element(el, offset_x, offset_y, abs_x, abs_y)
 
     def 向下翻页(self, 模拟人工=False, 是否一半翻=False):
-        print("向下翻页",模拟人工,是否一半翻)
+        print("向下翻页", 模拟人工, 是否一半翻)
         self.device.adb.page_down(randomize=模拟人工, half=是否一半翻)
 
     def 向上翻页(self, 模拟人工=False, 是否一半翻=False):
@@ -1105,11 +1109,12 @@ class 基本任务(抽象持久序列):
         with open(fname, "r") as fp:
             content = fp.read()
         return content
-    
+
     def 处理提示词(self, prompt):
         if prompt.strip().startswith("<!DOCTYPE html>"):
             return prompt
-        return tool_env.remove_leading_whitespace('''
+        return tool_env.remove_leading_whitespace(
+            """
         <!DOCTYPE html>
         <html lang="zh-CN">
         <head>
@@ -1119,7 +1124,8 @@ class 基本任务(抽象持久序列):
         {prompt}
         </body>
         </html>
-        ''').format(prompt=prompt)
+        """
+        ).format(prompt=prompt)
 
     def 创建提示词(self, **kwargs):
         # prompt = self.paras.get("提示词")
@@ -1182,8 +1188,12 @@ class 基本任务(抽象持久序列):
 
     def 是否一半向下翻页(self):
         c = self.微信容器
-        return c.elements and c.elements[-1].是否底部触底() and c.elements[-1].是否非文本容器超长()
-    
+        return (
+            c.elements
+            and c.elements[-1].是否底部触底()
+            and c.elements[-1].是否非文本容器超长()
+        )
+
     def 微信容器结束本轮(self, 标记的操作=None):
         全局缓存.最后执行动作 = 标记的操作
         全局缓存.前容器唯一值 = self.微信容器.key
@@ -1213,7 +1223,9 @@ class 基本任务(抽象持久序列):
 
     def 得到历史页(self):
         if 全局缓存.历史页 is None:
-            全局缓存.历史页 = pandas.DataFrame(columns=["原始时间", "唯一值", "图片key"])
+            全局缓存.历史页 = pandas.DataFrame(
+                columns=["原始时间", "唯一值", "图片key"]
+            )
         return 全局缓存.历史页
 
     def 点击第一张未处理图片(self):
@@ -1251,8 +1263,7 @@ class 基本任务(抽象持久序列):
         全局缓存.历史页 = tool_wx_df3.合并上下df(历史页, 当前页)
         全局缓存.缓存页 = None
         print("合并完成======================")
-        print(全局缓存.历史页[['上下文','时间','原始时间']])
-
+        print(全局缓存.历史页[["上下文", "时间", "原始时间"]])
 
     def 处理当前同步流程(self):
         if (
@@ -1302,17 +1313,18 @@ class 基本任务(抽象持久序列):
 
     def 下载微信图片并返回链接和唯一码(self):
         return self.device.下载微信图片并返回链接和唯一码(self.持久对象.TOKEN)
-    
+
     def 生成随机微信群名称(self):
         return tool_wx_groupname.随机生成健康微信群名字()
-    
+
     def 是否聚焦(self, results):
         if not isinstance(results, list):
             results = [results]
-        return sum([e.attrib.get('focused') == "true" for e in results]) > 0
+        return sum([e.attrib.get("focused") == "true" for e in results]) > 0
 
     def 持久对象写入数据记录字典(self, d: dict):
         self.持久对象.写入数据记录字典(d)
+
 
 class 前置预检查任务(基本任务):
     pass

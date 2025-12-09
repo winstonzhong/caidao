@@ -11,6 +11,9 @@ from tool_numpy import bin2array
 
 import pandas as pd
 
+import random
+import string
+
 
 def load_test_arr():
     with open("f:/tmp/test.arr", "rb") as fp:
@@ -262,6 +265,50 @@ def 自动补齐后续缺失时间并自动加1秒(df: pd.DataFrame) -> pd.DataF
     df_copy["时间"] = df_copy["时间"].dt.strftime("%Y-%m-%d %H:%M:%S")
 
     return df_copy
+
+
+def 随机生成6位大写列名(df: pd.DataFrame, colname: str) -> str:
+    """
+    随机生成一个由A-Z大写字母组成的6位字符串，且不与df[colname]列中现存值重复。
+
+    参数:
+        df: 包含目标列的pandas DataFrame
+        colname: 目标列名，该列的元素为「6位A-Z大写字母」组成的字符串
+
+    返回:
+        str: 6位A-Z大写字母字符串，且不存在于df[colname]中
+
+    Doctest示例:
+    >>> # 构造测试DataFrame（目标列含3个6位A-Z字符串）
+    >>> test_df = pd.DataFrame({'code': ['ABCDEF', 'GHIJKL', 'MNOPQR']})
+    >>> new_code = 随机生成6位大写列名(test_df, 'code')
+    >>> len(new_code) == 6  # 验证长度为6
+    True
+    >>> new_code not in test_df['code'].tolist()  # 验证不重复
+    True
+    >>> # 测试空DataFrame场景
+    >>> empty_df = pd.DataFrame({'code': []})
+    >>> new_empty_code = 随机生成6位大写列名(empty_df, 'code')
+    >>> len(new_empty_code) == 6
+    True
+    >>> # 测试含空值的DataFrame（空值自动排除）
+    >>> na_df = pd.DataFrame({'code': ['ABCDEF', None, 'GHIJKL']})
+    >>> new_na_code = 随机生成6位大写列名(na_df, 'code')
+    >>> new_na_code not in ['ABCDEF', 'GHIJKL']
+    True
+    """
+    # 定义A-Z大写字母池
+    upper_letters = string.ascii_uppercase
+    # 提取目标列非空值的集合（set加速重复检查）
+    existing_vals = set(df[colname].dropna()) if not df.empty else set()
+
+    # 循环生成，直到找到不重复的值
+    while True:
+        # 随机生成6位A-Z字符串
+        new_val = "".join(random.choice(upper_letters) for _ in range(6))
+        # 检查是否重复，不重复则返回
+        if new_val not in existing_vals:
+            return new_val
 
 
 if __name__ == "__main__":
