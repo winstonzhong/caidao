@@ -514,7 +514,7 @@ class SteadyDevice(DummyDevice):
             源文件移动至robot临时目录且按照56T链接返回的文件名(可选touch)
             """
             fpath = self.adb.pull_lastest_file_until(
-                base_dir=self.remote_fpath_wx_images, to_56T=False
+                base_dir=self.remote_fpath_wx_images, to_56T=False, clear_tmp_dir=True
             )
             url = tool_static.upload_file_by_path(fpath, token)
             fname = url.split("/")[-1]
@@ -550,6 +550,13 @@ class SteadyDevice(DummyDevice):
             return self.下载微信图片并返回链接和唯一码_内网()
         else:
             return self.下载微信图片并返回链接和唯一码_外网(token)
+
+    def 点击并上传手机端微信图片(self, e, token):
+        self.clear_remote_wx_images()
+        e.click()
+        time.sleep(1)
+        return self.download_wx_image(token)
+
 
     def cut_wx_df(self, df):
         tmp = df[df.自己]
@@ -1245,6 +1252,12 @@ class 基本任务(抽象持久序列):
             图片index is not None and df.iloc[0].容器key == 容器key
         ), "图片处理错误, 容器不一致"
         df.loc[图片index, ["链接", "图片key", "已处理"]] = (url, img_key, True)
+    
+    def 点击处理并上传图片(self, e):
+        self.device.clear_remote_wx_images()
+        e.click()
+        time.sleep(1)
+        self.处理并保存图片()
 
     def 合并历史和当前页(self, debug=False):
 
@@ -1313,6 +1326,9 @@ class 基本任务(抽象持久序列):
 
     def 下载微信图片并返回链接和唯一码(self):
         return self.device.下载微信图片并返回链接和唯一码(self.持久对象.TOKEN)
+    
+    def 点击并上传手机端微信图片(self, e):
+        return self.device.点击并上传手机端微信图片(e, self.持久对象.TOKEN)
 
     def 生成随机微信群名称(self):
         return tool_wx_groupname.随机生成健康微信群名字()
