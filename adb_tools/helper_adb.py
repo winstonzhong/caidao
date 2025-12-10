@@ -1903,9 +1903,9 @@ class BaseAdb(object):
                 break
             self.scroll_down(distance)
 
-    def scroll_up(self, distance=200, duration=None):
+    def scroll_up(self, distance=200, duration=None, steps=None):
         w, h = self.get_sys_width_height()
-        self.ua2.swipe(w // 2, h // 2, w // 2, (h // 2) + distance, duration=duration)
+        self.ua2.swipe(w // 2, h // 2, w // 2, (h // 2) + distance, duration=duration, steps=steps)
 
     # def page_up(self, duration=None, steps=None):
     #     w, h = self.get_sys_width_height()
