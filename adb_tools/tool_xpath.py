@@ -67,6 +67,8 @@ from urllib.parse import urljoin
 
 import tool_wx_groupname
 
+from tool_wx_groupname import 随机生成低风险微信群名字
+
 from douyin.tool_dy_score import (
     精确获取文本中的数字,
     计算评论价值评分,
@@ -1333,7 +1335,7 @@ class 基本任务(抽象持久序列):
         return self.device.点击并上传手机端微信图片(e, self.持久对象.TOKEN)
 
     def 生成随机微信群名称(self):
-        return tool_wx_groupname.随机生成健康微信群名字()
+        return tool_wx_groupname.随机生成低风险微信群名字()
 
     def 是否聚焦(self, results):
         if not isinstance(results, list):
