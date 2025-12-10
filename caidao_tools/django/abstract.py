@@ -194,14 +194,14 @@ class BaseModel(models.Model):
         d.update({"时间": int(time.time())})
         records.append(d)
         self.save()
-        
+
     def 查找数据记录(self, **k):
         records = self.数据.setdefault("数据记录", [])
         for record in records:
             if all(record.get(k) == v for k, v in k.items()):
                 return record
-    
-    def 更新记录(self, query:dict, update:dict):
+
+    def 更新记录(self, query: dict, update: dict):
         r = self.查找数据记录(**query)
         if r:
             r.update(update)
@@ -209,7 +209,6 @@ class BaseModel(models.Model):
             self.save()
         else:
             raise ValueError(f"未找到数据记录: {query}")
-
 
     def 变更间隔秒数(
         self, 每小时最多运行次数: int = 8, 两次运行最小间隔秒数=10 * 60, 间隔秒数=None
@@ -231,8 +230,6 @@ class BaseModel(models.Model):
             paras = {"名称": 名称}
         return self.__class__.objects.filter(**paras).first()
 
-    # def __getattr__(self, name):
-    #     return self.获取其他记录(name)
 
     class Meta:
         abstract = True

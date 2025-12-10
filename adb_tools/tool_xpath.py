@@ -37,7 +37,7 @@ from tool_exceptions import (
 
 from tool_remote_orm_model import RemoteModel
 
-from tool_wx_container import 解析器, 获取3P列表详情
+from tool_wx_container import 解析器, 获取3P列表详情, 获取列表详情
 
 import itertools
 
@@ -1345,6 +1345,9 @@ class 基本任务(抽象持久序列):
 
     def 是否三人群(self, name):
         return tool_env.is_valid_upper_6chars(name)
+    
+    def 持久对象获取其他记录(self, name):
+        return self.持久对象.获取其他记录(name)
 
 
 class 前置预检查任务(基本任务):

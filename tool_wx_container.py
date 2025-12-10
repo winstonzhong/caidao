@@ -74,9 +74,11 @@ def 获取列表详情(results):
         d['height'] = rect.height
         data.append(d)
     df = pandas.DataFrame(data)
-    df['valid'] = (df.top > top_most) & (df.bottom < bottom_most)
+    df['valid'] = (df.top >= top_most) & (df.bottom <= bottom_most)
     df['today'] = df['time'].str.match(r'^\d{2}:\d{2}$', na=False)
     df['s3p'] = df['session_name'].str.match(r'^[A-Z]{6}$', na=False)
+    df['up'] = top_most
+    df['down'] = bottom_most
     return df
 
 def 获取3P列表详情(results):
