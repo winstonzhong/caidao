@@ -30,6 +30,65 @@ ptn_wx_root = (
 ptn_recycler = """//*[@class="androidx.recyclerview.widget.RecyclerView"]"""
 
 
+
+#############################################
+
+x_nav = '//android.widget.FrameLayout/android.widget.RelativeLayout/android.widget.LinearLayout/android.widget.RelativeLayout/android.widget.LinearLayout/android.widget.TextView[@text="微信"][@content-desc=""]/../../../..'
+x_session = './android.widget.LinearLayout/android.widget.LinearLayout/android.widget.LinearLayout[1]/android.widget.LinearLayout/android.view.View'
+x_head = '//android.widget.FrameLayout/android.view.ViewGroup/android.widget.RelativeLayout/android.widget.LinearLayout/android.widget.LinearLayout/android.widget.RelativeLayout[@text=""][@content-desc="搜索"]/../../..'
+x_subtitle = './android.widget.LinearLayout/android.widget.LinearLayout/android.widget.LinearLayout[2]/android.widget.LinearLayout/android.view.View'
+x_time = './android.widget.LinearLayout/android.widget.LinearLayout/android.widget.LinearLayout/android.view.View'
+
+x_red = './android.widget.LinearLayout/android.widget.RelativeLayout/android.widget.TextView'
+
+
+def 获取列表详情(results):
+    e = results[0]
+    rect_nav = bounds_to_rect(e.elem.xpath(x_nav)[0].attrib.get('bounds'))
+    rect_head = bounds_to_rect(e.elem.xpath(x_head)[0].attrib.get('bounds'))
+    top_most = rect_head.bottom
+    bottom_most = rect_nav.top
+    data = []
+    for e in results:
+        d = {}
+        rect = bounds_to_rect(e.bounds)
+        x = e.elem.xpath(x_session)
+        if not x:
+            continue
+        d['session_name'] = x[0].attrib.get('text')
+        x = e.elem.xpath(x_subtitle)
+        if not x:
+            continue
+        d['subtitle'] = x[0].attrib.get('text')
+        x = e.elem.xpath(x_time)
+        if not x:
+            continue
+        d['time'] = x[0].attrib.get('text')
+        x = e.elem.xpath(x_red)
+        if x:
+            d['red'] = x[0].attrib.get('text')
+        else:
+            d['red'] = '0'
+        d['top'] = rect.top
+        d['bottom'] = rect.bottom
+        d['height'] = rect.height
+        data.append(d)
+    df = pandas.DataFrame(data)
+    df['valid'] = (df.top > top_most) & (df.bottom < bottom_most)
+    df['today'] = df['time'].str.match(r'^\d{2}:\d{2}$', na=False)
+    df['s3p'] = df['session_name'].str.match(r'^[A-Z]{6}$', na=False)
+    return df
+
+def 获取3P列表详情(results):
+    df = 获取列表详情(results)
+    df = df[(df.valid) & (df.today) & (df.s3p)]
+    return df[['session_name','subtitle','red', 'time']]
+
+
+
+
+
+
 def get_short_text(txt, max_length=20):
     return txt[:max_length] + ("..." if txt[max_length:] else "")
 

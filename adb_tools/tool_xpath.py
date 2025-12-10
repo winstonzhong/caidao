@@ -37,7 +37,7 @@ from tool_exceptions import (
 
 from tool_remote_orm_model import RemoteModel
 
-from tool_wx_container import 解析器
+from tool_wx_container import 解析器, 获取3P列表详情
 
 import itertools
 
