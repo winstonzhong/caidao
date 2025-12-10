@@ -766,11 +766,14 @@ def replace_url_host(url, host_name):
     new_url = urlunparse(new_components)
     return new_url
 
+
 # 这个视频还挺有意思的，充满了搞笑的对话和情节呢，让人感觉很欢乐。不知道你具体想要了解哪些关于这个视频的信息呀？比如对里面的某个情节的讨论，还是其他方面呢？
+
 
 def is_endswith_question(text: str) -> bool:
     question_end_pattern = r"[?？]\s*$"
     return re.search(question_end_pattern, text)
+
 
 def truncate_at_last_punct_if_question(text: str) -> str:
     """
@@ -800,7 +803,7 @@ def truncate_at_last_punct_if_question(text: str) -> str:
     """
     # if not is_endswith_question(text):
     #     return text.strip()
-    
+
     while is_endswith_question(text):
         # 定义需要查找的标点（全角。？！ + 半角?!）
         text = text.strip()[:-1]
@@ -891,6 +894,52 @@ def has_valid_result(txt):
 
     # 步骤6：其他情况 → 有有效结果
     return True
+
+
+def is_valid_upper_6chars(s: str) -> bool:
+    """
+    判断输入字符串是否严格由A-Z大写英文字母组成，且长度恰好为6位。
+
+    参数:
+        s: 待验证的字符串
+
+    返回:
+        布尔值：符合条件返回True，否则返回False
+
+    测试用例:
+    >>> is_valid_upper_6chars('ABCDEF')  # 标准符合条件的案例
+    True
+    >>> is_valid_upper_6chars('ABCDE')   # 长度不足6位
+    False
+    >>> is_valid_upper_6chars('ABCDEFG') # 长度超过6位
+    False
+    >>> is_valid_upper_6chars('AbcDEF')  # 包含小写字母
+    False
+    >>> is_valid_upper_6chars('ABC1EF')  # 包含数字
+    False
+    >>> is_valid_upper_6chars('ABC@EF')  # 包含特殊符号
+    False
+    >>> is_valid_upper_6chars('')        # 空字符串
+    False
+    >>> is_valid_upper_6chars('123456')  # 全数字
+    False
+    >>> is_valid_upper_6chars('XYZUVW')  # 另一个合法大写字母组合
+    True
+    >>> is_valid_upper_6chars('A0B9C8')  # 字母数字混合
+    False
+    >>> is_valid_upper_6chars('AAAAAA')  # 重复大写字母
+    True
+    >>> is_valid_upper_6chars('ABC DEF') # 包含空格
+    False
+    >>> is_valid_upper_6chars(None)
+    False
+    """
+    # 正则表达式说明：
+    # [A-Z] 匹配单个大写英文字母
+    # {6} 限定恰好匹配6个
+    # re.fullmatch 确保整个字符串完全匹配（而非部分匹配）
+    match_result = re.fullmatch(r"[A-Z]{6}", s or '')
+    return match_result is not None
 
 
 if __name__ == "__main__":
