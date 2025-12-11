@@ -175,7 +175,7 @@ def 列表处理状态计算函数(
     ...      "valid": True, "today": True, "s3p": True}
     ... ])
     >>> 列表处理状态计算函数(df_red_test, "测试", "测试red", "10:00", "1")
-    ('翻页', 1)
+    ('翻页', -1)
     >>> df_red_test = pd.DataFrame([
     ...     {"session_name": "测试", "subtitle": "测试red", "time": "10:00", "red":"8",
     ...      "valid": True, "today": True, "s3p": True},
@@ -215,7 +215,8 @@ def 列表处理状态计算函数(
     >>> 列表处理状态计算函数(df_test4_3, "测试会话3", "测试3", "20:00", "0")
     ('处理', 1)
 
-    #>>> 列表处理状态计算函数(df_bad, **last_bad)
+    >>> 列表处理状态计算函数(df_bad, **last_bad)
+    ('处理', 1)
     """
     # 步骤0：计算是否到顶部（处理df为空的边界情况）
 
@@ -246,14 +247,17 @@ def 列表处理状态计算函数(
             (df["session_name"] == session_name)
             & (df["subtitle"] == subtitle)
             & (df["time"] == time)
-            & (df["red"] == red)
+            # & (df["red"] == red)
         )
-        record_in_df = match_conditions.any()
+        records_in_df = df[match_conditions]
+
+        record_in_df = not records_in_df.empty
 
         if record_in_df:
-            filtered_df = df[base_conditions & (df["time"] > time) & (df["s3p"])]
+            base_conditions_found = base_conditions & (df.index < records_in_df.index[0])
+            filtered_df = df[base_conditions_found & (df["s3p"])]
             if filtered_df.empty:
-                filtered_df = df[base_conditions & (df["time"] > time)].iloc[:1]
+                filtered_df = df[base_conditions_found].iloc[:1]
         else:
             filtered_df = df[base_conditions & (df["s3p"])]
             if filtered_df.empty:
@@ -434,10 +438,11 @@ if __name__ == "__main__":
     with open(fpath, "r") as f:
         d = json.load(f)
 
-    df_bad = pd.DataFrame(d.get("df"))
+    df_bad = pd.DataFrame(d.get("df")).reset_index(drop=True)
     last_bad = clean_last(d.get("最后已处理"))
 
     print(doctest.testmod(verbose=False, report=False))
 
     # print(df_bad)
+    # print(df_bad.index)
     # print(last_bad)
