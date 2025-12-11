@@ -63,11 +63,11 @@ def 列表处理状态计算函数(
     # 测试步骤4-3：结果集为空 + 已到顶部 → 返回结束None
     >>> df_test4_3 = pd.DataFrame([
     ...     {"session_name": "智康安医养服务平台", "subtitle": "顶部记录", "time": "22:00", "red":"0",
-    ...      "valid": True, "today": True, "s3p": True},
+    ...      "valid": True, "today": True, "s3p": False},
     ...     {"session_name": "测试会话2", "subtitle": "测试2", "time": "21:00", "red":"1",
     ...      "valid": True, "today": True, "s3p": True}
     ... ])
-    >>> 列表处理状态计算函数(df_test4_3, "智康安医养服务平台", "顶部记录", "22:00", "0")
+    >>> 列表处理状态计算函数(df_test4_3, "测试会话2", "测试2", "21:00", "1")
     ('结束', None)
 
     >>> 列表处理状态计算函数(df_test4_3)
@@ -115,14 +115,28 @@ def 列表处理状态计算函数(
     ...     {"session_name": "测试1", "subtitle": "测试red1", "time": "09:00", "red":"1",
     ...      "valid": True, "today": False, "s3p": False}
     ... ])
-    >>> 列表处理状态计算函数(df_red_test, "测试", "测试red", "10:00", "1")
-    ('翻页', -1)
+    >>> 列表处理状态计算函数(df_red_test, "测试1", "测试red1", "09:00", "1")
+    ('处理', 0)
+
+    # 结果集为空 + 已到顶部 → 返回处理 1
+    >>> df_test4_3 = pd.DataFrame([
+    ...     {"session_name": "智康安医养服务平台", "subtitle": "顶部记录", "time": "22:00", "red":"0",
+    ...      "valid": True, "today": True, "s3p": False},
+    ...     {"session_name": "测试会话1", "subtitle": "测试1", "time": "21:30", "red":"0",
+    ...      "valid": True, "today": True, "s3p": False},
+    ...     {"session_name": "测试会话2", "subtitle": "测试2", "time": "21:00", "red":"1",
+    ...      "valid": True, "today": True, "s3p": True}
+    ... ])
+
+    >>> 列表处理状态计算函数(df_test4_3, "测试会话2", "测试2", "21:00", "1")
+    ('处理', 1)
     """
     # 步骤0：计算是否到顶部（处理df为空的边界情况）
+    session_name_top = "智康安医养服务平台"
     if df.empty:
         is_top = False
     else:
-        is_top = df.iloc[0]["session_name"] == "智康安医养服务平台"
+        is_top = df.iloc[0]["session_name"] == session_name_top
 
     # 判断最后一条处理记录是否为空（所有关键参数都为None）
     last_record_empty = all(v is None for v in [session_name, subtitle, time, red])
@@ -138,9 +152,9 @@ def 列表处理状态计算函数(
     if last_record_empty and df_last_row_today:
         return ("翻页", 1)
 
-    # 步骤3/4：最后一条记录非空的情况
+    # base_conditions = (df["valid"]) & (df["today"]) & (df["s3p"]) & (df["session_name"] != session_name_top)
+    base_conditions = (df["valid"]) & (df["today"]) & (df["session_name"] != session_name_top)
     if not last_record_empty:
-        # 判断记录是否存在于df中（四字段完全匹配）
         match_conditions = (
             (df["session_name"] == session_name)
             & (df["subtitle"] == subtitle)
@@ -150,16 +164,18 @@ def 列表处理状态计算函数(
         record_in_df = match_conditions.any()
 
         if record_in_df:
-            filter_conditions = (
-                (df["time"] > time) & (df["valid"]) & (df["today"]) & (df["s3p"])
-            )
-            filtered_df = df[filter_conditions]
+            filtered_df = df[base_conditions & (df["time"] > time) & (df["s3p"]) ]
+            if filtered_df.empty:
+                filtered_df = df[base_conditions & (df["time"] > time)].iloc[:1]
         else:
-            filtered_df = pd.DataFrame()
+            filtered_df = df[base_conditions & (df["s3p"]) ]
+            if filtered_df.empty:
+                filtered_df = df[base_conditions].iloc[:1]
     else:
-        filter_conditions = (df["valid"]) & (df["today"]) & (df["s3p"])
-        filtered_df = df[filter_conditions]
+        filtered_df = df[base_conditions & (df["s3p"]) ]
         record_in_df = False
+        if filtered_df.empty:
+            filtered_df = df[base_conditions].iloc[:1]
 
     # 步骤4：记录在df中
     if record_in_df:
