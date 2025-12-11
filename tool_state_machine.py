@@ -1,4 +1,71 @@
 import pandas as pd
+from tool_wx_container import 获取列表详情
+
+session_name_top = "智康安医养服务平台"
+
+
+# 最后已处理 = job.持久对象.数据.get('最后已处理')
+# obj = job.持久对象获取其他记录('微信_创建备用群')
+def clean_last(d):
+    return {k: d[k] for k in ["session_name", "subtitle", "time", "red"]}
+
+
+def 处理列表完成(job):
+    v = job.持久对象.获取字段值("正在处理", 弹出=True)
+    if v:
+        job.持久对象.设置字段值("最后已处理", v)
+
+
+def 处理通讯列表(job, results, save_ut=False):
+    df = 获取列表详情(results)
+    print(df)
+    最后已处理 = job.持久对象.获取字段值("最后已处理") or {}
+
+    if save_ut:
+        import time
+        import json
+
+        fpath = f"ut/{time.time()}.json"
+        print("保存ut 到 {}".format(fpath))
+        d = {
+            "df": df.to_dict(),
+            "最后已处理": 最后已处理,
+        }
+        with open(fpath, "w") as f:
+            json.dump(d, f)
+
+    # paras = {k: 最后已处理[k] for k in ["session_name", "subtitle", "time", "red"]}
+    paras = 列表处理状态计算函数(df, **clean_last(最后已处理))
+    列表处理函数(job, df, paras)
+
+
+def 列表处理函数(job, df, paras):
+    action, parm = paras
+    if action == "处理":
+        s = df.loc[parm]
+        if s.s3p:
+            print("================处理3p群")
+            print(s)
+            job.持久对象.设置字段值("正在处理", s.to_dict())
+            job.status = "处理3p群"
+            job.点击(s.center)
+        else:
+            print("================记录非3p群")
+            print(s)
+            job.持久对象.设置字段值("最后已处理", s.to_dict())
+
+    elif action == "翻页":
+        if parm == -1:
+            print("向上翻页")
+            job.向上翻页()
+        else:
+            print("向下翻页")
+            job.向下翻页()
+        print()
+    elif action == "结束":
+        print("本轮列表处理结束!")
+    else:
+        raise Exception(f"未知操作:{action}")
 
 
 def 列表处理状态计算函数(
@@ -147,9 +214,11 @@ def 列表处理状态计算函数(
 
     >>> 列表处理状态计算函数(df_test4_3, "测试会话3", "测试3", "20:00", "0")
     ('处理', 1)
+
+    #>>> 列表处理状态计算函数(df_bad, **last_bad)
     """
     # 步骤0：计算是否到顶部（处理df为空的边界情况）
-    session_name_top = "智康安医养服务平台"
+
     if df.empty:
         is_top = False
     else:
@@ -169,7 +238,9 @@ def 列表处理状态计算函数(
     if last_record_empty and df_last_row_today:
         return ("翻页", 1)
 
-    base_conditions = (df["valid"]) & (df["today"]) & (df["session_name"] != session_name_top)
+    base_conditions = (
+        (df["valid"]) & (df["today"]) & (df["session_name"] != session_name_top)
+    )
     if not last_record_empty:
         match_conditions = (
             (df["session_name"] == session_name)
@@ -180,15 +251,15 @@ def 列表处理状态计算函数(
         record_in_df = match_conditions.any()
 
         if record_in_df:
-            filtered_df = df[base_conditions & (df["time"] > time) & (df["s3p"]) ]
+            filtered_df = df[base_conditions & (df["time"] > time) & (df["s3p"])]
             if filtered_df.empty:
                 filtered_df = df[base_conditions & (df["time"] > time)].iloc[:1]
         else:
-            filtered_df = df[base_conditions & (df["s3p"]) ]
+            filtered_df = df[base_conditions & (df["s3p"])]
             if filtered_df.empty:
                 filtered_df = df[base_conditions].iloc[:1]
     else:
-        filtered_df = df[base_conditions & (df["s3p"]) ]
+        filtered_df = df[base_conditions & (df["s3p"])]
         record_in_df = False
         if filtered_df.empty:
             filtered_df = df[base_conditions].iloc[:1]
@@ -216,6 +287,7 @@ def 列表处理状态计算函数(
 
 if __name__ == "__main__":
     import doctest
+    import json
 
     # 执行doctest并输出详细结果
     core_data = [
@@ -352,4 +424,20 @@ if __name__ == "__main__":
             "s3p": True,
         },
     ]
+    from pathlib import Path
+
+    base_dir = Path(__file__).parent.resolve()
+    # fpath = '/home/ut/1765442497.4180336.json'
+    # print(base_dir)
+    fpath = base_dir / "ut/1765442497.4180336.json"
+
+    with open(fpath, "r") as f:
+        d = json.load(f)
+
+    df_bad = pd.DataFrame(d.get("df"))
+    last_bad = clean_last(d.get("最后已处理"))
+
     print(doctest.testmod(verbose=False, report=False))
+
+    # print(df_bad)
+    # print(last_bad)

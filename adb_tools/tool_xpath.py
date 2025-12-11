@@ -1104,13 +1104,16 @@ class 基本任务(抽象持久序列):
         self.status = "完成"
 
     def 点击(self, el, offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
-        self.device.click_element(el, offset_x, offset_y, abs_x, abs_y)
-    
+        if isinstance(el, tuple):
+            self.device.click(*el)
+        else:
+            self.device.click_element(el, offset_x, offset_y, abs_x, abs_y)
+
     def 回退(self):
         self.device.adb.go_back()
 
     def 向下翻页(self, 模拟人工=False, 是否一半翻=False):
-        print("向下翻页", 模拟人工, 是否一半翻)
+        # print("向下翻页", 模拟人工, 是否一半翻)
         self.device.adb.page_down(randomize=模拟人工, half=是否一半翻)
 
     def 向上翻页(self, 模拟人工=False, 是否一半翻=False):
@@ -1347,7 +1350,7 @@ class 基本任务(抽象持久序列):
 
     def 是否三人群(self, name):
         return tool_env.is_valid_upper_6chars(name)
-    
+
     def 持久对象获取其他记录(self, name):
         return self.持久对象.获取其他记录(name)
 

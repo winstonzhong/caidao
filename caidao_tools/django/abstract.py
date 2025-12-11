@@ -210,6 +210,13 @@ class BaseModel(models.Model):
         else:
             raise ValueError(f"未找到数据记录: {query}")
 
+    def 设置字段值(self, field: str, value):
+        self.数据[field] = value
+        self.save()
+
+    def 获取字段值(self, field: str, 弹出=False):
+        return self.数据.get(field) if not 弹出 else self.数据.pop(field, None)
+
     def 变更间隔秒数(
         self, 每小时最多运行次数: int = 8, 两次运行最小间隔秒数=10 * 60, 间隔秒数=None
     ):
@@ -229,7 +236,6 @@ class BaseModel(models.Model):
         else:
             paras = {"名称": 名称}
         return self.__class__.objects.filter(**paras).first()
-
 
     class Meta:
         abstract = True

@@ -72,6 +72,7 @@ def 获取列表详情(results):
         d['top'] = rect.top
         d['bottom'] = rect.bottom
         d['height'] = rect.height
+        d['center'] = rect.center
         data.append(d)
     df = pandas.DataFrame(data)
     df['valid'] = (df.top >= top_most) & (df.bottom <= bottom_most)
