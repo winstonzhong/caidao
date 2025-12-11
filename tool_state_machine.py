@@ -130,6 +130,23 @@ def 列表处理状态计算函数(
 
     >>> 列表处理状态计算函数(df_test4_3, "测试会话2", "测试2", "21:00", "1")
     ('处理', 1)
+
+    >>> 列表处理状态计算函数(df_test4_3, "测试会话1", "测试1", "21:30", "0")
+    ('结束', None)
+
+    >>> df_test4_3 = pd.DataFrame([
+    ...     {"session_name": "智康安医养服务平台", "subtitle": "顶部记录", "time": "22:00", "red":"0",
+    ...      "valid": True, "today": True, "s3p": False},
+    ...     {"session_name": "测试会话1", "subtitle": "测试1", "time": "21:30", "red":"0",
+    ...      "valid": True, "today": True, "s3p": False},
+    ...     {"session_name": "测试会话2", "subtitle": "测试2", "time": "21:00", "red":"1",
+    ...      "valid": True, "today": True, "s3p": False},
+    ...     {"session_name": "测试会话3", "subtitle": "测试3", "time": "20:00", "red":"0",
+    ...      "valid": True, "today": True, "s3p": False},
+    ... ])
+
+    >>> 列表处理状态计算函数(df_test4_3, "测试会话3", "测试3", "20:00", "0")
+    ('处理', 1)
     """
     # 步骤0：计算是否到顶部（处理df为空的边界情况）
     session_name_top = "智康安医养服务平台"
@@ -152,7 +169,6 @@ def 列表处理状态计算函数(
     if last_record_empty and df_last_row_today:
         return ("翻页", 1)
 
-    # base_conditions = (df["valid"]) & (df["today"]) & (df["s3p"]) & (df["session_name"] != session_name_top)
     base_conditions = (df["valid"]) & (df["today"]) & (df["session_name"] != session_name_top)
     if not last_record_empty:
         match_conditions = (
