@@ -8,7 +8,7 @@ namespaces = {"re": "http://exslt.org/regular-expressions"}
 
 
 def clean_last(d):
-    return {k: d[k] for k in ["session_name", "subtitle", "time", "red"]}
+    return {k: d.get(k) for k in ["session_name", "subtitle", "time", "red"]}
 
 
 def 处理3p群(job, results):
@@ -17,18 +17,23 @@ def 处理3p群(job, results):
     e = results[0].elem.xpath(x, namespaces=namespaces)
     e = e[0] if e else None
     if e is not None:
-        num = int(re.match("[A-Z]{6}\((\d+)\)", e.attrib.get("text")).groups()[0])
-        print("当前群人数:", num)
+        m = re.match("([A-Z]{6})\((\d+)\)", e.attrib.get("text"))
+        # num = int(re.match("[A-Z]{6}\((\d+)\)", e.attrib.get("text")).groups()[0])
+        num = int(m.groups()[1])
+        session_name = m.groups()[0]
+        print(f"当前群:{session_name}, 人数:{num}")
+        assert session_name == job.持久对象.获取字段值("正在处理").get("session_name"), "群名不一致"
         if num <= 2:
             job.status = None
             print("当前群人数不足, 不处理")
             job.回退()
+            处理列表完成(job)
         else:
             raise NotImplementedError
     else:
         job.status = None
         print("非法群...")
-    处理列表完成(job)
+        处理列表完成(job)
 
 
 def 处理列表完成(job):
