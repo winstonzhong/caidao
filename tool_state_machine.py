@@ -1,13 +1,40 @@
 import pandas as pd
 from tool_wx_container import 获取列表详情
+import re
 
 session_name_top = "智康安医养服务平台"
+
+namespaces = {"re": "http://exslt.org/regular-expressions"}
 
 
 # 最后已处理 = job.持久对象.数据.get('最后已处理')
 # obj = job.持久对象获取其他记录('微信_创建备用群')
 def clean_last(d):
     return {k: d[k] for k in ["session_name", "subtitle", "time", "red"]}
+
+
+#self.results[0].click()
+# from tool_state_machine import 处理列表完成
+def 处理3p群(job, results):
+    print("处理3p群")
+    x = '//android.view.ViewGroup/android.widget.RelativeLayout/android.widget.LinearLayout/android.widget.LinearLayout/android.widget.LinearLayout/android.widget.TextView[re:match(@text,"[A-Z]{6}\(\d+\)")]'
+    e = results[0].elem.xpath(x, namespaces=namespaces)
+    e = e[0] if e else None
+    if e is not None:
+        num = int(re.match("[A-Z]{6}\((\d+)\)",e.attrib.get('text')).groups()[0])
+        print('当前群人数:', num)
+        if num <=2:
+            job.status = None
+            print('当前群人数不足, 不处理')
+            job.回退()
+        else:
+            raise NotImplementedError
+    else:
+        job.status = None
+        print('非法群...')
+    处理列表完成(job)
+
+
 
 
 def 处理列表完成(job):
