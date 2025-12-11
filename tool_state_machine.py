@@ -10,6 +10,23 @@ namespaces = {"re": "http://exslt.org/regular-expressions"}
 def clean_last(d):
     return {k: d.get(k) for k in ["session_name", "subtitle", "time", "red"]}
 
+def 完成群设置用户已经进群(job):
+    # 可用空群 = models.BooleanField(default=True)
+    # 已占用 = models.BooleanField(default=False)
+    session_name = job.持久对象.获取字段值("正在处理").get("session_name")
+    # 群 = 获取群(job, session_name)
+    # 群['已占用'] = True
+    obj = job.持久对象.获取其他记录('微信_创建备用群')
+    obj.更新记录(query={"name": session_name}, update={"已设置进群确认": True})
+    处理列表完成(job)
+
+
+
+def 获取群(job, session_name):
+    obj = job.持久对象.获取其他记录('微信_创建备用群')
+    d = obj.查找数据记录(name=session_name)
+    print('群记录为:', d)
+    return d
 
 def 处理3p群(job, results):
     print("处理3p群")
@@ -18,22 +35,26 @@ def 处理3p群(job, results):
     e = e[0] if e else None
     if e is not None:
         m = re.match("([A-Z]{6})\((\d+)\)", e.attrib.get("text"))
-        # num = int(re.match("[A-Z]{6}\((\d+)\)", e.attrib.get("text")).groups()[0])
         num = int(m.groups()[1])
         session_name = m.groups()[0]
         print(f"当前群:{session_name}, 人数:{num}")
         assert session_name == job.持久对象.获取字段值("正在处理").get("session_name"), "群名不一致"
-        if num <= 2:
-            job.status = None
+        群 = 获取群(job, session_name)
+        if num <= 2 or not 群:
             print("当前群人数不足, 不处理")
-            job.回退()
-            处理列表完成(job)
+        elif not 群:
+            print("当前群不是已记录的3人群, 不处理")
+        elif 群.get('已设置进群确认'):
+            print("当前群不是可用空群, 不处理")
         else:
-            raise NotImplementedError
+            # raise NotImplementedError
+            job.status = '初始化3人群'
+            return
     else:
-        job.status = None
-        print("非法群...")
-        处理列表完成(job)
+        print("群名称不是期望的([A-Z]{6})\((\d+)\), 非法群, 不处理")
+    job.回退()
+    job.status = None
+    处理列表完成(job)
 
 
 def 处理列表完成(job):
@@ -69,14 +90,15 @@ def 列表处理函数(job, df, paras):
     action, parm = paras
     if action == "处理":
         s = df.loc[parm]
-        if s.s3p:
+        群 = 获取群(job, s["session_name"])
+        if s.s3p and 群 and not 群.get('已设置进群确认'):
             print("================处理3p群")
             print(s)
             job.持久对象.设置字段值("正在处理", s.to_dict())
             job.status = "处理3p群"
             job.点击(s.center)
         else:
-            print("================记录非3p群")
+            print("================非3p群 或 没有登记  或 已占用")
             print(s)
             job.持久对象.设置字段值("最后已处理", s.to_dict())
 
