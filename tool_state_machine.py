@@ -11,6 +11,33 @@ namespaces = {"re": "http://exslt.org/regular-expressions"}
 def clean_last(d):
     return {k: d.get(k) for k in ["session_name", "subtitle", "time", "red"]}
 
+def 获取群持久对象(job):
+    return job.持久对象.获取其他记录("微信_创建备用群")
+
+def 得到群df(job):
+    obj = 获取群持久对象(job)
+    df = obj.df_数据记录
+    if "已设置进群确认" not in df.columns:
+        df["已设置进群确认"] = False
+    if "二维码" not in df.columns:
+        df["二维码"] = np.nan
+    return df
+
+def 得到一个一人群(job):
+    df = 得到群df(job)
+    tmp = df[(~df.已设置进群确认) & (df.二维码.isna())]
+    return tmp.iloc[0] if not tmp.empty else None
+
+def 得到可用群id(job):
+    df = 得到群df(job)
+    tmp = df[(df.二维码.notna())]
+    return len(tmp) + 66
+
+
+def 更新群(job, name, **k):
+    obj = 获取群持久对象(job)
+    obj.更新记录(query={"name": name}, update=k)
+
 
 def 完成群设置用户已经进群(job):
     # 可用空群 = models.BooleanField(default=True)
@@ -18,13 +45,13 @@ def 完成群设置用户已经进群(job):
     session_name = job.持久对象.获取字段值("正在处理").get("session_name")
     # 群 = 获取群(job, session_name)
     # 群['已占用'] = True
-    obj = job.持久对象.获取其他记录("微信_创建备用群")
-    obj.更新记录(query={"name": session_name}, update={"已设置进群确认": True})
+    # obj = 获取群持久对象(job)
+    # obj.更新记录(query={"name": session_name}, update={"已设置进群确认": True})
+    更新群(job, session_name, 已设置进群确认=True)
     处理列表完成(job)
 
-
 def 获取群(job, session_name):
-    obj = job.持久对象.获取其他记录("微信_创建备用群")
+    obj = 获取群持久对象(job)
     d = obj.查找数据记录(name=session_name)
     print("群记录为:", d)
     return d

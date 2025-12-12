@@ -136,6 +136,7 @@ def 上传结果字典(task_key, result_data):
 
 
 def 回传结果到服务器(result_data, **paras):
+    # paras = paras or {}
     return 上传结果字典(
         task_key="服务器回传结果队列", result_data={**result_data, **paras}
     )
@@ -858,6 +859,10 @@ class 基本任务(抽象持久序列):
             df.loc[tmp.index[:i], "新增"] = False
         return i is not None
 
+    @property
+    def 设备串行号(self):
+        return self.device.adb.serialno
+    
     def get_remote_obj(self, url, 带串行号=True, **kwargs):
         if 带串行号:
             设备串行号 = self.device.adb.serialno
