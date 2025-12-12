@@ -30,22 +30,215 @@ ptn_wx_root = (
 ptn_recycler = """//*[@class="androidx.recyclerview.widget.RecyclerView"]"""
 
 
-
 #############################################
 
 x_nav = '//android.widget.FrameLayout/android.widget.RelativeLayout/android.widget.LinearLayout/android.widget.RelativeLayout/android.widget.LinearLayout/android.widget.TextView[@text="微信"][@content-desc=""]/../../../..'
-x_session = './android.widget.LinearLayout/android.widget.LinearLayout/android.widget.LinearLayout[1]/android.widget.LinearLayout/android.view.View'
+x_session = "./android.widget.LinearLayout/android.widget.LinearLayout/android.widget.LinearLayout[1]/android.widget.LinearLayout/android.view.View"
 x_head = '//android.widget.FrameLayout/android.view.ViewGroup/android.widget.RelativeLayout/android.widget.LinearLayout/android.widget.LinearLayout/android.widget.RelativeLayout[@text=""][@content-desc="搜索"]/../../..'
-x_subtitle = './android.widget.LinearLayout/android.widget.LinearLayout/android.widget.LinearLayout[2]/android.widget.LinearLayout/android.view.View'
-x_time = './android.widget.LinearLayout/android.widget.LinearLayout/android.widget.LinearLayout/android.view.View'
+x_subtitle = "./android.widget.LinearLayout/android.widget.LinearLayout/android.widget.LinearLayout[2]/android.widget.LinearLayout/android.view.View"
+x_time = "./android.widget.LinearLayout/android.widget.LinearLayout/android.widget.LinearLayout/android.view.View"
 
-x_red = './android.widget.LinearLayout/android.widget.RelativeLayout/android.widget.TextView'
+x_red = "./android.widget.LinearLayout/android.widget.RelativeLayout/android.widget.TextView"
+
+
+def time_to_24h_str(time_str):
+    """
+    将带时段（早上/上午/下午/晚上/凌晨/中午/午间等）的hh:mm格式字符串转换为标准24小时制"hh:mm"字符串，
+    不符合hh:mm核心格式的输入直接返回原始字符串。
+
+    核心逻辑：
+    1. 识别时段关键词（如早上/晚/下午/中午/午间），匹配对应的24小时制小时偏移量
+    2. 清理字符串，提取纯hh:mm格式的时间部分并验证合法性
+    3. 计算24小时制小时数，格式化小时/分钟为两位数字，输出"hh:mm"
+    4. 非法格式直接返回原始输入字符串
+
+    Examples:
+    >>> time_to_24h_str("早上8:12")  # 基础时段-早上
+    '08:12'
+    >>> time_to_24h_str("中午11:59") # 新增时段-中午（无偏移）
+    '11:59'
+    >>> time_to_24h_str("午间12:00") # 新增时段-午间（无偏移）
+    '12:00'
+    >>> time_to_24h_str("午间3:05")  # 新增时段-午间（单数字小时）
+    '03:05'
+    >>> time_to_24h_str("上午8:12")  # 扩展时段-上午（等价早上）
+    '08:12'
+    >>> time_to_24h_str("下午4:16")  # 基础时段-下午
+    '16:16'
+    >>> time_to_24h_str("晚上8:14")  # 基础时段-晚上
+    '20:14'
+    >>> time_to_24h_str("晚08:14")   # 变体-简写时段+补0小时
+    '20:14'
+    >>> time_to_24h_str("午4:16")    # 变体-简写时段（午=下午）
+    '16:16'
+    >>> time_to_24h_str("早8:12")    # 变体-简写时段（早=早上）
+    '08:12'
+    >>> time_to_24h_str("8:12")      # 无时段原始格式
+    '08:12'
+    >>> time_to_24h_str("16:16")     # 24小时制原始格式
+    '16:16'
+    >>> time_to_24h_str("08:12")     # 24小时制补0格式
+    '08:12'
+    >>> time_to_24h_str("昨天")      # 非法格式-无hh:mm
+    '昨天'
+    >>> time_to_24h_str("11-9日")    # 非法格式-日期
+    '11-9日'
+    >>> time_to_24h_str("8:12:30")   # 非法格式-多分隔符
+    '8:12:30'
+    >>> time_to_24h_str("晚上8点14") # 非法格式-无冒号
+    '晚上8点14'
+    >>> time_to_24h_str("晚上a:14")  # 非法格式-非数字小时
+    '晚上a:14'
+    >>> time_to_24h_str("早上0:00")  # 边界值-凌晨0点
+    '00:00'
+    >>> time_to_24h_str("下午12:00") # 边界值-下午12点（无偏移）
+    '00:00'
+    >>> time_to_24h_str("晚上12:00") # 边界值-晚上12点（转0点）
+    '00:00'
+    >>> time_to_24h_str("凌晨3:45")  # 扩展时段-凌晨
+    '03:45'
+    >>> time_to_24h_str("")          # 空字符串（返回原字符串）
+    ''
+    >>> time_to_24h_str(" 晚上 9:05 ") # 变体-含空格
+    '21:05'
+    >>> time_to_24h_str("下午0:5")   # 变体-分钟单数字
+    '12:05'
+    >>> time_to_24h_str("晚23:59")   # 变体-晚上23点（23+12=35→35%24=11）
+    '11:59'
+    """
+    # 定义时段与24小时制小时偏移量的映射（新增“中午”“午间”，无偏移）
+    period_mapping = {
+        "早上": 0,
+        "上午": 0,
+        "凌晨": 0,
+        "早": 0,
+        "中午": 0,  # 新增：中午无偏移
+        "午间": 0,  # 新增：午间无偏移
+        "下午": 12,
+        "午": 12,
+        "晚上": 12,
+        "晚": 12,
+    }
+
+    # 初始化偏移量，清理输入字符串（去除首尾空格）
+    hour_offset = 0
+    clean_str = time_str.strip()
+    original_str = time_str  # 保存原始输入，用于非法格式返回
+
+    # 识别时段并提取偏移量，同时移除时段关键词
+    for period, offset in period_mapping.items():
+        if period in clean_str:
+            hour_offset = offset
+            clean_str = clean_str.replace(period, "").strip()  # 移除时段后再次清理空格
+            break  # 只匹配第一个时段（避免多时段冲突）
+
+    # 验证并解析hh:mm格式
+    if ":" in clean_str and len(clean_str.split(":")) == 2:
+        try:
+            hour, minute = map(int, clean_str.split(":"))
+            # 计算24小时制小时数（处理12/24进制边界，如晚上12点转0点）
+            total_hour = (hour + hour_offset) % 24
+            # 格式化小时和分钟为两位数字（补前导0）
+            return f"{total_hour:02d}:{minute:02d}"
+        except ValueError:
+            # 无法转换为整数（如字母、特殊字符），返回原始字符串
+            return original_str
+
+    # 非hh:mm格式，返回原始字符串
+    return original_str
+
+
+def time_to_minutes(time_str):
+    """
+    将带时段（早上/上午/下午/晚上/凌晨等）的hh:mm格式字符串转换为总分钟数，非法格式返回np.nan。
+
+    核心逻辑：
+    1. 识别时段关键词（如早上/晚/下午），匹配对应的24小时制小时偏移量
+    2. 清理字符串，提取纯hh:mm格式的时间部分
+    3. 验证时间格式并转换为总分钟数
+
+    Examples:
+    >>> time_to_minutes("早上8:12")  # 基础时段
+    492
+    >>> time_to_minutes("上午8:12")  # 扩展时段（上午=早上）
+    492
+    >>> time_to_minutes("下午4:16")
+    976
+    >>> time_to_minutes("晚上8:14")
+    1214
+    >>> time_to_minutes("晚08:14")   # 变体格式（晚+08）
+    1214
+    >>> time_to_minutes("午4:16")    # 简写变体（午=下午）
+    976
+    >>> time_to_minutes("早8:12")    # 简写变体（早=早上）
+    492
+    >>> time_to_minutes("8:12")      # 无时段原始格式
+    492
+    >>> time_to_minutes("16:16")     # 24小时制原始格式
+    976
+    >>> time_to_minutes("昨天")      # 非法格式（无hh:mm）
+    nan
+    >>> time_to_minutes("11-9日")    # 非法格式（日期）
+    nan
+    >>> time_to_minutes("8:12:30")   # 非法格式（多分隔符）
+    nan
+    >>> time_to_minutes("晚上8点14") # 非法格式（无冒号）
+    nan
+    >>> time_to_minutes("晚上a:14")  # 非法格式（非数字）
+    nan
+    >>> time_to_minutes("早上0:00")  # 边界值（凌晨0点）
+    0
+    >>> time_to_minutes("下午12:00") # 边界值（下午12点）
+    1440
+    >>> time_to_minutes("凌晨3:45")  # 扩展时段（凌晨）
+    225
+    >>> time_to_minutes("")          # 空字符串
+    nan
+    >>> time_to_minutes(" 晚上 9:05 ") # 含空格的变体
+    1265
+    """
+    # 定义时段与24小时制小时偏移量的映射（覆盖常见变体）
+    period_mapping = {
+        "早上": 0,
+        "上午": 0,
+        "凌晨": 0,
+        "早": 0,
+        "下午": 12,
+        "午": 12,
+        "晚上": 12,
+        "晚": 12,
+    }
+
+    # 初始化偏移量，清理输入字符串（去除首尾空格）
+    hour_offset = 0
+    clean_str = time_str.strip()
+
+    # 识别时段并提取偏移量，同时移除时段关键词
+    for period, offset in period_mapping.items():
+        if period in clean_str:
+            hour_offset = offset
+            clean_str = clean_str.replace(period, "").strip()  # 移除时段后再次清理空格
+            break  # 只匹配第一个时段（避免多时段冲突）
+
+    # 复用原逻辑验证hh:mm格式并转换
+    if ":" in clean_str and len(clean_str.split(":")) == 2:
+        try:
+            hour, minute = map(int, clean_str.split(":"))
+            # 计算24小时制总分钟数
+            total_min = (hour + hour_offset) * 60 + minute
+            return total_min
+        except ValueError:
+            # 无法转换为整数（如字母、特殊字符）
+            return numpy.nan
+
+    # 非hh:mm格式直接返回nan
+    return numpy.nan
 
 
 def 获取列表详情(results):
     e = results[0]
-    rect_nav = bounds_to_rect(e.elem.xpath(x_nav)[0].attrib.get('bounds'))
-    rect_head = bounds_to_rect(e.elem.xpath(x_head)[0].attrib.get('bounds'))
+    rect_nav = bounds_to_rect(e.elem.xpath(x_nav)[0].attrib.get("bounds"))
+    rect_head = bounds_to_rect(e.elem.xpath(x_head)[0].attrib.get("bounds"))
     top_most = rect_head.bottom
     bottom_most = rect_nav.top
     data = []
@@ -55,41 +248,38 @@ def 获取列表详情(results):
         x = e.elem.xpath(x_session)
         if not x:
             continue
-        d['session_name'] = x[0].attrib.get('text')
+        d["session_name"] = x[0].attrib.get("text")
         x = e.elem.xpath(x_subtitle)
         if not x:
             continue
-        d['subtitle'] = x[0].attrib.get('text')
+        d["subtitle"] = x[0].attrib.get("text")
         x = e.elem.xpath(x_time)
         if not x:
             continue
-        d['time'] = x[0].attrib.get('text')
+        d["time"] = time_to_24h_str(x[0].attrib.get("text"))
         x = e.elem.xpath(x_red)
         if x:
-            d['red'] = x[0].attrib.get('text')
+            d["red"] = x[0].attrib.get("text")
         else:
-            d['red'] = '0'
-        d['top'] = rect.top
-        d['bottom'] = rect.bottom
-        d['height'] = rect.height
-        d['center'] = rect.center
+            d["red"] = "0"
+        d["top"] = rect.top
+        d["bottom"] = rect.bottom
+        d["height"] = rect.height
+        d["center"] = rect.center
         data.append(d)
     df = pandas.DataFrame(data)
-    df['valid'] = (df.top >= top_most) & (df.bottom <= bottom_most)
-    df['today'] = df['time'].str.match(r'^\d{2}:\d{2}$', na=False)
-    df['s3p'] = df['session_name'].str.match(r'^[A-Z]{6}$', na=False)
-    df['up'] = top_most
-    df['down'] = bottom_most
+    df["valid"] = (df.top >= top_most) & (df.bottom <= bottom_most)
+    df["today"] = df["time"].str.match(r"^\d{2}:\d{2}$", na=False)
+    df["s3p"] = df["session_name"].str.match(r"^[A-Z]{6}$", na=False)
+    df["up"] = top_most
+    df["down"] = bottom_most
     return df
+
 
 def 获取3P列表详情(results):
     df = 获取列表详情(results)
     df = df[(df.valid) & (df.today) & (df.s3p)]
-    return df[['session_name','subtitle','red', 'time']]
-
-
-
-
+    return df[["session_name", "subtitle", "red", "time"]]
 
 
 def get_short_text(txt, max_length=20):
@@ -160,9 +350,9 @@ class 单条容器(list):
 
     def 是否非文本容器超长(self):
         v = self.rect.height / self.rect_big.height
-        print(f'容器高度占比: {v:.2f}')
+        print(f"容器高度占比: {v:.2f}")
         return self.类型 != "文本" and (self.rect.height / self.rect_big.height) >= 0.40
-    
+
     @property
     def 和微信容器底边间距(self):
         return abs(self.rect_big.bottom - self.rect.bottom)
@@ -816,7 +1006,11 @@ class 解析器(object):
         return get_hash_bytes(etree.tostring(recycler[0]))
 
     def 是否一半向下翻页(self):
-        return self.elements and self.elements[-1].是否底部触底() and self.elements[-1].是否非文本容器超长()
+        return (
+            self.elements
+            and self.elements[-1].是否底部触底()
+            and self.elements[-1].是否非文本容器超长()
+        )
 
 
 if __name__ == "__main__":

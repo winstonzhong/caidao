@@ -8,11 +8,16 @@ session_name_top = "智康安医养服务平台"
 namespaces = {"re": "http://exslt.org/regular-expressions"}
 
 
+
+
+
 def clean_last(d):
     return {k: d.get(k) for k in ["session_name", "subtitle", "time", "red"]}
 
+
 def 获取群持久对象(job):
     return job.持久对象.获取其他记录("微信_创建备用群")
+
 
 def 得到群df(job):
     obj = 获取群持久对象(job)
@@ -23,10 +28,12 @@ def 得到群df(job):
         df["二维码"] = np.nan
     return df
 
+
 def 得到一个一人群(job):
     df = 得到群df(job)
     tmp = df[(~df.已设置进群确认) & (df.二维码.isna())]
     return tmp.iloc[0] if not tmp.empty else None
+
 
 def 得到可用群id(job):
     df = 得到群df(job)
@@ -49,6 +56,7 @@ def 完成群设置用户已经进群(job):
     # obj.更新记录(query={"name": session_name}, update={"已设置进群确认": True})
     更新群(job, session_name, 已设置进群确认=True)
     处理列表完成(job)
+
 
 def 获取群(job, session_name):
     obj = 获取群持久对象(job)
@@ -98,6 +106,8 @@ def 处理通讯列表(job, results, save_ut=False):
     df = 获取列表详情(results)
     print(df)
     最后已处理 = job.持久对象.获取字段值("最后已处理") or {}
+    print(最后已处理)
+    # raise ValueError
 
     if save_ut:
         import time
@@ -518,20 +528,17 @@ def 时间列表Bug修正(df: pd.DataFrame) -> pd.DataFrame:
                 pass
         return np.nan
 
-
     s = check_df["time"].apply(time_to_minutes).diff()
 
-    abnormal_mask =  s[s> 0]
+    abnormal_mask = s[s > 0]
 
-    if not abnormal_mask.empty:# and abnormal_mask.any():
+    if not abnormal_mask.empty:  # and abnormal_mask.any():
         first_abnormal_idx = abnormal_mask.idxmin()
     else:
         first_abnormal_idx = None
 
-
     if first_abnormal_idx is not None:
         df_copy.loc[first_abnormal_idx:, "today"] = False
-
 
     false_today_mask = check_df.today[~check_df.today]
     if not false_today_mask.empty:
@@ -541,8 +548,6 @@ def 时间列表Bug修正(df: pd.DataFrame) -> pd.DataFrame:
 
     if first_false_today_idx is not None:
         df_copy.loc[first_false_today_idx:, "today"] = False
-
-
 
     return df_copy
 
@@ -689,17 +694,23 @@ if __name__ == "__main__":
     from pathlib import Path
 
     base_dir = Path(__file__).parent.resolve()
-    # fpath = '/home/ut/1765442497.4180336.json'
-    # print(base_dir)
-    fpath = base_dir / "ut/1765442497.4180336.json"
 
-    with open(fpath, "r") as f:
-        d = json.load(f)
+    def get_bad_pair(fpath):
+        fpath = base_dir / fpath
 
-    df_bad = pd.DataFrame(d.get("df")).reset_index(drop=True)
-    last_bad = clean_last(d.get("最后已处理"))
+        with open(fpath, "r") as f:
+            d = json.load(f)
+
+        df_bad = pd.DataFrame(d.get("df")).reset_index(drop=True)
+        last_bad = clean_last(d.get("最后已处理"))
+        return df_bad, last_bad
+
+    df_bad, last_bad = get_bad_pair("ut/1765442497.4180336.json")
+    # ut/1765546838.8218212.json
+    df_bad1, last_bad1 = get_bad_pair("ut/1765546838.8218212.json")
 
     print(doctest.testmod(verbose=False, report=False))
+    # print(df_bad1)
 
     # print(df_bad)
     # print(df_bad.index)
