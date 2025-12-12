@@ -104,6 +104,7 @@ def 处理列表完成(job):
 
 def 处理通讯列表(job, results, save_ut=False):
     df = 获取列表详情(results)
+    df = 时间列表Bug修正(df)
     print(df)
     最后已处理 = job.持久对象.获取字段值("最后已处理") or {}
     print(最后已处理)
@@ -707,7 +708,7 @@ if __name__ == "__main__":
 
     df_bad, last_bad = get_bad_pair("ut/1765442497.4180336.json")
     # ut/1765546838.8218212.json
-    df_bad1, last_bad1 = get_bad_pair("ut/1765546838.8218212.json")
+    # df_bad1, last_bad1 = get_bad_pair("ut/1765546838.8218212.json")
 
     print(doctest.testmod(verbose=False, report=False))
     # print(df_bad1)
