@@ -1,6 +1,7 @@
 import pandas as pd
 from tool_wx_container import 获取列表详情
 import re
+import numpy as np
 
 session_name_top = "智康安医养服务平台"
 
@@ -10,23 +11,24 @@ namespaces = {"re": "http://exslt.org/regular-expressions"}
 def clean_last(d):
     return {k: d.get(k) for k in ["session_name", "subtitle", "time", "red"]}
 
+
 def 完成群设置用户已经进群(job):
     # 可用空群 = models.BooleanField(default=True)
     # 已占用 = models.BooleanField(default=False)
     session_name = job.持久对象.获取字段值("正在处理").get("session_name")
     # 群 = 获取群(job, session_name)
     # 群['已占用'] = True
-    obj = job.持久对象.获取其他记录('微信_创建备用群')
+    obj = job.持久对象.获取其他记录("微信_创建备用群")
     obj.更新记录(query={"name": session_name}, update={"已设置进群确认": True})
     处理列表完成(job)
 
 
-
 def 获取群(job, session_name):
-    obj = job.持久对象.获取其他记录('微信_创建备用群')
+    obj = job.持久对象.获取其他记录("微信_创建备用群")
     d = obj.查找数据记录(name=session_name)
-    print('群记录为:', d)
+    print("群记录为:", d)
     return d
+
 
 def 处理3p群(job, results):
     print("处理3p群")
@@ -38,17 +40,19 @@ def 处理3p群(job, results):
         num = int(m.groups()[1])
         session_name = m.groups()[0]
         print(f"当前群:{session_name}, 人数:{num}")
-        assert session_name == job.持久对象.获取字段值("正在处理").get("session_name"), "群名不一致"
+        assert session_name == job.持久对象.获取字段值("正在处理").get(
+            "session_name"
+        ), "群名不一致"
         群 = 获取群(job, session_name)
         if num <= 2 or not 群:
             print("当前群人数不足, 不处理")
         elif not 群:
             print("当前群不是已记录的3人群, 不处理")
-        elif 群.get('已设置进群确认'):
+        elif 群.get("已设置进群确认"):
             print("当前群不是可用空群, 不处理")
         else:
             # raise NotImplementedError
-            job.status = '初始化3人群'
+            job.status = "初始化3人群"
             return
     else:
         print("群名称不是期望的([A-Z]{6})\((\d+)\), 非法群, 不处理")
@@ -91,7 +95,7 @@ def 列表处理函数(job, df, paras):
     if action == "处理":
         s = df.loc[parm]
         群 = 获取群(job, s["session_name"])
-        if s.s3p and 群 and not 群.get('已设置进群确认'):
+        if s.s3p and 群 and not 群.get("已设置进群确认"):
             print("================处理3p群")
             print(s)
             job.持久对象.设置字段值("正在处理", s.to_dict())
@@ -112,6 +116,9 @@ def 列表处理函数(job, df, paras):
         print()
     elif action == "结束":
         print("本轮列表处理结束!")
+        import time
+
+        time.sleep(3)
     else:
         raise Exception(f"未知操作:{action}")
 
@@ -337,6 +344,190 @@ def 列表处理状态计算函数(
         return ("翻页", -1)
     else:
         return ("结束", None)
+
+
+def 时间列表Bug修正(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    修正时间列表的Bug：忽略置顶行后，将第一个非倒序位置及之后的today设为False
+
+    参数:
+        df: 包含session_name、time、today列的DataFrame
+
+    返回:
+        修正后的DataFrame
+
+    Doctest示例:
+    >>> # 构造测试用例（与题目示例一致）
+    >>> data = {
+    ...     'session_name': ['智康安医养服务平台', '独立游戏开发第 _BEHA', 'VUKMBO', 'AHLUBP', 'ProcessOn', '李强', '订阅号消息', '内部机器人测试群_OAKK', '全宏益健康分析师', '富贵杠上花', '服务通知'],
+    ...     'time': ['10月29日', '05:57', '22:28', '19:20', '19:02', '17:33', '17:27', '15:53', '08:15', '昨天', '昨天'],
+    ...     'today': [False, True, True, True, True, True, True, True, True, False, False]
+    ... }
+    >>> df = pd.DataFrame(data)
+    >>> result = 时间列表Bug修正(df)
+    >>> # 验证第一个非倒序位置（索引2）及之后的today均为False
+    >>> result.loc[2:, 'today'].tolist()
+    [False, False, False, False, False, False, False, False, False]
+    >>> # 验证置顶行和第一个非倒序位置前的行未被修改
+    >>> result.loc[:1, 'today'].tolist()
+    [False, True]
+
+    >>> # 测试无置顶行且时间正常倒序的情况
+    >>> data2 = {
+    ...     'session_name': ['A', 'B', 'C'],
+    ...     'time': ['22:00', '20:00', '18:00'],
+    ...     'today': [True, True, True]
+    ... }
+    >>> df2 = pd.DataFrame(data2)
+    >>> result2 = 时间列表Bug修正(df2)
+    >>> result2['today'].tolist()  # 无修改
+    [True, True, True]
+
+    >>> # 测试无置顶行且第一个非倒序在索引1的情况
+    >>> data3 = {
+    ...     'session_name': ['A', 'B', 'C'],
+    ...     'time': ['10:00', '12:00', '09:00'],
+    ...     'today': [True, True, True]
+    ... }
+    >>> df3 = pd.DataFrame(data3)
+    >>> result3 = 时间列表Bug修正(df3)
+    >>> result3['today'].tolist()  # 索引1及之后设为False
+    [True, False, False]
+
+    >>> # 测试用例1: 基本功能测试（只有hh:mm格式）
+    >>> df1 = pd.DataFrame({
+    ...     'session_name': ['智康安医养服务平台', 'A', 'B', 'C'],
+    ...     'time': ['10:30', '22:28', '19:20', '17:33'],
+    ...     'today': [False, True, True, True]
+    ... })
+    >>> result1 = 时间列表Bug修正(df1)
+    >>> result1['today'].tolist()
+    [False, True, True, True]
+
+    >>> # 测试用例2: 存在非倒序的情况
+    >>> df2 = pd.DataFrame({
+    ...     'session_name': ['智康安医养服务平台', 'A', 'B', 'C', 'D'],
+    ...     'time': ['10月29日', '05:57', '22:28', '19:20', '17:33'],
+    ...     'today': [False, True, True, True, True]
+    ... })
+    >>> result2 = 时间列表Bug修正(df2)
+    >>> result2['today'].tolist()
+    [False, True, False, False, False]
+
+    >>> # 测试用例3: 包含非hh:mm格式的时间（应转为nan并跳过）
+    >>> df3 = pd.DataFrame({
+    ...     'session_name': ['智康安医养服务平台', 'A', 'B', 'C', 'D', 'E'],
+    ...     'time': ['10月29日', '23:50', '昨天', '22:28', '19:20', '17:33'],
+    ...     'today': [False, True, False, True, True, True]
+    ... })
+    >>> result3 = 时间列表Bug修正(df3)
+    >>> result3['today'].tolist()
+    [False, True, False, False, False, False]
+
+    >>> # 测试用例4: 非置顶行，存在非倒序
+    >>> df4 = pd.DataFrame({
+    ...     'session_name': ['其他平台', 'A', 'B', 'C', 'D'],
+    ...     'time': ['10:00', '05:57', '22:28', '19:20', '17:33'],
+    ...     'today': [True, True, True, True, True]
+    ... })
+    >>> result4 = 时间列表Bug修正(df4)
+    >>> result4['today'].tolist()
+    [True, True, False, False, False]
+
+    >>> # 测试用例5: 空DataFrame
+    >>> df5 = pd.DataFrame(columns=['session_name', 'time', 'today'])
+    >>> result5 = 时间列表Bug修正(df5)
+    >>> len(result5)
+    0
+
+    >>> # 测试用例6: 只有一行置顶行
+    >>> df6 = pd.DataFrame({
+    ...     'session_name': ['智康安医养服务平台'],
+    ...     'time': ['10月29日'],
+    ...     'today': [False]
+    ... })
+    >>> result6 = 时间列表Bug修正(df6)
+    >>> result6['today'].tolist()
+    [False]
+
+    >>> # 测试用例7: 时间全部倒序（hh:mm格式）
+    >>> df7 = pd.DataFrame({
+    ...     'session_name': ['智康安医养服务平台', 'A', 'B', 'C'],
+    ...     'time': ['10月29日', '22:28', '19:20', '17:33'],
+    ...     'today': [False, True, True, True]
+    ... })
+    >>> result7 = 时间列表Bug修正(df7)
+    >>> result7['today'].tolist()
+    [False, True, True, True]
+
+    >>> # 测试用例8: 非hh:mm格式在hh:mm之后，不应影响比较
+    >>> df8 = pd.DataFrame({
+    ...     'session_name': ['智康安医养服务平台', 'A', 'B', 'C'],
+    ...     'time': ['10:30', '09:20', '昨天', '08:15'],
+    ...     'today': [False, True, False, True]
+    ... })
+    >>> result8 = 时间列表Bug修正(df8)
+    >>> result8['today'].tolist()
+    [False, True, False, False]
+
+    """
+    # 复制原DataFrame，避免修改原数据
+    df_copy = df.copy()
+
+    # 步骤1：判断是否有置顶行，确定需要校验的起始索引
+    top_row_session = df_copy.iloc[0]["session_name"] if not df_copy.empty else ""
+    check_start_idx = 1 if top_row_session == "智康安医养服务平台" else 0
+    check_df = df_copy.iloc[check_start_idx:].copy()
+
+    if check_df.empty:
+        return df_copy
+
+    def time_to_minutes(time_str):
+        """将HH:MM格式转换为分钟数，其他格式返回-1"""
+        if ":" in time_str and len(time_str.split(":")) == 2:
+            try:
+                hour, minute = map(int, time_str.split(":"))
+                return hour * 60 + minute
+            except ValueError:
+                pass
+        return np.nan
+
+
+    # 生成可比较的时间数值列表
+    # time_values = check_df["time"].apply(time_to_minutes)
+
+    # # 步骤3：查找第一个非倒序的位置（前一个值 < 当前值）
+    # first_abnormal_idx = None
+    # s = time_values.diff()
+    # if not s[s > 0].empty:
+    #     first_abnormal_idx = s[s > 0].index[0]
+    s = check_df["time"].apply(time_to_minutes).diff()
+
+    abnormal_mask =  s[s> 0]
+
+    if not abnormal_mask.empty:# and abnormal_mask.any():
+        first_abnormal_idx = abnormal_mask.idxmin()
+    else:
+        first_abnormal_idx = None
+
+
+    # 步骤4：如果找到异常位置，修改原DataFrame的today字段
+    if first_abnormal_idx is not None:
+        df_copy.loc[first_abnormal_idx:, "today"] = False
+
+
+    false_today_mask = check_df.today[~check_df.today]
+    if not false_today_mask.empty:
+        first_false_today_idx = false_today_mask.idxmin()  # 第一个today为False的位置
+    else:
+        first_false_today_idx = None
+
+    if first_false_today_idx is not None:
+        df_copy.loc[first_false_today_idx:, "today"] = False
+
+
+
+    return df_copy
 
 
 if __name__ == "__main__":
