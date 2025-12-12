@@ -483,7 +483,6 @@ def 时间列表Bug修正(df: pd.DataFrame) -> pd.DataFrame:
         return df_copy
 
     def time_to_minutes(time_str):
-        """将HH:MM格式转换为分钟数，其他格式返回-1"""
         if ":" in time_str and len(time_str.split(":")) == 2:
             try:
                 hour, minute = map(int, time_str.split(":"))
@@ -493,14 +492,6 @@ def 时间列表Bug修正(df: pd.DataFrame) -> pd.DataFrame:
         return np.nan
 
 
-    # 生成可比较的时间数值列表
-    # time_values = check_df["time"].apply(time_to_minutes)
-
-    # # 步骤3：查找第一个非倒序的位置（前一个值 < 当前值）
-    # first_abnormal_idx = None
-    # s = time_values.diff()
-    # if not s[s > 0].empty:
-    #     first_abnormal_idx = s[s > 0].index[0]
     s = check_df["time"].apply(time_to_minutes).diff()
 
     abnormal_mask =  s[s> 0]
@@ -511,7 +502,6 @@ def 时间列表Bug修正(df: pd.DataFrame) -> pd.DataFrame:
         first_abnormal_idx = None
 
 
-    # 步骤4：如果找到异常位置，修改原DataFrame的today字段
     if first_abnormal_idx is not None:
         df_copy.loc[first_abnormal_idx:, "today"] = False
 
