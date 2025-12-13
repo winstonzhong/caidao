@@ -901,16 +901,17 @@ class 基本任务(抽象持久序列):
     def serialno(self):
         return self.device.adb.serialno
 
-    def 打开应用(self):
-        script = f"am start -n {self.package}/{self.activity}"
+    def 打开应用(self, package=None, activity=None):
+        package = package or self.package
+        activity = activity or self.activity
+        script = f"am start -n {package}/{activity}"
         # print(script)
         self.device.adb.execute(script)
         time.sleep(3)
-        # print(f"checking...:{self.package}/{self.activity}", self.device.adb.is_app_opened(self.package))
-        if not self.device.adb.is_app_opened(self.package):
+        if not self.device.adb.is_app_opened(package):
             self.device.adb.open_certain_app(
-                package=self.package,
-                activity=self.activity,
+                package=package,
+                activity=activity,
                 stop=True,
             )
 
@@ -1359,6 +1360,8 @@ class 基本任务(抽象持久序列):
     def 持久对象获取其他记录(self, name):
         return self.持久对象.获取其他记录(name)
 
+    def 打开豆包(self):
+        self.打开应用('com.larus.nova', None)
 
 class 前置预检查任务(基本任务):
     pass
