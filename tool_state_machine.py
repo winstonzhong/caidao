@@ -7,6 +7,22 @@ session_name_top = "智康安医养服务平台"
 
 namespaces = {"re": "http://exslt.org/regular-expressions"}
 
+KEY_LAST_PROCESSED = "最后已处理"
+
+def 得到最后已处理记录(job):
+    v = job.持久对象.获取字段值(KEY_LAST_PROCESSED)
+    if isinstance(v, dict):
+        v = [v]
+        job.持久对象.设置字段值(KEY_LAST_PROCESSED, v)
+    return v or []
+
+
+def 记录最后已处理记录(job, d: dict):
+    v = 得到最后已处理记录(job)
+    v.insert(0, d)
+    v = v[:3]
+    job.持久对象.设置字段值(KEY_LAST_PROCESSED, v)
+
 
 def 比对历史记录并返回(df: pd.DataFrame, dict_list: list):
     """
@@ -156,13 +172,7 @@ def 更新群(job, name, **k):
 
 
 def 完成群设置用户已经进群(job):
-    # 可用空群 = models.BooleanField(default=True)
-    # 已占用 = models.BooleanField(default=False)
     session_name = job.持久对象.获取字段值("正在处理").get("session_name")
-    # 群 = 获取群(job, session_name)
-    # 群['已占用'] = True
-    # obj = 获取群持久对象(job)
-    # obj.更新记录(query={"name": session_name}, update={"已设置进群确认": True})
     更新群(job, session_name, 已设置进群确认=True)
     处理列表完成(job)
 
@@ -208,16 +218,17 @@ def 处理3p群(job, results):
 def 处理列表完成(job):
     v = job.持久对象.获取字段值("正在处理", 弹出=True)
     if v:
-        job.持久对象.设置字段值("最后已处理", v)
+        记录最后已处理记录(job, v)
 
 
 def 处理通讯列表(job, results, save_ut=False):
     df = 获取列表详情(results)
     df = 时间列表Bug修正(df)
     print(df)
-    最后已处理 = job.持久对象.获取字段值("最后已处理") or {}
-    print(最后已处理)
-    # raise ValueError
+
+    last_proc_list = 得到最后已处理记录(job)
+
+    print("^^^^^^^^^^^^^^^^", last_proc_list)
 
     if save_ut:
         import time
@@ -227,13 +238,13 @@ def 处理通讯列表(job, results, save_ut=False):
         print("保存ut 到 {}".format(fpath))
         d = {
             "df": df.to_dict(),
-            "最后已处理": 最后已处理,
+            "最后已处理": last_proc_list,
         }
         with open(fpath, "w") as f:
             json.dump(d, f)
 
-    # paras = {k: 最后已处理[k] for k in ["session_name", "subtitle", "time", "red"]}
-    paras = 列表处理状态计算函数(df, **clean_last(最后已处理))
+    # paras = 列表处理状态计算函数(df, **clean_last(last_proc_list))
+    paras = 列表处理状态计算函数2(df, last_proc_list)
     列表处理函数(job, df, paras)
 
 
@@ -251,7 +262,7 @@ def 列表处理函数(job, df, paras):
         else:
             print("================非3p群 或 没有登记  或 已占用")
             print(s)
-            job.持久对象.设置字段值("最后已处理", s.to_dict())
+            记录最后已处理记录(job, s.to_dict())
 
     elif action == "翻页":
         if parm == -1:
@@ -670,9 +681,7 @@ def 列表处理状态计算函数2(df: pd.DataFrame, dict_list: list):
     if not last_record_empty:
 
         if 最后处理过的记录idx is not None:
-            base_conditions_found = base_conditions & (
-                df.index < 最后处理过的记录idx
-            )
+            base_conditions_found = base_conditions & (df.index < 最后处理过的记录idx)
             filtered_df = df[base_conditions_found & (df["s3p"])]
             if filtered_df.empty:
                 filtered_df = df[base_conditions_found].iloc[:1]
