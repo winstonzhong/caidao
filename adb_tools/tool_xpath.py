@@ -504,10 +504,11 @@ class SteadyDevice(DummyDevice):
     def clear_remote_wx_images(self):
         self.adb.clear_temp_dir(self.remote_fpath_wx_images)
 
-    def download_wx_image(self, token=None):
+    def 将手机文件上传56T(self, token=None, 手机端路径=None):
+        手机端路径 = 手机端路径 or self.remote_fpath_wx_images
         if tool_static.is_inner():
             fpath = self.adb.pull_lastest_file_until(
-                base_dir=self.remote_fpath_wx_images, to_56T=True
+                base_dir=手机端路径, to_56T=True
             )
             return tool_static.路径到链接(fpath)
         else:
@@ -517,13 +518,38 @@ class SteadyDevice(DummyDevice):
             源文件移动至robot临时目录且按照56T链接返回的文件名(可选touch)
             """
             fpath = self.adb.pull_lastest_file_until(
-                base_dir=self.remote_fpath_wx_images, to_56T=False, clear_tmp_dir=True
+                base_dir=手机端路径, to_56T=False, clear_tmp_dir=True
             )
             url = tool_static.upload_file_by_path(fpath, token)
             fname = url.split("/")[-1]
-            src = self.adb.get_latest_file(base_dir=self.remote_fpath_wx_images)
+            src = self.adb.get_latest_file(base_dir=手机端路径)
             self.adb.move_file_to_robot_temp(src, fname)
             return url
+
+
+    def download_wx_image(self, token=None):
+        return self.将手机文件上传56T(
+            token=token, 手机端路径=self.remote_fpath_wx_images
+        )
+        # if tool_static.is_inner():
+        #     fpath = self.adb.pull_lastest_file_until(
+        #         base_dir=self.remote_fpath_wx_images, to_56T=True
+        #     )
+        #     return tool_static.路径到链接(fpath)
+        # else:
+        #     """
+        #     下载该文件到本地
+        #     上传至56T
+        #     源文件移动至robot临时目录且按照56T链接返回的文件名(可选touch)
+        #     """
+        #     fpath = self.adb.pull_lastest_file_until(
+        #         base_dir=self.remote_fpath_wx_images, to_56T=False, clear_tmp_dir=True
+        #     )
+        #     url = tool_static.upload_file_by_path(fpath, token)
+        #     fname = url.split("/")[-1]
+        #     src = self.adb.get_latest_file(base_dir=self.remote_fpath_wx_images)
+        #     self.adb.move_file_to_robot_temp(src, fname)
+        #     return url
 
     def 下载微信图片并返回链接和唯一码_内网(self):
         fpath = self.adb.pull_lastest_file_until(
@@ -554,11 +580,19 @@ class SteadyDevice(DummyDevice):
         else:
             return self.下载微信图片并返回链接和唯一码_外网(token)
 
-    def 点击并上传手机端微信图片(self, e, token):
-        self.clear_remote_wx_images()
+    def 点击并上传手机端文件(self, e, token, 手机端路径):
+        # self.clear_remote_wx_images()
+        self.adb.clear_temp_dir(手机端路径)
         e.click()
         time.sleep(1)
-        return self.download_wx_image(token)
+        return self.将手机文件上传56T(token, 手机端路径)
+
+    def 点击并上传手机端微信图片(self, e, token):
+        return self.点击并上传手机端文件(e, token, self.remote_fpath_wx_images)
+        # self.clear_remote_wx_images()
+        # e.click()
+        # time.sleep(1)
+        # return self.download_wx_image(token)
 
     def cut_wx_df(self, df):
         tmp = df[df.自己]
@@ -1339,6 +1373,9 @@ class 基本任务(抽象持久序列):
 
     def 下载微信图片并返回链接和唯一码(self):
         return self.device.下载微信图片并返回链接和唯一码(self.持久对象.TOKEN)
+
+    def 点击并上传手机端文件(self, e, 手机端路径):
+        return self.device.点击并上传手机端文件(e, self.持久对象.TOKEN, 手机端路径)
 
     def 点击并上传手机端微信图片(self, e):
         return self.device.点击并上传手机端微信图片(e, self.持久对象.TOKEN)
