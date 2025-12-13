@@ -9,6 +9,10 @@ namespaces = {"re": "http://exslt.org/regular-expressions"}
 
 KEY_LAST_PROCESSED = "最后已处理"
 
+def clean_last(d):
+    return {k: d.get(k) for k in ["session_name", "subtitle", "time", "red"]}
+
+
 def 得到最后已处理记录(job):
     v = job.持久对象.获取字段值(KEY_LAST_PROCESSED)
     if isinstance(v, dict):
@@ -19,7 +23,7 @@ def 得到最后已处理记录(job):
 
 def 记录最后已处理记录(job, d: dict):
     v = 得到最后已处理记录(job)
-    v.insert(0, d)
+    v.insert(0, clean_last(d))
     v = v[:3]
     job.持久对象.设置字段值(KEY_LAST_PROCESSED, v)
 
@@ -134,10 +138,6 @@ def 比对历史记录并返回(df: pd.DataFrame, dict_list: list):
 
     # 所有item都未匹配到，返回None
     return None
-
-
-def clean_last(d):
-    return {k: d.get(k) for k in ["session_name", "subtitle", "time", "red"]}
 
 
 def 获取群持久对象(job):
