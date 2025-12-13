@@ -23,7 +23,7 @@ def 得到最后已处理记录(job):
 
 def 记录最后已处理记录(job, d: dict):
     v = 得到最后已处理记录(job)
-    v = [d for d in v if d.get("session_name") != d.get("session_name")]
+    v = [x for x in v if x.get("session_name") != d.get("session_name")]
     v.insert(0, clean_last(d))
     v = v[:5]
     job.持久对象.设置字段值(KEY_LAST_PROCESSED, v)
