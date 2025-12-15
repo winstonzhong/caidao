@@ -7,12 +7,143 @@ session_name_top = "智康安医养服务平台"
 
 namespaces = {"re": "http://exslt.org/regular-expressions"}
 
+KEY_LAST_PROCESSED = "最后已处理"
 
 def clean_last(d):
     return {k: d.get(k) for k in ["session_name", "subtitle", "time", "red"]}
 
+
+def 得到最后已处理记录(job):
+    v = job.持久对象.获取字段值(KEY_LAST_PROCESSED)
+    if isinstance(v, dict):
+        v = [v]
+        job.持久对象.设置字段值(KEY_LAST_PROCESSED, v)
+    return v or []
+
+
+def 记录最后已处理记录(job, d: dict):
+    v = 得到最后已处理记录(job)
+    v = [x for x in v if x.get("session_name") != d.get("session_name")]
+    v.insert(0, clean_last(d))
+    v = v[:5]
+    job.持久对象.设置字段值(KEY_LAST_PROCESSED, v)
+
+
+def 比对历史记录并返回(df: pd.DataFrame, dict_list: list):
+    """
+    依次遍历dict_list中的字典项，在DataFrame中查找完全匹配session_name/subtitle/time/red字段的行，返回第一个匹配行的索引。
+
+    参数:
+        df: 包含会话记录的DataFrame，需包含session_name、subtitle、time、red字段
+        dict_list: 待匹配的字典列表，格式为[{"session_name":"xx", "subtitle":"xx", "time":"xx", "red":"xx"}]
+                   若列表为空/非列表/第一个元素非字典，则视为无匹配记录，返回None
+
+    返回:
+        int/None: 第一个匹配行的索引（int）；无匹配项或参数不合法时返回None
+
+    Doctest示例：
+    >>> # 构造基础测试数据
+    >>> test_data = [
+    ...     {"session_name": "会话1", "subtitle": "消息1", "time": "09:00", "red": "0", "valid": True},
+    ...     {"session_name": "会话2", "subtitle": "消息2", "time": "10:00", "red": "1", "valid": True},
+    ...     {"session_name": "会话3", "subtitle": "消息3", "time": "11:00", "red": "2", "valid": False},
+    ...     {"session_name": "会话2", "subtitle": "消息2", "time": "10:00", "red": "1", "valid": True}  # 重复行
+    ... ]
+    >>> df = pd.DataFrame(test_data)
+
+    # 测试1：正常匹配（单个item匹配）
+    >>> 比对历史记录并返回(df, [{"session_name": "会话2", "subtitle": "消息2", "time": "10:00", "red": "1"}])
+    1
+
+    # 测试2：多个item，第一个不匹配，第二个匹配
+    >>> 比对历史记录并返回(df, [
+    ...     {"session_name": "会话0", "subtitle": "消息0", "time": "08:00", "red": "0"},
+    ...     {"session_name": "会话3", "subtitle": "消息3", "time": "11:00", "red": "2"}
+    ... ])
+    2
+
+    # 测试3：匹配多行，返回第一个匹配的索引
+    >>> 比对历史记录并返回(df, [{"session_name": "会话2", "subtitle": "消息2", "time": "10:00", "red": "1"}])
+    1
+
+    # 测试4：部分字段不匹配（red字段不同）
+    >>> 比对历史记录并返回(df, [{"session_name": "会话2", "subtitle": "消息2", "time": "10:00", "red": "0"}])
+
+
+    # 测试5：dict_list为空，返回None
+    >>> 比对历史记录并返回(df, [])
+
+
+    # 测试6：dict_list非列表类型（字符串），返回None
+    >>> 比对历史记录并返回(df, "非法类型")
+
+
+    # 测试7：dict_list第一个元素非字典（数字），返回None
+    >>> 比对历史记录并返回(df, [123, {"session_name": "会话1"}])
+
+
+    # 测试8：df为空，返回None
+    >>> 比对历史记录并返回(pd.DataFrame(), [{"session_name": "会话1", "subtitle": "消息1", "time": "09:00", "red": "0"}])
+
+
+    # 测试9：item缺失部分字段（red字段），视为匹配df中red为None的行（无匹配）
+    >>> 比对历史记录并返回(df, [{"session_name": "会话1", "subtitle": "消息1", "time": "09:00"}])
+
+
+    # 测试10：item字段值类型不匹配（red为数字8 vs df中字符串"8"）
+    >>> df_type = pd.DataFrame([{"session_name": "会话4", "subtitle": "消息4", "time": "12:00", "red": "8"}])
+    >>> 比对历史记录并返回(df_type, [{"session_name": "会话4", "subtitle": "消息4", "time": "12:00", "red": 8}])
+
+
+    # 测试11：item字段完全匹配（含空值场景）
+    >>> df_null = pd.DataFrame([{"session_name": None, "subtitle": "空会话", "time": "13:00", "red": None}])
+    >>> 比对历史记录并返回(df_null, [{"session_name": None, "subtitle": "空会话", "time": "13:00", "red": None}])
+
+    # 测试12：dict_list中有空字典，返回None
+    >>> 比对历史记录并返回(df, [{}])
+    """
+    # 边界条件1：df为空，直接返回None
+    if df.empty:
+        return None
+
+    # 边界条件2：dict_list不合法（非列表/空列表/第一个元素非字典），返回None
+    if (
+        not isinstance(dict_list, list)
+        or len(dict_list) == 0
+        or not isinstance(dict_list[0], dict)
+    ):
+        return None
+
+    # 遍历dict_list中的每个待匹配项
+    for item in dict_list:
+        # 提取item中的四个关键字段（缺失则为None）
+        target_session = item.get("session_name")
+        target_subtitle = item.get("subtitle")
+        target_time = item.get("time")
+        target_red = item.get("red")
+
+        # 构建匹配条件：四个字段完全相等
+        match_condition = (
+            (df["session_name"] == target_session)
+            & (df["subtitle"] == target_subtitle)
+            & (df["time"] == target_time)
+            & (df["red"] == target_red)
+        )
+
+        # 筛选匹配的行
+        matched_rows = df[match_condition]
+
+        # 找到第一个匹配行，返回其索引
+        if not matched_rows.empty:
+            return matched_rows.index[0]
+
+    # 所有item都未匹配到，返回None
+    return None
+
+
 def 获取群持久对象(job):
     return job.持久对象.获取其他记录("微信_创建备用群")
+
 
 def 得到群df(job):
     obj = 获取群持久对象(job)
@@ -23,10 +154,12 @@ def 得到群df(job):
         df["二维码"] = np.nan
     return df
 
+
 def 得到一个一人群(job):
     df = 得到群df(job)
     tmp = df[(~df.已设置进群确认) & (df.二维码.isna())]
     return tmp.iloc[0] if not tmp.empty else None
+
 
 def 得到可用群id(job):
     df = 得到群df(job)
@@ -40,15 +173,10 @@ def 更新群(job, name, **k):
 
 
 def 完成群设置用户已经进群(job):
-    # 可用空群 = models.BooleanField(default=True)
-    # 已占用 = models.BooleanField(default=False)
     session_name = job.持久对象.获取字段值("正在处理").get("session_name")
-    # 群 = 获取群(job, session_name)
-    # 群['已占用'] = True
-    # obj = 获取群持久对象(job)
-    # obj.更新记录(query={"name": session_name}, update={"已设置进群确认": True})
     更新群(job, session_name, 已设置进群确认=True)
     处理列表完成(job)
+
 
 def 获取群(job, session_name):
     obj = 获取群持久对象(job)
@@ -91,13 +219,17 @@ def 处理3p群(job, results):
 def 处理列表完成(job):
     v = job.持久对象.获取字段值("正在处理", 弹出=True)
     if v:
-        job.持久对象.设置字段值("最后已处理", v)
+        记录最后已处理记录(job, v)
 
 
 def 处理通讯列表(job, results, save_ut=False):
     df = 获取列表详情(results)
+    df = 时间列表Bug修正(df)
     print(df)
-    最后已处理 = job.持久对象.获取字段值("最后已处理") or {}
+
+    last_proc_list = 得到最后已处理记录(job)
+
+    print("^^^^^^^^^^^^^^^^", last_proc_list)
 
     if save_ut:
         import time
@@ -107,13 +239,13 @@ def 处理通讯列表(job, results, save_ut=False):
         print("保存ut 到 {}".format(fpath))
         d = {
             "df": df.to_dict(),
-            "最后已处理": 最后已处理,
+            "最后已处理": last_proc_list,
         }
         with open(fpath, "w") as f:
             json.dump(d, f)
 
-    # paras = {k: 最后已处理[k] for k in ["session_name", "subtitle", "time", "red"]}
-    paras = 列表处理状态计算函数(df, **clean_last(最后已处理))
+    # paras = 列表处理状态计算函数(df, **clean_last(last_proc_list))
+    paras = 列表处理状态计算函数2(df, last_proc_list)
     列表处理函数(job, df, paras)
 
 
@@ -131,7 +263,7 @@ def 列表处理函数(job, df, paras):
         else:
             print("================非3p群 或 没有登记  或 已占用")
             print(s)
-            job.持久对象.设置字段值("最后已处理", s.to_dict())
+            记录最后已处理记录(job, s.to_dict())
 
     elif action == "翻页":
         if parm == -1:
@@ -373,6 +505,218 @@ def 列表处理状态计算函数(
         return ("结束", None)
 
 
+def 列表处理状态计算函数2(df: pd.DataFrame, dict_list: list):
+    """
+    根据给定的DataFrame和最后一条处理记录的字段列表，计算返回状态（翻页/处理/结束）及对应参数。
+
+    算法逻辑：
+    0. 是否到顶部：df第一条记录的session_name为"智康安医养服务平台"则为True，否则False。
+    1. 用最后一条处理记录的字段比对df。
+    2. 最后一条记录为空，且df最后一行today=True → 返回（翻页，1）。
+    3. 最后一条记录非空，df最后一行today=True，且记录不在df中 → 返回（翻页，1）。
+    4. 最后一条记录非空且在df中：
+       - 筛选df中时间大于该记录、valid/today/s3p均为True的结果集。
+       - 结果集非空 → 返回（处理，结果集最后一条的index）。
+       - 结果集为空且未到顶部 → 返回（翻页，-1）。
+       - 否则 → 返回（结束，None）。
+
+    参数:
+        df: 包含会话记录的DataFrame，结构见问题描述
+        dict_list: 包含最后一条处理记录的字典列表，格式为[{"session_name":"xx", "subtitle":"xx", "time":"xx", "red":"xx"}]
+                   若列表为空/非列表/第一个元素非字典，则视为最后一条记录为空
+
+    返回:
+        tuple: (状态类型, 参数)，状态类型包括"翻页"/"处理"/"结束"
+
+    Doctest示例：
+    >>> # 构造核心测试数据（补充原代码缺失的定义）
+    >>> core_data = [
+    ...     {"session_name": "AHLUBP", "subtitle": '你将"宋刚"移出了群聊', "time": "20:23", "red":"0",
+    ...      "valid": True, "today": True, "s3p": True},
+    ...     {"session_name": "TEST1", "subtitle": "测试1", "time": "20:24", "red":"0",
+    ...      "valid": True, "today": True, "s3p": True},
+    ...     {"session_name": "TEST2", "subtitle": "测试2", "time": "20:25", "red":"0",
+    ...      "valid": True, "today": True, "s3p": True},
+    ...     {"session_name": "TEST3", "subtitle": "测试3", "time": "20:26", "red":"0",
+    ...      "valid": True, "today": True, "s3p": True},
+    ...     {"session_name": "TEST4", "subtitle": "测试4", "time": "20:27", "red":"0",
+    ...      "valid": True, "today": True, "s3p": True},
+    ...     {"session_name": "TEST5", "subtitle": "测试5", "time": "20:28", "red":"0",
+    ...      "valid": True, "today": False, "s3p": True}
+    ... ]
+    >>> df_core = pd.DataFrame(core_data)
+
+    # 测试边界情况：最后一条记录为空但df最后一行today=False
+    >>> 列表处理状态计算函数2(df_core, [])  # df最后一行today=False
+    ('处理', 4)
+
+    >>> df_test2 = df_core.iloc[:-1].copy()  # 移除最后一行（today=False），新最后一行today=True
+
+    >>> 列表处理状态计算函数2(df_test2, [{"session_name":"AHLUBP", "subtitle":'你将"宋刚"移出了群聊', "time":"20:23", "red":"0"}])
+    ('翻页', -1)
+
+
+    >>> 列表处理状态计算函数2(df_test2, [])
+    ('翻页', 1)
+
+    # 测试步骤3：最后一条记录非空 + df最后一行today=True + 记录不在df中
+    >>> 列表处理状态计算函数2(df_test2, [{"session_name":"不存在的会话", "subtitle":"不存在的副标题", "time":"22:00", "red":"0"}])
+    ('翻页', 1)
+
+
+    # 测试步骤4-2：结果集为空 + 未到顶部 → 返回翻页-1
+    >>> df_test4_2 = pd.DataFrame([
+    ...     {"session_name": "测试会话", "subtitle": "测试1", "time": "22:00", "red":"0",
+    ...      "valid": True, "today": True, "s3p": True},
+    ...     {"session_name": "测试会话2", "subtitle": "测试2", "time": "21:00", "red":"1",
+    ...      "valid": True, "today": True, "s3p": True}
+    ... ])
+    >>> 列表处理状态计算函数2(df_test4_2, [{"session_name":"测试会话", "subtitle":"测试1", "time":"22:00", "red":"0"}])
+    ('翻页', -1)
+
+    # 测试步骤4-3：结果集为空 + 已到顶部 → 返回结束None
+    >>> df_test4_3 = pd.DataFrame([
+    ...     {"session_name": "智康安医养服务平台", "subtitle": "顶部记录", "time": "22:00", "red":"0",
+    ...      "valid": True, "today": True, "s3p": False},
+    ...     {"session_name": "测试会话2", "subtitle": "测试2", "time": "21:00", "red":"1",
+    ...      "valid": True, "today": True, "s3p": True}
+    ... ])
+    >>> 列表处理状态计算函数2(df_test4_3, [{"session_name":"测试会话2", "subtitle":"测试2", "time":"21:00", "red":"1"}])
+    ('结束', None)
+
+    >>> 列表处理状态计算函数2(df_test4_3, [])
+    ('翻页', 1)
+
+    >>> df_test4_4 = pd.DataFrame([
+    ...     {"session_name": "智康安医养服务平台", "subtitle": "顶部记录", "time": "22:00", "red":"0",
+    ...      "valid": True, "today": True, "s3p": False},
+    ...     {"session_name": "XOXOXO", "subtitle": "测试2", "time": "21:00", "red":"0",
+    ...      "valid": True, "today": True, "s3p": True},
+    ...     {"session_name": "ABABAB", "subtitle": "测试3", "time": "20:59", "red":"0",
+    ...      "valid": True, "today": True, "s3p": True}
+    ... ])
+    >>> 列表处理状态计算函数2(df_test4_4, [{"session_name":"XOXOXO", "subtitle":"测试2", "time":"21:00", "red":"0"}])
+    ('结束', None)
+    >>> 列表处理状态计算函数2(df_test4_4, [{"session_name":"ABABAB", "subtitle":"测试3", "time":"20:59", "red":"0"}])
+    ('处理', 1)
+
+    # 测试边界情况：df为空
+    >>> 列表处理状态计算函数2(pd.DataFrame(), [])
+    ('结束', None)
+
+    # 测试red字段匹配
+    >>> df_red_test = pd.DataFrame([
+    ...     {"session_name": "测试", "subtitle": "测试red", "time": "10:00", "red":"8",
+    ...      "valid": True, "today": True, "s3p": True}
+    ... ])
+    >>> 列表处理状态计算函数2(df_red_test, [{"session_name":"测试", "subtitle":"测试red", "time":"10:00", "red":"8"}])
+    ('翻页', -1)
+
+    # 测试red字段不匹配
+    >>> df_red_test = pd.DataFrame([
+    ...     {"session_name": "测试", "subtitle": "测试red", "time": "10:00", "red":"8",
+    ...      "valid": True, "today": True, "s3p": True}
+    ... ])
+    >>> 列表处理状态计算函数2(df_red_test, [{"session_name":"测试", "subtitle":"测试red", "time":"10:00", "red":"8"}])
+    ('翻页', -1)
+    >>> df_red_test = pd.DataFrame([
+    ...     {"session_name": "测试", "subtitle": "测试red", "time": "10:00", "red":"8",
+    ...      "valid": True, "today": True, "s3p": True},
+    ...     {"session_name": "测试1", "subtitle": "测试red1", "time": "09:00", "red":"1",
+    ...      "valid": True, "today": False, "s3p": False}
+    ... ])
+    >>> 列表处理状态计算函数2(df_red_test, [{"session_name":"测试1", "subtitle":"测试red1", "time":"09:00", "red":"1"}])
+    ('处理', 0)
+
+    # 结果集为空 + 已到顶部 → 返回处理 1
+    >>> df_test4_3 = pd.DataFrame([
+    ...     {"session_name": "智康安医养服务平台", "subtitle": "顶部记录", "time": "22:00", "red":"0",
+    ...      "valid": True, "today": True, "s3p": False},
+    ...     {"session_name": "测试会话1", "subtitle": "测试1", "time": "21:30", "red":"0",
+    ...      "valid": True, "today": True, "s3p": False},
+    ...     {"session_name": "测试会话2", "subtitle": "测试2", "time": "21:00", "red":"1",
+    ...      "valid": True, "today": True, "s3p": True}
+    ... ])
+    >>> 列表处理状态计算函数2(df_test4_3, [{"session_name":"测试会话2", "subtitle":"测试2", "time":"21:00", "red":"1"}])
+    ('处理', 1)
+
+    >>> 列表处理状态计算函数2(df_test4_3, [{"session_name":"测试会话1", "subtitle":"测试1", "time":"21:30", "red":"0"}])
+    ('结束', None)
+
+    >>> df_test4_3 = pd.DataFrame([
+    ...     {"session_name": "智康安医养服务平台", "subtitle": "顶部记录", "time": "22:00", "red":"0",
+    ...      "valid": True, "today": True, "s3p": False},
+    ...     {"session_name": "测试会话1", "subtitle": "测试1", "time": "21:30", "red":"0",
+    ...      "valid": True, "today": True, "s3p": False},
+    ...     {"session_name": "测试会话2", "subtitle": "测试2", "time": "21:00", "red":"1",
+    ...      "valid": True, "today": True, "s3p": False},
+    ...     {"session_name": "测试会话3", "subtitle": "测试3", "time": "20:00", "red":"0",
+    ...      "valid": True, "today": True, "s3p": False},
+    ... ])
+    >>> 列表处理状态计算函数2(df_test4_3, [{"session_name":"测试会话3", "subtitle":"测试3", "time":"20:00", "red":"0"}])
+    ('处理', 1)
+    """
+    最后处理过的记录idx = 比对历史记录并返回(df, dict_list)
+    # 步骤0：计算是否到顶部（处理df为空的边界情况）
+    if df.empty:
+        is_top = False
+    else:
+        is_top = df.iloc[0]["session_name"] == session_name_top
+
+    last_record_empty = not dict_list
+
+    # 处理df为空的边界情况
+    if df.empty:
+        return ("结束", None)
+
+    # 获取df最后一行
+    df_last_row = df.iloc[-1]
+    df_last_row_today = bool(df_last_row["today"])
+
+    if last_record_empty and df_last_row_today:
+        return ("翻页", 1)
+
+    base_conditions = (
+        (df["valid"]) & (df["today"]) & (df["session_name"] != session_name_top)
+    )
+    if not last_record_empty:
+
+        if 最后处理过的记录idx is not None:
+            base_conditions_found = base_conditions & (df.index < 最后处理过的记录idx)
+            filtered_df = df[base_conditions_found & (df["s3p"])]
+            if filtered_df.empty:
+                filtered_df = df[base_conditions_found].iloc[:1]
+        else:
+            filtered_df = df[base_conditions & (df["s3p"])]
+            if filtered_df.empty:
+                filtered_df = df[base_conditions].iloc[:1]
+    else:
+        filtered_df = df[base_conditions & (df["s3p"])]
+        # record_in_df = False
+        if filtered_df.empty:
+            filtered_df = df[base_conditions].iloc[:1]
+
+    # 步骤4：记录在df中
+    if 最后处理过的记录idx is not None:
+        # 结果集非空 → 返回处理+最后一条index
+        if not filtered_df.empty:
+            return ("处理", filtered_df.index[-1])
+        # 结果集为空
+        else:
+            if not is_top:
+                return ("翻页", -1)
+            else:
+                return ("结束", None)
+    elif df_last_row_today:
+        return ("翻页", 1)
+    elif not filtered_df.empty:
+        return ("处理", filtered_df.index[-1])
+    elif not is_top:
+        return ("翻页", -1)
+    else:
+        return ("结束", None)
+
+
 def 时间列表Bug修正(df: pd.DataFrame) -> pd.DataFrame:
     """
     修正时间列表的Bug：忽略置顶行后，将第一个非倒序位置及之后的today设为False
@@ -518,20 +862,17 @@ def 时间列表Bug修正(df: pd.DataFrame) -> pd.DataFrame:
                 pass
         return np.nan
 
-
     s = check_df["time"].apply(time_to_minutes).diff()
 
-    abnormal_mask =  s[s> 0]
+    abnormal_mask = s[s > 0]
 
-    if not abnormal_mask.empty:# and abnormal_mask.any():
+    if not abnormal_mask.empty:  # and abnormal_mask.any():
         first_abnormal_idx = abnormal_mask.idxmin()
     else:
         first_abnormal_idx = None
 
-
     if first_abnormal_idx is not None:
         df_copy.loc[first_abnormal_idx:, "today"] = False
-
 
     false_today_mask = check_df.today[~check_df.today]
     if not false_today_mask.empty:
@@ -541,8 +882,6 @@ def 时间列表Bug修正(df: pd.DataFrame) -> pd.DataFrame:
 
     if first_false_today_idx is not None:
         df_copy.loc[first_false_today_idx:, "today"] = False
-
-
 
     return df_copy
 
@@ -689,17 +1028,23 @@ if __name__ == "__main__":
     from pathlib import Path
 
     base_dir = Path(__file__).parent.resolve()
-    # fpath = '/home/ut/1765442497.4180336.json'
-    # print(base_dir)
-    fpath = base_dir / "ut/1765442497.4180336.json"
 
-    with open(fpath, "r") as f:
-        d = json.load(f)
+    def get_bad_pair(fpath):
+        fpath = base_dir / fpath
 
-    df_bad = pd.DataFrame(d.get("df")).reset_index(drop=True)
-    last_bad = clean_last(d.get("最后已处理"))
+        with open(fpath, "r") as f:
+            d = json.load(f)
+
+        df_bad = pd.DataFrame(d.get("df")).reset_index(drop=True)
+        last_bad = clean_last(d.get("最后已处理"))
+        return df_bad, last_bad
+
+    df_bad, last_bad = get_bad_pair("ut/1765442497.4180336.json")
+    # ut/1765546838.8218212.json
+    # df_bad1, last_bad1 = get_bad_pair("ut/1765546838.8218212.json")
 
     print(doctest.testmod(verbose=False, report=False))
+    # print(df_bad1)
 
     # print(df_bad)
     # print(df_bad.index)
