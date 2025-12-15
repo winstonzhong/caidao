@@ -210,7 +210,7 @@ class BaseModel(models.Model):
         else:
             raise ValueError(f"未找到数据记录: {query}")
 
-    def 设置字段值(self, field: str, value):
+    def 设置字段值(self, field, value):
         self.数据[field] = value
         self.save()
 
