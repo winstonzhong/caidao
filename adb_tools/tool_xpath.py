@@ -987,6 +987,10 @@ class 基本任务(抽象持久序列):
     def few_first(self):
         return self.d.get("few_first", False)
 
+    @property
+    def 最大执行秒(self):
+        return self.d.get("最大执行秒", -1)
+
     def 执行操作块(self, block_id, ignore_status=False):
         self.match(block_id, ignore_status)
         block = next(filter(lambda b: b.id == block_id, self.blocks))
@@ -1029,7 +1033,17 @@ class 基本任务(抽象持久序列):
     def 执行任务(self, 单步=True):
         num_empty_repeated = 0
         executed = 0
+        最大执行秒 = self.最大执行秒
+        old = time.time()
+
         while 1:
+            executed_seconds = time.time() - old
+            print('========================{},{}'.format(executed_seconds, 最大执行秒))
+
+            if 最大执行秒 > 0 and executed_seconds >= 最大执行秒:
+                print("达到最大执行秒，停止执行:", executed_seconds, 最大执行秒)
+                raise ValueError(f"达到最大执行秒异常:{executed_seconds} {最大执行秒}")
+
             if not self.blocks:
                 self.status = "完成"
 
