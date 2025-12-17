@@ -5,10 +5,7 @@ import time
 
 
 def 计算下一次运行等待秒数(
-    df,
-    两次运行最小间隔秒数=5 * 60,
-    每小时最多运行次数=8,
-    当前时间=None
+    df, 两次运行最小间隔秒数=5 * 60, 每小时最多运行次数=8, 当前时间=None
 ):
     """
     根据历史运行记录和约束条件，计算下一次运行需要等待的秒数
@@ -75,26 +72,25 @@ def 计算下一次运行等待秒数(
 
     # 2. 校验DataFrame列完整性
     if "时间" not in df.columns:
-        raise ValueError("DataFrame必须包含名为\"时间\"的列")
+        raise ValueError('DataFrame必须包含名为"时间"的列')
 
     # 3. 处理无历史记录场景（首次运行无需等待）
     if df.empty:
         return 0
 
-    df = df.sort_values('时间')
+    df = df.sort_values("时间")
 
-    df = df[df.时间 >=  current_time - 3600]
+    df = df[df.时间 >= current_time - 3600]
 
     if df.empty:
         return 0
 
-
     # 4. 核心变量初始化
-    last_run_time = df["时间"].iloc[-1]            # 最后一次运行时间
-    run_count_total = len(df)                      # 总运行次数
-    hour_seconds = 3600                            # 1小时的秒数
-    max_hourly = 每小时最多运行次数                # 每小时最多运行次数
-    min_interval = 两次运行最小间隔秒数            # 最小间隔秒数
+    last_run_time = df["时间"].iloc[-1]  # 最后一次运行时间
+    run_count_total = len(df)  # 总运行次数
+    hour_seconds = 3600  # 1小时的秒数
+    max_hourly = 每小时最多运行次数  # 每小时最多运行次数
+    min_interval = 两次运行最小间隔秒数  # 最小间隔秒数
 
     # 5. 计算每小时上限约束的等待时间
     hour_constraint_wait = 0  # 初始化每小时约束的等待时间
@@ -103,10 +99,10 @@ def 计算下一次运行等待秒数(
         # 例如max_hourly=8 → 找倒数第8条（索引-8），即第7次运行时间
         target_index = -max_hourly
         target_run_time = df["时间"].iloc[target_index]
-        
+
         # 计算目标运行时间与当前时间的差值
         time_diff = current_time - target_run_time
-        
+
         # 若差值 < 1小时 → 需等待到目标运行时间+1小时
         if time_diff < hour_seconds:
             hour_constraint_wait = (target_run_time + hour_seconds) - current_time
@@ -119,7 +115,6 @@ def 计算下一次运行等待秒数(
 
     # 8. 转换为整数返回（秒数取整，round处理浮点精度问题）
     return int(round(wait_seconds))
-
 
 
 def 精确获取文本中的数字(txt):
@@ -272,6 +267,12 @@ def 计算评论价值评分(
 
     # 强制限制得分在0-100区间
     最终得分 = max(0.0, min(100.0, 总分))
+
+    # 最终得分 = 0 if 是否有广告 else 最终得分
+    if not 是否有广告 and 评论数 < 100 and 点赞数 < 100:
+        最终得分 = 100
+    else:
+        最终得分 = 0
 
     return 最终得分
 
