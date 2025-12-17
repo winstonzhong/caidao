@@ -455,6 +455,66 @@ def 得到需要处理的图片df(df_本页, df_历史):
     return 需要处理的df
 
 
+def 设置已处理(df: pd.DataFrame, 最后历史时间: str = None) -> pd.DataFrame:
+    """
+    根据最后历史时间更新DataFrame的'已处理'列值。
+
+    当最后历史时间不为None时，筛选出'已处理'为False的行，判断其'原始时间'是否≤传入的时间字符串，
+    满足条件则将该行'已处理'设为True；不满足/最后历史时间为None时保持原有值。
+    函数返回处理后的DataFrame副本，避免修改原数据。
+
+    参数:
+        df: 必须包含'已处理'(bool类型)和'原始时间'(字符串/时间类型)列的DataFrame
+        最后历史时间: 格式为"YYYY-MM-DD HH:MM:SS"的时间字符串，默认为None
+
+    返回:
+        处理后的DataFrame副本
+
+    示例:
+    >>> import pandas as pd
+    >>> # 构造基础测试数据
+    >>> data = {
+    ...     '原始时间': ['2025-12-16 22:00:00', '2025-12-16 22:02:00', '2025-12-16 22:05:00', None],
+    ...     '已处理': [False, False, False, False]
+    ... }
+    >>> df = pd.DataFrame(data)
+    >>> # 测试1: 正常场景（部分行满足条件）
+    >>> df_result1 = 设置已处理(df, "2025-12-16 22:02:00")
+    >>> df_result1['已处理'].tolist()
+    [True, True, False, False]
+    >>> # 测试2: 最后历史时间为None（不处理）
+    >>> df_result2 = 设置已处理(df, None)
+    >>> df_result2['已处理'].tolist()
+    [False, False, False, False]
+    >>> # 测试3: 原始时间等于最后历史时间
+    >>> df3 = pd.DataFrame({'原始时间': ['2025-12-16 22:02:00'], '已处理': [False]})
+    >>> df_result3 = 设置已处理(df3, "2025-12-16 22:02:00")
+    >>> df_result3['已处理'].iloc[0]
+    True
+    >>> # 测试4: 原始时间大于最后历史时间
+    >>> df4 = pd.DataFrame({'原始时间': ['2025-12-16 22:03:00'], '已处理': [False]})
+    >>> df_result4 = 设置已处理(df4, "2025-12-16 22:02:00")
+    >>> df_result4['已处理'].iloc[0]
+    False
+    >>> # 测试5: 部分行已处理为True（不修改）
+    >>> df5 = pd.DataFrame({
+    ...     '原始时间': ['2025-12-16 22:00:00', '2025-12-16 22:01:00'],
+    ...     '已处理': [True, False]
+    ... })
+    >>> df_result5 = 设置已处理(df5, "2025-12-16 22:02:00")
+    >>> df_result5['已处理'].tolist()
+    [True, True]
+    """
+    # 1. 创建DataFrame副本，避免修改原数据（最佳实践）
+    df_copy = df.copy()
+    if 最后历史时间 is not None:
+        更新掩码 = (~df_copy['已处理']) & (df_copy['原始时间'] <= 最后历史时间)
+        df_copy.loc[更新掩码, '已处理'] = True
+    return df_copy
+
+
+
+
 if __name__ == "__main__":
     import doctest
 
@@ -471,17 +531,17 @@ if __name__ == "__main__":
     # /home/yka-003/workspace/caidao/ut/df1_1765965165.2201815.json
     # /home/yka-003/workspace/caidao/ut/df2_1765965165.2204852.json
     
-    df11 = pd.read_json("/home/yka-003/workspace/caidao/ut/df1_1765965165.2201815.json")
-    df22 = pd.read_json("/home/yka-003/workspace/caidao/ut/df2_1765965165.2204852.json")
-    # print(df11.iloc[-1])
-    # print(df22.iloc[-1])
-    print(df11)
-    print(df22)
-    print(df11.iloc[0].容器key)
-    print(df22.iloc[0].容器key)
-    print(df11 == df22)
-    print(df11.xy)
-    print(df22.xy)
+    # df11 = pd.read_json("/home/yka-003/workspace/caidao/ut/df1_1765965165.2201815.json")
+    # df22 = pd.read_json("/home/yka-003/workspace/caidao/ut/df2_1765965165.2204852.json")
+    # # print(df11.iloc[-1])
+    # # print(df22.iloc[-1])
+    # print(df11)
+    # print(df22)
+    # print(df11.iloc[0].容器key)
+    # print(df22.iloc[0].容器key)
+    # print(df11 == df22)
+    # print(df11.xy)
+    # print(df22.xy)
 
     得到需要处理的图片df(df1, df2)
     print(doctest.testmod(verbose=False, report=False))

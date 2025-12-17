@@ -1260,26 +1260,16 @@ class 基本任务(抽象持久序列):
     def 微信df(self):
         容器 = self.微信容器
         df = 容器.上下文df
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        print(df)
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        # print(df)
+        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~")
         df = tool_pandas.自动补齐后续缺失时间并自动加1秒(df)
         df["唯一值带时间"] = df.唯一值 + "-" + df.时间.astype("str")
         df["容器key"] = 容器.key
-        return df
+        # return df
+        return tool_wx_df3.设置已处理(df, 全局缓存.最后历史时间)
 
     def 是否微信容器发生了变化(self):
-        # if 全局缓存.缓存页 is None:
-        #     return True
-
-        # if (
-        #     not 全局缓存.缓存页.empty
-        #     and not self.微信df.empty
-        #     and 全局缓存.缓存页.容器key.iloc[0] == self.微信容器.key
-        # ):
-        #     return False
-
-        # return True
         return (
             全局缓存.前容器唯一值 is None or 全局缓存.前容器唯一值 != self.微信容器.key
         )
@@ -1309,8 +1299,8 @@ class 基本任务(抽象持久序列):
     def 得到当前缓存页(self):
         df = self.微信df
         if 全局缓存.缓存页 is None:
-            全局缓存.缓存页 = df
             print("---------------------初始化当前缓存页")
+            全局缓存.缓存页 = df
         elif not df.empty and (len(df) != len(全局缓存.缓存页) or 全局缓存.缓存页.容器key.iloc[0] != df.iloc[0].容器key):
             print("---------------------更新当前缓存页")
             # if 1:
@@ -1337,8 +1327,14 @@ class 基本任务(抽象持久序列):
         全局缓存.临时历史页 = pandas.DataFrame(
             columns=["原始时间", "唯一值", "图片key"]
         )
+        历史页 = self.得到历史页()
+        last_valid_idx = 历史页['原始时间'].last_valid_index()
+        全局缓存.最后历史时间 = 历史页.loc[last_valid_idx, '原始时间'] if last_valid_idx is not None else None
+
 
     def 存储历史页(self, df):
+        历史页 = self.得到历史页()
+        df = tool_wx_df3.合并上下df(历史页, df)
         会话名称 = self.device.干净的微信会话名称
         self.持久对象.数据.setdefault("会话列表", {})[会话名称] = df.to_json()
         self.持久对象.save()
@@ -1348,8 +1344,8 @@ class 基本任务(抽象持久序列):
         # # df = 全局缓存.临时历史页
         tmp = df[(df.类型 == "图片") & (~df.已处理)]
         # tmp = tool_wx_df3.得到需要处理的图片df(df, 全局缓存.临时历史页)
-        print("$$$$$$$$$$$$$未处理图片$$$$$$$$$$$$$")
-        print(tmp)
+        # print("$$$$$$$$$$$$$未处理图片$$$$$$$$$$$$$")
+        # print(tmp)
         # if 1 and not tmp.empty:
         #     print(tmp.iloc[0])
         #     fpath1 = f"/home/yka-003/workspace/caidao/ut/df1_{time.time()}.json"
