@@ -18,6 +18,7 @@ def 合并上下df(df上: pd.DataFrame, df下: pd.DataFrame) -> pd.DataFrame:
 
     示例:
     >>> # 基本重叠情况 - 完美匹配
+    >>> import numpy as np
     >>> df1 = pd.DataFrame({
     ...     '原始时间': ['2025-11-10 22:56:00', '2025-11-10 23:00:00'],
     ...     '唯一值': ['a', 'b'],
@@ -353,7 +354,134 @@ def 合并上下df(df上: pd.DataFrame, df下: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
+# def 得到需要处理的图片df(df_本页, df_历史):
+#     tmp = df_本页[(df_本页.类型 == "图片") & (~df_本页.已处理)]
+#     # tmp = df_本页[(df_本页.类型 == "图片") & (~df_本页.已处理) & ((df_本页.容器key != df_历史.容器key) | (df_本页.唯一值 == df_历史.唯一值))]
+#     # 容器key
+#     print(tmp)
+#     print(tmp.iloc[0])
+#     print(df_历史)
+
+
+def 得到需要处理的图片df(df_本页, df_历史):
+    """
+    筛选本页未处理的图片记录，并剔除历史数据中已存在（容器key+唯一值组合匹配）的记录。
+
+    参数:
+        df_本页 (pd.DataFrame): 包含本页数据的DataFrame，需包含字段：类型、已处理、容器key、唯一值
+        df_历史 (pd.DataFrame): 包含历史数据的DataFrame，需包含字段：容器key、唯一值
+
+    返回:
+        pd.DataFrame: 筛选后的待处理图片记录
+
+    示例:
+    >>> # 测试场景1：常规场景（部分记录在历史中）
+    >>> df_本页1 = pd.DataFrame({
+    ...     '类型': ['图片', '文字', '图片', '图片'],
+    ...     '已处理': [False, False, False, True],
+    ...     '容器key': ['key1', 'key2', 'key3', 'key1'],
+    ...     '唯一值': ['val1', 'val2', 'val3', 'val1']
+    ... }, index=[0, 1, 2, 3])  # 显式指定索引，保证输出一致
+    >>> df_历史1 = pd.DataFrame({
+    ...     '容器key': ['key1', 'key4'],
+    ...     '唯一值': ['val1', 'val4']
+    ... }, index=[0, 1])
+    >>> result1 = 得到需要处理的图片df(df_本页1, df_历史1)
+    >>> result1.index.tolist()
+    [2]
+
+    >>> # 测试场景2：历史数据为空，返回所有未处理图片
+    >>> df_本页2 = pd.DataFrame({
+    ...     '类型': ['图片', '图片'],
+    ...     '已处理': [False, False],
+    ...     '容器key': ['key5', 'key6'],
+    ...     '唯一值': ['val5', 'val6']
+    ... }, index=[0, 1])
+    >>> df_历史2 = pd.DataFrame(columns=['容器key', '唯一值'])  # 空历史数据
+    >>> result2 = 得到需要处理的图片df(df_本页2, df_历史2)
+    >>> result2.index.tolist()
+    [0, 1]
+
+    >>> # 测试场景3：本页无未处理图片，返回空DataFrame
+    >>> df_本页3 = pd.DataFrame({
+    ...     '类型': ['图片', '文字'],
+    ...     '已处理': [True, False],
+    ...     '容器key': ['key7', 'key8'],
+    ...     '唯一值': ['val7', 'val8']
+    ... }, index=[0, 1])
+    >>> df_历史3 = pd.DataFrame({
+    ...     '容器key': ['key7'],
+    ...     '唯一值': ['val7']
+    ... }, index=[0])
+    >>> result3 = 得到需要处理的图片df(df_本页3, df_历史3)
+    >>> print(result3.empty)
+    True
+
+    >>> # 测试场景4：所有未处理图片都在历史中，返回空DataFrame
+    >>> df_本页4 = pd.DataFrame({
+    ...     '类型': ['图片', '图片'],
+    ...     '已处理': [False, False],
+    ...     '容器key': ['key9', 'key10'],
+    ...     '唯一值': ['val9', 'val10']
+    ... }, index=[0, 1])
+    >>> df_历史4 = pd.DataFrame({
+    ...     '容器key': ['key9', 'key10'],
+    ...     '唯一值': ['val9', 'val10']
+    ... }, index=[0, 1])
+    >>> result4 = 得到需要处理的图片df(df_本页4, df_历史4)
+    >>> print(result4.empty)
+    True
+    >>> result4 = 得到需要处理的图片df(df1, df2)
+    >>> result4.iloc[0].上下文
+    '钟北川:[分享了一张图片<405x226>]'
+    """
+    # 1. 筛选本页中类型为图片且未处理的记录
+    tmp = df_本页[(df_本页.类型 == "图片") & (~df_本页.已处理)]
+
+    # 2. 处理边界情况：如果历史数据为空，直接返回筛选后的结果
+    if df_历史.empty:
+        return tmp
+
+    # 3. 提取历史数据中"容器key"和"唯一值"的组合（元组形式），转为集合提升查询效率
+    历史_容器唯一值组合 = set(zip(df_历史["容器key"], df_历史["唯一值"]))
+
+    # 4. 过滤tmp：保留"容器key+唯一值"不在历史组合中的记录
+    需要处理的df = tmp[
+        ~tmp.apply(
+            lambda row: (row["容器key"], row["唯一值"]) in 历史_容器唯一值组合, axis=1
+        )
+    ]
+
+    return 需要处理的df
+
+
 if __name__ == "__main__":
     import doctest
 
+    # /home/yka-003/workspace/caidao/ut/df1_1765955223.729453.json
+    # /home/yka-003/workspace/caidao/ut/df2_1765955223.7296903.json
+
+    # /home/yka-003/workspace/caidao/ut/df1_1765963449.458808.json
+    # /home/yka-003/workspace/caidao/ut/df2_1765963449.4590175.json
+
+
+    df1 = pd.read_json("/home/yka-003/workspace/caidao/ut/df1_1765955223.729453.json")
+    df2 = pd.read_json("/home/yka-003/workspace/caidao/ut/df2_1765955223.7296903.json")
+
+    # /home/yka-003/workspace/caidao/ut/df1_1765965165.2201815.json
+    # /home/yka-003/workspace/caidao/ut/df2_1765965165.2204852.json
+    
+    df11 = pd.read_json("/home/yka-003/workspace/caidao/ut/df1_1765965165.2201815.json")
+    df22 = pd.read_json("/home/yka-003/workspace/caidao/ut/df2_1765965165.2204852.json")
+    # print(df11.iloc[-1])
+    # print(df22.iloc[-1])
+    print(df11)
+    print(df22)
+    print(df11.iloc[0].容器key)
+    print(df22.iloc[0].容器key)
+    print(df11 == df22)
+    print(df11.xy)
+    print(df22.xy)
+
+    得到需要处理的图片df(df1, df2)
     print(doctest.testmod(verbose=False, report=False))

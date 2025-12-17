@@ -7,7 +7,7 @@ from tool_wx import (
     cutoff_renamed_suffix,
 )
 import numpy
-from helper_hash import get_hash_jsonable, get_hash, MyEncoder, get_hash_bytes
+from helper_hash import get_hash_jsonable, get_hash, MyEncoder, get_hash_bytes, get_hash_df
 from tool_time import convert_chinese_datetime
 import re
 import pandas
@@ -417,6 +417,8 @@ class 单条容器(list):
     def 发言者(self):
         if self.头像 is not None:
             return self.头像.描述[:-2]
+        if self.类型 == "系统提示":
+            return "系统"
 
     @property
     def 发言者_无别名(self):
@@ -482,7 +484,7 @@ class 单条容器(list):
         >>> 单条容器.判断类型(['时间', '头像', '昵称'])
         '未知'
         >>> 单条容器.判断类型(['系统提示', '时间'])
-        '未知'
+        '系统提示'
         >>> 单条容器.判断类型(['头像', '正文'])
         '文本'
         >>> 单条容器.判断类型(['视频文件下载图标', '正文', '昵称', '时间', '头像', '视频文件封面'])
@@ -534,6 +536,9 @@ class 单条容器(list):
 
         if "视频时长" in l:
             return "小视频文件"
+        
+        if "系统提示" in l:
+            return "系统提示"
 
         return "未知"
 
@@ -592,6 +597,9 @@ class 单条容器(list):
 
         if self.类型 == "公众号名片":
             return f"""[分享了一个公众号名片]{self.获取所有文本或描述('公众号名片')}"""
+        
+        if self.类型 == "系统提示":
+            return f"""[系统提示]{self.获取所有文本或描述()}"""
 
     @property
     def 时间(self):
@@ -658,7 +666,8 @@ class 单条容器(list):
 
     @property
     def xy头像(self):
-        return bounds_to_rect(self.头像.bounds).center
+        头像 = self.头像
+        return bounds_to_rect(头像.bounds).center if 头像 is not None else None
 
     @property
     def 点选中心(self):
@@ -999,11 +1008,18 @@ class 解析器(object):
                 return True
         return False
 
+    # @property
+    # def key(self):
+    #     recycler = self.tree.xpath(ptn_recycler, namespaces=namespaces)
+    #     assert recycler, "没有找到recycler"
+    #     return get_hash_bytes(etree.tostring(recycler[0]))
+
     @property
     def key(self):
-        recycler = self.tree.xpath(ptn_recycler, namespaces=namespaces)
-        assert recycler, "没有找到recycler"
-        return get_hash_bytes(etree.tostring(recycler[0]))
+        # recycler = self.tree.xpath(ptn_recycler, namespaces=namespaces)
+        # assert recycler, "没有找到recycler"
+        # return get_hash_bytes(etree.tostring(recycler[0]))
+        return get_hash_df(self.上下文df)
 
     def 是否一半向下翻页(self):
         return (
