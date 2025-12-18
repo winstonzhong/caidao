@@ -1289,9 +1289,11 @@ class 基本任务(抽象持久序列):
 
     def 微信容器向下翻页(self):
         self.微信容器结束本轮("微信容器向下翻页")
+        全局缓存.向下翻页次数 += 1
 
     def 微信容器向上翻页(self):
         self.微信容器结束本轮("微信容器向上翻页")
+        全局缓存.向上翻页次数 += 1
 
     def 得到当前缓存页(self):
         df = self.微信df
@@ -1320,12 +1322,12 @@ class 基本任务(抽象持久序列):
         return (
             pandas.read_json(io.StringIO(会话数据))
             if 会话数据 is not None
-            else pandas.DataFrame(columns=["原始时间", "唯一值", "图片key"])
+            else pandas.DataFrame(columns=["原始时间", "唯一值", "时间", "图片key"])
         ).replace({None: numpy.nan})
 
     def 初始化临时历史页(self):
         全局缓存.临时历史页 = pandas.DataFrame(
-            columns=["原始时间", "唯一值", "图片key"]
+            columns=["原始时间", "唯一值", "时间", "图片key"]
         )
         历史页 = self.得到历史页()
         last_valid_idx = 历史页["时间"].last_valid_index()
@@ -1334,6 +1336,8 @@ class 基本任务(抽象持久序列):
             if last_valid_idx is not None
             else None
         )
+        全局缓存.向上翻页次数 = 0
+        全局缓存.向下翻页次数 = 0
 
     def 存储历史页(self, df, name=None):
         会话名称 = self.device.干净的微信会话名称 if name is None else name
@@ -1342,19 +1346,16 @@ class 基本任务(抽象持久序列):
 
     def 清除历史页(self, name=None):
         self.存储历史页(
-            pandas.DataFrame(columns=["原始时间", "唯一值", "图片key"]), name
+            pandas.DataFrame(columns=["原始时间", "唯一值", "时间", "图片key"]), name
         )
 
     def 合并并存储历史页(self, df, name=None):
         历史页 = self.得到历史页()
         df = tool_pandas.将某列缺失时间向前补齐并每行自动加1秒(df, "时间")
         df = tool_wx_df3.截断已存储的历史部分(df, 全局缓存.最后历史时间, colname="时间")
-        # print('=======================将要合并的页面数据==========================')
-        # print(df)
-        # print('=======================已经保存的页面数据==========================')
-        
-        df = tool_wx_df3.合并上下df(历史页, df)
-        self.存储历史页(df, name)
+        if not df.empty:
+            df = tool_wx_df3.合并上下df(历史页, df)
+            self.存储历史页(df, name)
 
     def 点击第一张未处理图片(self):
         df = self.得到当前缓存页()
@@ -1473,16 +1474,13 @@ class 基本任务(抽象持久序列):
     def 是否已对齐(self):
         历史页 = self.得到历史页()
         当前页 = self.得到当前缓存页()
-        # print(历史页)
-        # print(当前页)
-        return not 历史页.empty and 当前页.原始时间.dropna().isin(历史页.原始时间).any()
+        return (not 历史页.empty and 当前页.原始时间.dropna().isin(历史页.原始时间).any()) or(历史页.empty and 全局缓存.向上翻页次数 >= 3)
 
     def 处理历史对齐流程(self):
         if (
             not self.是否微信容器发生了变化()
             and 全局缓存.最后执行动作 == "微信容器向上翻页"
         ):
-            # raise 对齐历史到顶部异常
             return True
 
         if self.长按最后一条未处理语音():
@@ -1492,6 +1490,7 @@ class 基本任务(抽象持久序列):
         if self.是否已对齐():
             return True
         self.微信容器向上翻页()
+
 
     def 下载微信图片并返回链接和唯一码(self):
         return self.device.下载微信图片并返回链接和唯一码(self.持久对象.TOKEN)
