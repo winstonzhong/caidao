@@ -1301,7 +1301,10 @@ class 基本任务(抽象持久序列):
         if 全局缓存.缓存页 is None:
             print("---------------------初始化当前缓存页")
             全局缓存.缓存页 = df
-        elif not df.empty and (len(df) != len(全局缓存.缓存页) or 全局缓存.缓存页.容器key.iloc[0] != df.iloc[0].容器key):
+        elif not df.empty and (
+            len(df) != len(全局缓存.缓存页)
+            or 全局缓存.缓存页.容器key.iloc[0] != df.iloc[0].容器key
+        ):
             print("---------------------更新当前缓存页")
             # if 1:
             #     fpath1 = f"/home/yka-003/workspace/caidao/ut/df1_{time.time()}.json"
@@ -1328,16 +1331,29 @@ class 基本任务(抽象持久序列):
             columns=["原始时间", "唯一值", "图片key"]
         )
         历史页 = self.得到历史页()
-        last_valid_idx = 历史页['原始时间'].last_valid_index()
-        全局缓存.最后历史时间 = 历史页.loc[last_valid_idx, '原始时间'] if last_valid_idx is not None else None
+        last_valid_idx = 历史页["原始时间"].last_valid_index()
+        全局缓存.最后历史时间 = (
+            历史页.loc[last_valid_idx, "原始时间"]
+            if last_valid_idx is not None
+            else None
+        )
 
-
-    def 存储历史页(self, df):
-        历史页 = self.得到历史页()
-        df = tool_wx_df3.合并上下df(历史页, df)
-        会话名称 = self.device.干净的微信会话名称
+    def 存储历史页(self, df, name=None):
+        会话名称 = self.device.干净的微信会话名称 if name is None else name
         self.持久对象.数据.setdefault("会话列表", {})[会话名称] = df.to_json()
         self.持久对象.save()
+        
+    def 清除历史页(self, name=None):
+        self.存储历史页(pandas.DataFrame(columns=["原始时间", "唯一值", "图片key"]), name)
+
+    def 合并并存储历史页(self, df, name=None):
+        历史页 = self.得到历史页()
+
+        df = tool_wx_df3.合并上下df(历史页, df)
+        # 会话名称 = self.device.干净的微信会话名称 if name is None else name
+        # self.持久对象.数据.setdefault("会话列表", {})[会话名称] = df.to_json()
+        # self.持久对象.save()
+        self.存储历史页(df, name)
 
     def 点击第一张未处理图片(self):
         df = self.得到当前缓存页()

@@ -455,6 +455,47 @@ def 得到需要处理的图片df(df_本页, df_历史):
     return 需要处理的df
 
 
+def 截断已存储的历史部分(df: pd.DataFrame, 最后历史时间: str = None) -> pd.DataFrame:
+    """
+    截断已存储的历史部分 的 Docstring
+
+    :param df: 说明
+    :type df: pd.DataFrame
+    :param 最后历史时间: 说明
+    :type 最后历史时间: str
+    :return: 说明
+    :rtype: DataFrame
+
+    >>> data = {
+    ...     '原始时间': ['2025-01-01 10:00:00', '2025-01-01 11:00:00', '2025-01-01 12:00:00', '2025-01-01 13:00:00'],
+    ...     '数值': [1, 2, 3, 4]
+    ... }
+    >>> df = pd.DataFrame(data)
+    >>> # 测试1: 传入中间时间，截断后返回后续行
+    >>> 截断后的_df = 截断已存储的历史部分(df, '2025-01-01 11:00:00')
+    >>> len(截断后的_df)
+    2
+    """
+    if 最后历史时间 is None:
+        return df
+
+    符合条件的行 = df["原始时间"] <= 最后历史时间
+
+    # 确定截断位置
+    if 符合条件的行.any():
+        # 取最后一个符合条件的行索引，截断位置为该索引+1
+        最后符合条件索引 = df[符合条件的行].index[-1]
+        截断位置 = 最后符合条件索引 + 1
+    else:
+        # 无符合条件的行，截断位置为0（返回全部数据）
+        截断位置 = 0
+
+    # 执行截断，并将时间列转回字符串格式（保持原数据格式）
+    结果_df = df.iloc[截断位置:].copy()
+
+    return 结果_df
+
+
 def 设置已处理(df: pd.DataFrame, 最后历史时间: str = None) -> pd.DataFrame:
     """
     根据最后历史时间更新DataFrame的'已处理'列值。
@@ -508,11 +549,9 @@ def 设置已处理(df: pd.DataFrame, 最后历史时间: str = None) -> pd.Data
     # 1. 创建DataFrame副本，避免修改原数据（最佳实践）
     df_copy = df.copy()
     if 最后历史时间 is not None:
-        更新掩码 = (~df_copy['已处理']) & (df_copy['原始时间'] <= 最后历史时间)
-        df_copy.loc[更新掩码, '已处理'] = True
+        更新掩码 = (~df_copy["已处理"]) & (df_copy["原始时间"] <= 最后历史时间)
+        df_copy.loc[更新掩码, "已处理"] = True
     return df_copy
-
-
 
 
 if __name__ == "__main__":
@@ -524,13 +563,12 @@ if __name__ == "__main__":
     # /home/yka-003/workspace/caidao/ut/df1_1765963449.458808.json
     # /home/yka-003/workspace/caidao/ut/df2_1765963449.4590175.json
 
-
     df1 = pd.read_json("/home/yka-003/workspace/caidao/ut/df1_1765955223.729453.json")
     df2 = pd.read_json("/home/yka-003/workspace/caidao/ut/df2_1765955223.7296903.json")
 
     # /home/yka-003/workspace/caidao/ut/df1_1765965165.2201815.json
     # /home/yka-003/workspace/caidao/ut/df2_1765965165.2204852.json
-    
+
     # df11 = pd.read_json("/home/yka-003/workspace/caidao/ut/df1_1765965165.2201815.json")
     # df22 = pd.read_json("/home/yka-003/workspace/caidao/ut/df2_1765965165.2204852.json")
     # # print(df11.iloc[-1])
