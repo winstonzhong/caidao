@@ -431,9 +431,6 @@ def 得到需要处理的图片df(df_本页, df_历史):
     >>> result4 = 得到需要处理的图片df(df_本页4, df_历史4)
     >>> print(result4.empty)
     True
-    >>> result4 = 得到需要处理的图片df(df1, df2)
-    >>> result4.iloc[0].上下文
-    '钟北川:[分享了一张图片<405x226>]'
     """
     # 1. 筛选本页中类型为图片且未处理的记录
     tmp = df_本页[(df_本页.类型 == "图片") & (~df_本页.已处理)]
@@ -455,7 +452,7 @@ def 得到需要处理的图片df(df_本页, df_历史):
     return 需要处理的df
 
 
-def 截断已存储的历史部分(df: pd.DataFrame, 最后历史时间: str = None) -> pd.DataFrame:
+def 截断已存储的历史部分(df: pd.DataFrame, 最后历史时间: str = None, colname="原始时间") -> pd.DataFrame:
     """
     截断已存储的历史部分 的 Docstring
 
@@ -479,7 +476,7 @@ def 截断已存储的历史部分(df: pd.DataFrame, 最后历史时间: str = N
     if 最后历史时间 is None:
         return df
 
-    符合条件的行 = df["原始时间"] <= 最后历史时间
+    符合条件的行 = df[colname] <= 最后历史时间
 
     # 确定截断位置
     if 符合条件的行.any():
@@ -556,30 +553,7 @@ def 设置已处理(df: pd.DataFrame, 最后历史时间: str = None) -> pd.Data
 
 if __name__ == "__main__":
     import doctest
-
-    # /home/yka-003/workspace/caidao/ut/df1_1765955223.729453.json
-    # /home/yka-003/workspace/caidao/ut/df2_1765955223.7296903.json
-
-    # /home/yka-003/workspace/caidao/ut/df1_1765963449.458808.json
-    # /home/yka-003/workspace/caidao/ut/df2_1765963449.4590175.json
-
-    df1 = pd.read_json("/home/yka-003/workspace/caidao/ut/df1_1765955223.729453.json")
-    df2 = pd.read_json("/home/yka-003/workspace/caidao/ut/df2_1765955223.7296903.json")
-
-    # /home/yka-003/workspace/caidao/ut/df1_1765965165.2201815.json
-    # /home/yka-003/workspace/caidao/ut/df2_1765965165.2204852.json
-
-    # df11 = pd.read_json("/home/yka-003/workspace/caidao/ut/df1_1765965165.2201815.json")
-    # df22 = pd.read_json("/home/yka-003/workspace/caidao/ut/df2_1765965165.2204852.json")
-    # # print(df11.iloc[-1])
-    # # print(df22.iloc[-1])
-    # print(df11)
-    # print(df22)
-    # print(df11.iloc[0].容器key)
-    # print(df22.iloc[0].容器key)
-    # print(df11 == df22)
-    # print(df11.xy)
-    # print(df22.xy)
-
-    得到需要处理的图片df(df1, df2)
+    # df1 = pd.read_json("/home/yka-003/workspace/caidao/ut/df1_1765955223.729453.json")
+    # df2 = pd.read_json("/home/yka-003/workspace/caidao/ut/df2_1765955223.7296903.json")
+    # 得到需要处理的图片df(df1, df2)
     print(doctest.testmod(verbose=False, report=False))

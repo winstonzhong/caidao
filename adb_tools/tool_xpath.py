@@ -1260,14 +1260,11 @@ class 基本任务(抽象持久序列):
     def 微信df(self):
         容器 = self.微信容器
         df = 容器.上下文df
-        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        # print(df)
-        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~")
         df = tool_pandas.自动补齐后续缺失时间并自动加1秒(df)
         df["唯一值带时间"] = df.唯一值 + "-" + df.时间.astype("str")
         df["容器key"] = 容器.key
-        # return df
-        return tool_wx_df3.设置已处理(df, 全局缓存.最后历史时间)
+        return df
+        # return tool_wx_df3.设置已处理(df, 全局缓存.最后历史时间)
 
     def 是否微信容器发生了变化(self):
         return (
@@ -1331,9 +1328,9 @@ class 基本任务(抽象持久序列):
             columns=["原始时间", "唯一值", "图片key"]
         )
         历史页 = self.得到历史页()
-        last_valid_idx = 历史页["原始时间"].last_valid_index()
+        last_valid_idx = 历史页["时间"].last_valid_index()
         全局缓存.最后历史时间 = (
-            历史页.loc[last_valid_idx, "原始时间"]
+            历史页.loc[last_valid_idx, "时间"]
             if last_valid_idx is not None
             else None
         )
@@ -1350,33 +1347,23 @@ class 基本任务(抽象持久序列):
 
     def 合并并存储历史页(self, df, name=None):
         历史页 = self.得到历史页()
-
-        df = tool_wx_df3.截断已存储的历史部分(df, 全局缓存.最后历史时间)
-
+        df = tool_pandas.将某列缺失时间向前补齐并每行自动加1秒(df, "时间")
+        df = tool_wx_df3.截断已存储的历史部分(df, 全局缓存.最后历史时间, colname="时间")
+        # print('=======================将要合并的页面数据==========================')
+        # print(df)
+        # print('=======================已经保存的页面数据==========================')
+        
         df = tool_wx_df3.合并上下df(历史页, df)
-        # 会话名称 = self.device.干净的微信会话名称 if name is None else name
-        # self.持久对象.数据.setdefault("会话列表", {})[会话名称] = df.to_json()
-        # self.持久对象.save()
         self.存储历史页(df, name)
 
     def 点击第一张未处理图片(self):
         df = self.得到当前缓存页()
         # # df = 全局缓存.临时历史页
         tmp = df[(df.类型 == "图片") & (~df.已处理)]
-        # tmp = tool_wx_df3.得到需要处理的图片df(df, 全局缓存.临时历史页)
-        # print("$$$$$$$$$$$$$未处理图片$$$$$$$$$$$$$")
-        # print(tmp)
-        # if 1 and not tmp.empty:
-        #     print(tmp.iloc[0])
-        #     fpath1 = f"/home/yka-003/workspace/caidao/ut/df1_{time.time()}.json"
-        #     df.to_json(fpath1)
-        #     print(fpath1)
-        #     fpath2 = f"/home/yka-003/workspace/caidao/ut/df2_{time.time()}.json"
-        #     全局缓存.临时历史页.to_json(fpath2)
-        #     print(fpath2)
-        #     print(df)
-        #     print('-------------------------------------------------------')
-        #     print(全局缓存.临时历史页)
+        if 全局缓存.最后历史时间 is not None:
+            h = tmp[tmp.时间 <= 全局缓存.最后历史时间]
+            if not h.empty:
+                tmp = tmp.loc[h.index[-1]+1:]
 
         if not tmp.empty:
             self.device.click(*tmp.iloc[0].xy)
@@ -1461,9 +1448,6 @@ class 基本任务(抽象持久序列):
             not self.是否微信容器发生了变化()
             and 全局缓存.最后执行动作 == "微信容器向下翻页"
         ):
-            # print("最后结果======================")
-            # print(全局缓存.临时历史页)
-            # raise 同步消息到底部异常
             return True
         else:
             if self.点击第一张未处理图片():
