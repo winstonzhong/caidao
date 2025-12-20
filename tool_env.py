@@ -767,12 +767,59 @@ def replace_url_host(url, host_name):
     return new_url
 
 
-# 这个视频还挺有意思的，充满了搞笑的对话和情节呢，让人感觉很欢乐。不知道你具体想要了解哪些关于这个视频的信息呀？比如对里面的某个情节的讨论，还是其他方面呢？
+def 精确识别并截断废话(txt: str) -> str:
+    """
+    精确识别并截断文本中包含"聊聊"的废话部分，返回核心内容
+
+    功能说明：
+    - 先清理文本首尾的空白字符（空格、制表符、换行等）
+    - 定位"聊聊"的起始位置，若无则返回清理后的原文本
+    - 找到"聊聊"后，向后跳过逗号，寻找第一个非逗号截断标点（。！～）
+    - 截断到该标点前的核心内容
+
+    >>> 精确识别并截断废话("从视频里能感受到手工编绳的用心，貔貅和吞金兽的搭配很有特色，色彩丰富也显得很有活力呢！要是你在编绳配色或技巧上有想交流的，咱们可以一起聊聊呀。")
+    '从视频里能感受到手工编绳的用心，貔貅和吞金兽的搭配很有特色，色彩丰富也显得很有活力呢！'
+    >>> 精确识别并截断废话("从视频里能感受到演唱会带来的热烈氛围和之后的不舍感，这种戒断反应特别能让人共情呢！要是还想回味现场，和我聊聊印象最深的片段也很开心呀。	")
+    '从视频里能感受到演唱会带来的热烈氛围和之后的不舍感，这种戒断反应特别能让人共情呢！'
+    >>> 精确识别并截断废话("从视频里能感受到手工创作的温柔感，“生活该是被热爱的人事填满”这句话特别戳人，这样的手工内容既治愈又能传递对生活的热爱～要是你想了解视频里手工制作的具体技巧，或者想聊聊这类手工的创作灵感，都可以跟我说呀～")
+    '从视频里能感受到手工创作的温柔感，“生活该是被热爱的人事填满”这句话特别戳人，这样的手工内容既治愈又能传递对生活的热爱～'
+    >>> 精确识别并截断废话("从视频里能感受到你用缝纫机创作时的顺畅感，看来重机90这款缝纫机确实很适配你的缝纫需求，搭配上你的天赋，做手工肯定特别有成就感～")
+    '从视频里能感受到你用缝纫机创作时的顺畅感，看来重机90这款缝纫机确实很适配你的缝纫需求，搭配上你的天赋，做手工肯定特别有成就感～'
+    >>> 精确识别并截断废话("能感受到你在没有更新的日子里，也在用心通过缝纫机专注创作，这份对手工的坚持特别打动人。")
+    '能感受到你在没有更新的日子里，也在用心通过缝纫机专注创作，这份对手工的坚持特别打动人。'
+    >>> 精确识别并截断废话("看到视频里的草莓绒花，觉得特别有冬日氛围，绒花的质感柔软又精致，做成发簪戴在头上肯定很亮眼，还能感受到非遗手艺的独特魅力。")
+    '看到视频里的草莓绒花，觉得特别有冬日氛围，绒花的质感柔软又精致，做成发簪戴在头上肯定很亮眼，还能感受到非遗手艺的独特魅力。'
+    """
+    # 第一步：清理文本首尾的空白字符
+    cleaned_txt = txt.strip()
+
+    # 第二步：定位"聊聊"的起始位置（找不到返回-1）
+    chat_pos = cleaned_txt.find("聊聊")
+    if chat_pos == -1:
+        # 无"聊聊"，返回清理后的原文本
+        return cleaned_txt
+    else:
+        cleaned_txt = cleaned_txt[:chat_pos]
+    return 查找并截断(cleaned_txt)
 
 
 def is_endswith_question(text: str) -> bool:
     question_end_pattern = r"[?？]\s*$"
     return re.search(question_end_pattern, text)
+
+def is_contains_question(text: str) -> bool:
+    question_pattern = r"[?？]"
+    return re.search(question_pattern, text)
+
+def 查找并截断(text: str, target_puncts: str="。？！?!～"):
+    last_punct_idx = -1
+    for punct in target_puncts:
+        current_idx = text.rfind(punct)
+        if current_idx > last_punct_idx:
+            last_punct_idx = current_idx
+            break
+
+    return text[: last_punct_idx + 1] if last_punct_idx != -1 else text
 
 
 def truncate_at_last_punct_if_question(text: str) -> str:
@@ -783,7 +830,7 @@ def truncate_at_last_punct_if_question(text: str) -> str:
     >>> truncate_at_last_punct_if_question("这是第一段。这是第二段？")  # 最后标点是。
     '这是第一段。'
     >>> truncate_at_last_punct_if_question("测试1？测试2！   ")  # 末尾带空白，最后标点是？
-    '测试1？测试2！'
+    '测试1'
     >>> truncate_at_last_punct_if_question("示例！结尾是？")  # 最后标点是！
     '示例！'
     >>> truncate_at_last_punct_if_question("半角!结尾？")  # 半角!匹配
@@ -795,30 +842,19 @@ def truncate_at_last_punct_if_question(text: str) -> str:
     >>> truncate_at_last_punct_if_question("")  # 空字符串边界Case
     ''
     >>> truncate_at_last_punct_if_question("混合标点。a?b！c？")  # 多标点取最后一个
-    '混合标点。a?b！'
+    '混合标点。'
     >>> truncate_at_last_punct_if_question("从视频里能感机这件事的小得～不知，有的小作品呀？")
     '从视频里能感机这件事的小得～'
     >>> truncate_at_last_punct_if_question("这个视频还, 于。这个视频的信息呀？比如对里面的某个情节的讨论，还是其他方面呢？")
     '这个视频还, 于。'
     """
-    # if not is_endswith_question(text):
-    #     return text.strip()
-
-    while is_endswith_question(text):
-        # 定义需要查找的标点（全角。？！ + 半角?!）
-        text = text.strip()[:-1]
-        target_puncts = "。？！?!～"
-        # 遍历所有标点，找到最后出现的位置
-        last_punct_idx = -1
-        for punct in target_puncts:
-            current_idx = text.rfind(punct)
-            if current_idx > last_punct_idx:
-                last_punct_idx = current_idx
-
-        # 找到标点则截断，否则返回原文
-        text = text[: last_punct_idx + 1] if last_punct_idx != -1 else text
+    while is_contains_question(text):
+        text = 查找并截断(text, "？?")[:-1]
+        text = 查找并截断(text)
     return text.strip()
 
+def 截断问句和废话(txt):
+    return truncate_at_last_punct_if_question(精确识别并截断废话(txt))
 
 def has_valid_result(txt):
     """
@@ -938,7 +974,7 @@ def is_valid_upper_6chars(s: str) -> bool:
     # [A-Z] 匹配单个大写英文字母
     # {6} 限定恰好匹配6个
     # re.fullmatch 确保整个字符串完全匹配（而非部分匹配）
-    match_result = re.fullmatch(r"[A-Z]{6}", s or '')
+    match_result = re.fullmatch(r"[A-Z]{6}", s or "")
     return match_result is not None
 
 

@@ -1295,6 +1295,11 @@ class 基本任务(抽象持久序列):
         self.微信容器结束本轮("微信容器向上翻页")
         全局缓存.向上翻页次数 += 1
 
+    def 存储调试df(self, df):
+        fpath1 = f"/mnt/56T/tmp/{time.time()}_{random.random():.4f}.json"
+        df.to_json(fpath1)
+        print(fpath1)
+
     def 得到当前缓存页(self):
         df = self.微信df
         if 全局缓存.缓存页 is None:
@@ -1305,14 +1310,6 @@ class 基本任务(抽象持久序列):
             or 全局缓存.缓存页.容器key.iloc[0] != df.iloc[0].容器key
         ):
             print("---------------------更新当前缓存页")
-            # if 1:
-            #     fpath1 = f"/home/yka-003/workspace/caidao/ut/df1_{time.time()}.json"
-            #     df.to_json(fpath1)
-            #     print(fpath1)
-            #     fpath2 = f"/home/yka-003/workspace/caidao/ut/df2_{time.time()}.json"
-            #     全局缓存.缓存页.to_json(fpath2)
-            #     print(fpath2)
-            #     print('-================================================================================================')
             全局缓存.缓存页 = df
         return 全局缓存.缓存页
 
@@ -1325,17 +1322,22 @@ class 基本任务(抽象持久序列):
             else pandas.DataFrame(columns=["原始时间", "唯一值", "时间", "图片key"])
         ).replace({None: numpy.nan})
 
+    def 得到最后合法值(self, s: pandas.Series, default=None):
+        last_valid_idx = s.last_valid_index()
+        return s.loc[last_valid_idx] if last_valid_idx is not None else default
+
     def 初始化临时历史页(self):
         全局缓存.临时历史页 = pandas.DataFrame(
             columns=["原始时间", "唯一值", "时间", "图片key"]
         )
         历史页 = self.得到历史页()
-        last_valid_idx = 历史页["时间"].last_valid_index()
-        全局缓存.最后历史时间 = (
-            历史页.loc[last_valid_idx, "时间"]
-            if last_valid_idx is not None
-            else None
-        )
+        # last_valid_idx = 历史页["时间"].last_valid_index()
+        # 全局缓存.最后历史时间 = (
+        #     历史页.loc[last_valid_idx, "时间"]
+        #     if last_valid_idx is not None
+        #     else None
+        # )
+        全局缓存.最后历史时间 = self.得到最后合法值(历史页["时间"])
         全局缓存.向上翻页次数 = 0
         全局缓存.向下翻页次数 = 0
 
@@ -1344,15 +1346,16 @@ class 基本任务(抽象持久序列):
         self.持久对象.数据.setdefault("会话列表", {})[会话名称] = df.to_json()
         self.持久对象.save()
 
-    def 清除历史页(self, name=None):
+    def 清空历史(self, name=None):
         self.存储历史页(
             pandas.DataFrame(columns=["原始时间", "唯一值", "时间", "图片key"]), name
         )
 
     def 合并并存储历史页(self, df, name=None):
         历史页 = self.得到历史页()
+        最后历史时间 = self.得到最后合法值(历史页["时间"])
         df = tool_pandas.将某列缺失时间向前补齐并每行自动加1秒(df, "时间")
-        df = tool_wx_df3.截断已存储的历史部分(df, 全局缓存.最后历史时间, colname="时间")
+        df = tool_wx_df3.截断已存储的历史部分(df, 最后历史时间, colname="时间")
         if not df.empty:
             df = tool_wx_df3.合并上下df(历史页, df)
             self.存储历史页(df, name)
@@ -1364,7 +1367,7 @@ class 基本任务(抽象持久序列):
         if 全局缓存.最后历史时间 is not None:
             h = tmp[tmp.时间 <= 全局缓存.最后历史时间]
             if not h.empty:
-                tmp = tmp.loc[h.index[-1]+1:]
+                tmp = tmp.loc[h.index[-1] + 1 :]
 
         if not tmp.empty:
             self.device.click(*tmp.iloc[0].xy)
@@ -1406,25 +1409,16 @@ class 基本任务(抽象持久序列):
         self.处理并保存图片()
 
     def 合并历史和当前页(self):
-
         # 历史页 = self.得到历史页()
         历史页 = 全局缓存.临时历史页
         当前页 = self.得到当前缓存页()
-        # if debug:
-        #     content = {
-        #         "历史页": 历史页.to_csv(),
-        #         "当前页": 当前页.to_csv(),
-        #     }
-        #     content = json.dumps(content, ensure_ascii=False)
-        #     url = self.上传文件(content, ".json", project_name="tmp")
-        #     print(url)
-        #     print(tool_static.链接到路径(url))
-        # raise ValueError
-        # 全局缓存.临时历史页 = tool_wx_df3.合并上下df(历史页, 当前页)
+        当前页 = tool_pandas.将某列缺失时间向前补齐并每行自动加1秒(当前页, "时间")
+        当前页 = tool_wx_df3.截断已存储的历史部分(当前页, 全局缓存.最后历史时间, colname="时间")
+
         df = tool_wx_df3.合并上下df(历史页, 当前页)
-        # self.存储历史页(df)
+        df = tool_pandas.将某列缺失时间向前补齐并每行自动加1秒(df, "时间")
+        全局缓存.最后历史时间 = self.得到最后合法值(df["时间"], 全局缓存.最后历史时间)
         全局缓存.临时历史页 = df
-        # 全局缓存.缓存页 = None
         print("合并完成======================")
         print(df[["上下文", "时间", "原始时间"]])
 
@@ -1474,7 +1468,9 @@ class 基本任务(抽象持久序列):
     def 是否已对齐(self):
         历史页 = self.得到历史页()
         当前页 = self.得到当前缓存页()
-        return (not 历史页.empty and 当前页.原始时间.dropna().isin(历史页.原始时间).any()) or(历史页.empty and 全局缓存.向上翻页次数 >= 3)
+        return (
+            not 历史页.empty and 当前页.原始时间.dropna().isin(历史页.原始时间).any()
+        ) or (历史页.empty and 全局缓存.向上翻页次数 >= 3)
 
     def 处理历史对齐流程(self):
         if (
@@ -1490,7 +1486,6 @@ class 基本任务(抽象持久序列):
         if self.是否已对齐():
             return True
         self.微信容器向上翻页()
-
 
     def 下载微信图片并返回链接和唯一码(self):
         return self.device.下载微信图片并返回链接和唯一码(self.持久对象.TOKEN)

@@ -290,16 +290,45 @@ def show(img, max_length=900, force_resize=True):
     cv2.destroyAllWindows()
 
 
-def show_in_plt(img):
-    import matplotlib
-    matplotlib.use('TkAgg')
-    from matplotlib import pyplot as plt
-    from skimage.io import imshow
+# def show_in_plt(img):
+#     import matplotlib
+#     matplotlib.use('TkAgg')
+#     from matplotlib import pyplot as plt
+#     from skimage.io import imshow
 
-    if len(img.shape) == 2:
-        imshow(img, cmap="gray")
+#     if len(img.shape) == 2:
+#         imshow(img, cmap="gray")
+#     else:
+#         imshow(img)
+#     plt.show()
+
+
+def show_in_plt(img):
+    """
+    在matplotlib中显示图片（适配CV2格式的图片，区分灰度/彩色）
+    解决skimage.io.imshow废弃的警告问题，同时修复CV2 BGR转RGB的显示问题
+
+    Args:
+        img: CV2格式的图片数组（np.ndarray）
+    """
+    import matplotlib
+
+    matplotlib.use("TkAgg")  # 指定后端（保持原逻辑）
+    import matplotlib.pyplot as plt
+
+
+    # 处理图片格式：CV2读取的是BGR，matplotlib需要RGB；灰度图无需转换
+    if len(img.shape) == 3 and img.shape[2] == 3:  # 彩色图片（3通道）
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        plt.imshow(img_rgb)
+    elif len(img.shape) == 2:  # 灰度图片（单通道）
+        plt.imshow(img, cmap="gray")
     else:
-        imshow(img)
+        # 处理其他情况（如4通道透明图）
+        plt.imshow(img)
+
+    plt.axis("off")  # 隐藏坐标轴（可选，提升显示效果）
+    plt.tight_layout()  # 适配布局
     plt.show()
 
 
@@ -310,7 +339,8 @@ def show_plt_safe(
     cfg={},
 ):
     import matplotlib
-    matplotlib.use('TkAgg')
+
+    matplotlib.use("TkAgg")
     from matplotlib import pyplot as plt
 
     if len(imgs) > 1:
@@ -348,7 +378,8 @@ def show_plt_safe(
 
 def to_plot_img(img, cmap=None):
     import matplotlib
-    matplotlib.use('TkAgg')
+
+    matplotlib.use("TkAgg")
     from matplotlib import pyplot as plt
 
     plt.tight_layout()
@@ -1351,6 +1382,7 @@ class FracContours(object):
         canvas = get_canvas(w, h, mono=True)
         cv2.drawContours(canvas, c, -1, 255, 1)
         return canvas
+
 
 def stitch_images(image_paths, direction="horizontal"):
     """
