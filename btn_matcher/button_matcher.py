@@ -254,7 +254,7 @@ def find_buttons_all(
         >>> mask2 = np.random.randint(0, 255, (80, 120), dtype=np.uint8)
         >>> masks = [mask1, mask2]
         >>> db = [('test_btn', [], np.random.randint(0, 255, (10, 32), dtype=np.uint8), 50, 30)]
-        >>> success, results = find_buttons_all(masks, db, min_match_prob=0.0)  # doctest: +ELLIPSIS
+        >>> results = find_buttons_all(masks, db, min_match_prob=0.0)  # doctest: +ELLIPSIS
         >>> isinstance(results, list)
         True
     """
@@ -299,7 +299,7 @@ def find_buttons_all(
         f"\n✓ 批量匹配完成：共找到 {len(all_results)} 个符合条件的按钮（阈值≥{min_match_prob}）"
     ) if verbose else None
 
-    return True, all_results
+    return all_results
 
 
 def 计算宽高比数据库(
@@ -653,44 +653,22 @@ def 批量匹配流程(
     masks: List[np.ndarray],
     db: list,
     min_match_prob: float = 0.9,
-    使用宽高比过滤: bool = True,
-    使用尺寸过滤: bool = True,
-    aspect_ratio_tolerance: float = 0.15,
-    x方向缩放率: float = 1,
-    y方向缩放率: float = 1,
-    尺寸容忍阈值: float = 0.2,
+    aspect_ratio_fluctuation_threshold: float = 0.05,
+    scale_threshold: float = 0.1,
 ) -> Tuple[bool, List[Dict[str, Any]]]:
-    """
-    完整的批量匹配流程，集成宽高比和尺寸过滤
-
-    参数:
-        masks: 待匹配的灰度图列表
-        db: 加载后的特征库
-        min_match_prob: 最小匹配置信度阈值
-        使用宽高比过滤: 是否启用宽高比过滤
-        使用尺寸过滤: 是否启用尺寸过滤
-        aspect_ratio_tolerance: 宽高比容忍阈值
-        x方向缩放率: X方向缩放系数
-        y方向缩放率: Y方向缩放系数
-        尺寸容忍阈值: 尺寸差异容忍阈值
-
-    返回:
-        tuple: (success, results)
-
-    """
     if not masks or not db:
         return False, []
 
-    filtered_masks = masks
-    filtered_db = db
+    aspect_ratios = 计算宽高比数据库(db,aspect_ratio_fluctuation_threshold, scale_threshold)
 
+    target_ratios_df = 计算目标匹配宽高比(masks)
 
+    indexes = 过滤宽高比(aspect_ratios, target_ratios_df)
+
+    filtered_masks = [masks[i] for i in indexes]
     # 执行匹配
-    if filtered_masks and filtered_db:
-        return find_buttons_all(filtered_masks, filtered_db, min_match_prob)
-    else:
-        print("警告：过滤后没有剩余的masks或数据库模板")
-        return True, []
+    if filtered_masks:
+        return find_buttons_all(filtered_masks, db, min_match_prob)
 
 
 def 保存匹配结果(results: List[Dict[str, Any]], output_file: str = "match_results.json"):
