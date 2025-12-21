@@ -1,0 +1,23 @@
+[
+  {
+    "mask_idx": 0,
+    "btn_name": "btn_0",
+    "match_prob": 0.867,
+    "match_count": 52,
+    "total_features": 60
+  },
+  {
+    "mask_idx": 2,
+    "btn_name": "btn_1",
+    "match_prob": 0.407,
+    "match_count": 22,
+    "total_features": 54
+  },
+  {
+    "mask_idx": 3,
+    "btn_name": "btn_2",
+    "match_prob": 0.311,
+    "match_count": 23,
+    "total_features": 74
+  }
+]
