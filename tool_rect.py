@@ -855,12 +855,6 @@ class RectImage(Rect):
         top=None,
         bottom=None,
     ):
-        """
-        >>> RectImage(img1,100,200,300,500) == RectImage(img1,100,200,300,500)
-        True
-        >>> RectImage(img1,100,200,300,500) == RectImage(img1,100,200,300,501)
-        False
-        """
         self.origin = img
         h, w = img.shape[:2]
         if left is None:
@@ -875,13 +869,6 @@ class RectImage(Rect):
         return cls(img, left, left + width, top, top + height)
 
     def to_absolute(self, left, right, top, bottom):
-        """
-        >>> RectImage(img1).width == img1.shape[1]
-        True
-        >>> ri=RectImage(img1,100,200,300,500)
-        >>> ri.to_absolute(0,10,0,20)
-        (100, 110, 300, 320)
-        """
         return left + self.left, right + self.left, top + self.top, bottom + self.top
 
     @property
@@ -1019,61 +1006,6 @@ class RectImage(Rect):
 
         return a.tolist()
 
-        # if 0 in right:
-        #     right = right[1:]
-        #
-        # if debug:
-        #     print(right)
-        #     print(left)
-        #     # return
-        #
-        # # if 0 in right.shape:
-        # #     pass
-        #
-        # if 0 not in left.shape and (0 in right.shape or right[0] > left[0]):
-        #     right = cls.add_head_tail(right, y.shape[0])[:-1]
-        #     left =  cls.add_head_tail(left, y.shape[0])[1:]
-        #     m = min(right.shape[0], left.shape[0])
-        #     right = right[:m]
-        #     left = left[:m]
-        # else:
-        #     right = cls.add_head_tail(right, y.shape[0])
-        #     left =  cls.add_head_tail(left, y.shape[0])
-        #     m = min(right.shape[0], left.shape[0])
-        #     right = right[:m]
-        #     left = left[:m]
-        #     s = right != left
-        #     right = right[s]
-        #     left = left[s]
-        #
-        # if debug:
-        #     print('-' * 20)
-        #     print(right)
-        #     print(left)
-        #
-        #
-        # mr = right[1:]
-        # ml = left[0:-1]
-        #
-        # m = mr - ml >= min_len - 1
-        #
-        # if debug:
-        #     print(mr, m)
-        # mr = mr[m]
-        # ml = ml[m]
-        #
-        # right = numpy.concatenate((right[0:1], mr)) if mr.size else right[0:1]
-        # left = numpy.concatenate((ml, left[-1:])) if ml.size else left[-1:]
-        #
-        # if debug:
-        #     print('=' * 20)
-        #     print(mr)
-        #     print(ml)
-        #     print(right)
-        #     print(left)
-        #
-        # return list(zip(right, left)) if 0 not in right.shape else [(0, y.shape[0]-1)]
-
     def get_split_points(self, a, max_length):
         a = numpy.concatenate(([0], a.flatten(), [max_length - 1]))
         return list(zip(a, roll_up(a)))[:-1]
@@ -1184,22 +1116,7 @@ class RectImage(Rect):
             return img
         return img[self.top : self.bottom + 1, self.left : self.right + 1, ...]
 
-    # def crop(self, left, right, top, bottom):
-    #     return RectImage(self.img,
-    #                      left, right, top, bottom,
-    #                      self.offset_x,
-    #                      self.offset_y,
-    #                      )
-
     def crop(self, left, right, top, bottom):
-        """
-        >>> ri1 = RectImage(img1)
-        >>> ri2 = ri1.crop(100,120,200,230)
-        >>> ri2
-        100 120 200 230<21, 31>
-        >>> ri2.crop(10,16,10,18)
-        110 116 210 218<7, 9>
-        """
         return RectImage(
             self.origin,
             *self.to_absolute(left, right, top, bottom),
@@ -1412,6 +1329,6 @@ class RectImage(Rect):
 if __name__ == "__main__":
     import doctest
 
-    img1 = file2array("test_split_zeros.bin")
-    mask1 = img1 > 0
+    # img1 = file2array("test_split_zeros.bin")
+    # mask1 = img1 > 0
     print(doctest.testmod(verbose=False, report=False))

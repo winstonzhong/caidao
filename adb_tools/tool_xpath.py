@@ -4,6 +4,7 @@ Created on 2023年12月21日
 @author: lenovo
 """
 
+import io
 import os
 import time
 
@@ -21,6 +22,8 @@ import functools
 import json
 
 import pandas
+
+import numpy
 
 import lxml
 
@@ -74,6 +77,10 @@ from douyin.tool_dy_score import (
     计算评论价值评分,
     计算下一次运行等待秒数,
 )
+
+from helper_task_redis2 import RedisTaskHandler
+
+global_redis = RedisTaskHandler.from_inner_json()
 
 # def execute_lines(job, lines, self=None):
 #     if self is not None:
@@ -507,9 +514,7 @@ class SteadyDevice(DummyDevice):
     def 将手机文件上传56T(self, token=None, 手机端路径=None):
         手机端路径 = 手机端路径 or self.remote_fpath_wx_images
         if tool_static.is_inner():
-            fpath = self.adb.pull_lastest_file_until(
-                base_dir=手机端路径, to_56T=True
-            )
+            fpath = self.adb.pull_lastest_file_until(base_dir=手机端路径, to_56T=True)
             return tool_static.路径到链接(fpath)
         else:
             """
@@ -525,7 +530,6 @@ class SteadyDevice(DummyDevice):
             src = self.adb.get_latest_file(base_dir=手机端路径)
             self.adb.move_file_to_robot_temp(src, fname)
             return url
-
 
     def download_wx_image(self, token=None):
         return self.将手机文件上传56T(
@@ -620,6 +624,29 @@ class SteadyDevice(DummyDevice):
     def 四重击(self, x, y):
         self.adb.do_double_click(x, y)
         self.adb.特殊双击(x, y)
+
+    @property
+    def xpath_更多信息_微信(self):
+        return '//android.widget.ImageView[re:match(@text,"")][re:match(@content-desc,"聊天信息|更多信息")]'
+
+    # def 是否在会话页面(self):
+    #     # return self.has_xpath(self.xpath_更多信息)
+    #     return self.has_xpath(
+    #         '////android.widget.ImageView[re:match(@text,"")][re:match(@content-desc,"聊天信息|更多信息")]/../../../../..//android.widget.TextView[re:match(@text,".+")]'
+    #     )
+
+    @property
+    def 微信会话名称(self):
+        x = f"{self.xpath_更多信息_微信}/../../../../..//android.widget.TextView"
+        e = self.find_xpath_first(x)
+        return e.text if e is not None else ""
+
+    def 是否微信群聊(self):
+        return tool_wx.is_session_name(self.微信会话名称)
+
+    @property
+    def 干净的微信会话名称(self):
+        return tool_wx.clean_session_name(self.微信会话名称)
 
 
 class 基本输入字段对象(object):
@@ -896,7 +923,7 @@ class 基本任务(抽象持久序列):
     @property
     def 设备串行号(self):
         return self.device.adb.serialno
-    
+
     def get_remote_obj(self, url, 带串行号=True, **kwargs):
         if 带串行号:
             设备串行号 = self.device.adb.serialno
@@ -983,6 +1010,10 @@ class 基本任务(抽象持久序列):
     def wait_steady(self):
         return self.d.get("wait_steady", False)
 
+    @wait_steady.setter
+    def wait_steady(self, v):
+        self.d["wait_steady"] = bool(v)
+
     @property
     def few_first(self):
         return self.d.get("few_first", False)
@@ -1038,7 +1069,7 @@ class 基本任务(抽象持久序列):
 
         while 1:
             executed_seconds = time.time() - old
-            print('========================{},{}'.format(executed_seconds, 最大执行秒))
+            print("========================{},{}".format(executed_seconds, 最大执行秒))
 
             if 最大执行秒 > 0 and executed_seconds >= 最大执行秒:
                 print("达到最大执行秒，停止执行:", executed_seconds, 最大执行秒)
@@ -1237,19 +1268,9 @@ class 基本任务(抽象持久序列):
         df["唯一值带时间"] = df.唯一值 + "-" + df.时间.astype("str")
         df["容器key"] = 容器.key
         return df
+        # return tool_wx_df3.设置已处理(df, 全局缓存.最后历史时间)
 
     def 是否微信容器发生了变化(self):
-        # if 全局缓存.缓存页 is None:
-        #     return True
-
-        # if (
-        #     not 全局缓存.缓存页.empty
-        #     and not self.微信df.empty
-        #     and 全局缓存.缓存页.容器key.iloc[0] == self.微信容器.key
-        # ):
-        #     return False
-
-        # return True
         return (
             全局缓存.前容器唯一值 is None or 全局缓存.前容器唯一值 != self.微信容器.key
         )
@@ -1272,92 +1293,167 @@ class 基本任务(抽象持久序列):
 
     def 微信容器向下翻页(self):
         self.微信容器结束本轮("微信容器向下翻页")
+        全局缓存.向下翻页次数 += 1
 
     def 微信容器向上翻页(self):
         self.微信容器结束本轮("微信容器向上翻页")
+        全局缓存.向上翻页次数 += 1
+
+    def 存储调试df(self, df):
+        fpath1 = f"/mnt/56T/tmp/{time.time()}_{random.random():.4f}.json"
+        df.to_json(fpath1)
+        print(fpath1)
 
     def 得到当前缓存页(self):
         df = self.微信df
         if 全局缓存.缓存页 is None:
+            print("---------------------初始化当前缓存页")
             全局缓存.缓存页 = df
-
-        if not df.empty:
-            if len(df) != len(全局缓存.缓存页):
-                全局缓存.缓存页 = df
-            elif 全局缓存.缓存页.容器key.iloc[0] != df.iloc[0].容器key:
-                全局缓存.缓存页 = df
-
+        elif not df.empty and (
+            len(df) != len(全局缓存.缓存页)
+            or 全局缓存.缓存页.容器key.iloc[0] != df.iloc[0].容器key
+        ):
+            print("---------------------更新当前缓存页")
+            全局缓存.缓存页 = df
         return 全局缓存.缓存页
 
     def 得到历史页(self):
-        if 全局缓存.历史页 is None:
-            全局缓存.历史页 = pandas.DataFrame(
-                columns=["原始时间", "唯一值", "图片key"]
-            )
-        return 全局缓存.历史页
+        会话名称 = self.device.干净的微信会话名称
+        会话数据 = self.持久对象.数据.setdefault("会话列表", {}).get(会话名称)
+        return (
+            pandas.read_json(io.StringIO(会话数据))
+            if 会话数据 is not None
+            else pandas.DataFrame(columns=["原始时间", "唯一值", "时间", "图片key"])
+        ).replace({None: numpy.nan})
+
+    def 得到最后合法值(self, s: pandas.Series, default=None):
+        last_valid_idx = s.last_valid_index()
+        return s.loc[last_valid_idx] if last_valid_idx is not None else default
+
+    def 初始化临时历史页(self):
+        全局缓存.临时历史页 = pandas.DataFrame(
+            columns=["原始时间", "唯一值", "时间", "图片key"]
+        )
+        历史页 = self.得到历史页()
+        # last_valid_idx = 历史页["时间"].last_valid_index()
+        # 全局缓存.最后历史时间 = (
+        #     历史页.loc[last_valid_idx, "时间"]
+        #     if last_valid_idx is not None
+        #     else None
+        # )
+        全局缓存.最后历史时间 = self.得到最后合法值(历史页["时间"])
+        全局缓存.向上翻页次数 = 0
+        全局缓存.向下翻页次数 = 0
+
+    def 存储历史页(self, df, name=None):
+        会话名称 = self.device.干净的微信会话名称 if name is None else name
+        self.持久对象.数据.setdefault("会话列表", {})[会话名称] = df.to_json()
+        self.持久对象.save()
+
+    def 清空历史(self, name=None):
+        self.存储历史页(
+            pandas.DataFrame(columns=["原始时间", "唯一值", "时间", "图片key"]), name
+        )
+
+    def 合并并存储历史页(self, df, name=None):
+        历史页 = self.得到历史页()
+        最后历史时间 = self.得到最后合法值(历史页["时间"])
+        df = tool_pandas.将某列缺失时间向前补齐并每行自动加1秒(df, "时间")
+        df = tool_wx_df3.截断已存储的历史部分(df, 最后历史时间, colname="时间")
+        if not df.empty:
+            df = tool_wx_df3.合并上下df(历史页, df)
+            self.存储历史页(df, name)
 
     def 点击第一张未处理图片(self):
         df = self.得到当前缓存页()
+        # # df = 全局缓存.临时历史页
         tmp = df[(df.类型 == "图片") & (~df.已处理)]
+        if 全局缓存.最后历史时间 is not None:
+            h = tmp[tmp.时间 <= 全局缓存.最后历史时间]
+            if not h.empty:
+                tmp = tmp.loc[h.index[-1] + 1 :]
+
         if not tmp.empty:
             self.device.click(*tmp.iloc[0].xy)
             全局缓存.最后图片index = tmp.index[0]
             全局缓存.最后图片信息 = tmp.index[0], tmp.iloc[0].容器key
             return True
 
+    # def 处理并保存图片(self):
+    #     url, img_key = self.下载微信图片并返回链接和唯一码()
+    #     df = 全局缓存.临时历史页
+    #     图片index, 容器key = 全局缓存.最后图片信息
+    #     assert (
+    #         图片index is not None and df.iloc[0].容器key == 容器key
+    #     ), "图片处理错误, 容器不一致"
+    #     df.loc[图片index, ["链接", "图片key", "已处理"]] = (url, img_key, True)
+
     def 处理并保存图片(self):
         url, img_key = self.下载微信图片并返回链接和唯一码()
-        df = 全局缓存.历史页
+        # df = 全局缓存.临时历史页
+        # df = self.得到当前缓存页()
+        df = 全局缓存.缓存页
+        # df = 全局缓存.临时历史页
         图片index, 容器key = 全局缓存.最后图片信息
         assert (
-            图片index is not None and df.iloc[0].容器key == 容器key
+            图片index is not None and df.loc[图片index].容器key == 容器key
         ), "图片处理错误, 容器不一致"
         df.loc[图片index, ["链接", "图片key", "已处理"]] = (url, img_key, True)
 
-    def 点击处理并上传图片(self, e):
+    # def 点击处理并上传图片(self, e):
+    #     self.device.clear_remote_wx_images()
+    #     e.click()
+    #     time.sleep(1)
+    #     self.处理并保存图片()
+
+    def 保存并上传图片(self, e):
         self.device.clear_remote_wx_images()
         e.click()
         time.sleep(1)
         self.处理并保存图片()
 
-    def 合并历史和当前页(self, debug=False):
-
-        历史页 = self.得到历史页()
+    def 合并历史和当前页(self):
+        # 历史页 = self.得到历史页()
+        历史页 = 全局缓存.临时历史页
         当前页 = self.得到当前缓存页()
-        if debug:
-            content = {
-                "历史页": 历史页.to_csv(),
-                "当前页": 当前页.to_csv(),
-            }
-            content = json.dumps(content, ensure_ascii=False)
-            url = self.上传文件(content, ".json", project_name="tmp")
-            print(url)
-            print(tool_static.链接到路径(url))
-        # raise ValueError
-        全局缓存.历史页 = tool_wx_df3.合并上下df(历史页, 当前页)
-        全局缓存.缓存页 = None
+        当前页 = tool_pandas.将某列缺失时间向前补齐并每行自动加1秒(当前页, "时间")
+        当前页 = tool_wx_df3.截断已存储的历史部分(当前页, 全局缓存.最后历史时间, colname="时间")
+
+        df = tool_wx_df3.合并上下df(历史页, 当前页)
+        df = tool_pandas.将某列缺失时间向前补齐并每行自动加1秒(df, "时间")
+        全局缓存.最后历史时间 = self.得到最后合法值(df["时间"], 全局缓存.最后历史时间)
+        全局缓存.临时历史页 = df
         print("合并完成======================")
-        print(全局缓存.历史页[["上下文", "时间", "原始时间"]])
+        print(df[["上下文", "时间", "原始时间"]])
+
+    # def 处理当前同步流程(self, debug=False):
+    #     if (
+    #         not self.是否微信容器发生了变化()
+    #         and 全局缓存.最后执行动作 == "微信容器向下翻页"
+    #     ):
+    #         print("最后结果======================")
+    #         print(全局缓存.临时历史页)
+    #         # raise 同步消息到底部异常
+    #         return True
+    #     else:
+    #         self.合并历史和当前页(debug)
+    #         if self.点击第一张未处理图片():
+    #             self.微信容器结束本轮("点击图片")
+    #         else:
+    #             self.微信容器向下翻页()
 
     def 处理当前同步流程(self):
         if (
             not self.是否微信容器发生了变化()
             and 全局缓存.最后执行动作 == "微信容器向下翻页"
         ):
-            print("最后结果======================")
-            print(全局缓存.历史页)
-            raise 同步消息到底部异常
+            return True
         else:
-            self.合并历史和当前页()
             if self.点击第一张未处理图片():
                 self.微信容器结束本轮("点击图片")
             else:
+                self.合并历史和当前页()
                 self.微信容器向下翻页()
-            # if self.点击第一张未处理图片():
-            #     self.微信容器结束本轮("点击图片")
-            # else:
-            #     self.合并历史和当前页()
-            #     self.微信容器向下翻页()
 
     @property
     def 最后一条未处理语音(self):
@@ -1373,17 +1469,27 @@ class 基本任务(抽象持久序列):
             全局缓存.setdefault("处理过的语音列表", []).append(s.唯一值带时间)
             return True
 
+    def 是否已对齐(self):
+        历史页 = self.得到历史页()
+        当前页 = self.得到当前缓存页()
+        return (
+            not 历史页.empty and 当前页.原始时间.dropna().isin(历史页.原始时间).any()
+        ) or (历史页.empty and 全局缓存.向上翻页次数 >= 3)
+
     def 处理历史对齐流程(self):
         if (
             not self.是否微信容器发生了变化()
             and 全局缓存.最后执行动作 == "微信容器向上翻页"
         ):
-            raise 对齐历史到顶部异常
-        else:
-            if self.长按最后一条未处理语音():
-                self.微信容器结束本轮("处理语音")
-            else:
-                self.微信容器向上翻页()
+            return True
+
+        if self.长按最后一条未处理语音():
+            self.微信容器结束本轮("处理语音")
+            return False
+
+        if self.是否已对齐():
+            return True
+        self.微信容器向上翻页()
 
     def 下载微信图片并返回链接和唯一码(self):
         return self.device.下载微信图片并返回链接和唯一码(self.持久对象.TOKEN)
@@ -1412,7 +1518,8 @@ class 基本任务(抽象持久序列):
         return self.持久对象.获取其他记录(name)
 
     def 打开豆包(self):
-        self.打开应用('com.larus.nova', None)
+        self.打开应用("com.larus.nova", None)
+
 
 class 前置预检查任务(基本任务):
     pass

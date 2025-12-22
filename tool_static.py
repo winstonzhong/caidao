@@ -15,6 +15,7 @@ import json
 import string
 import requests
 import threading
+from tool_img import to_buffer
 
 BASE_URL_56T = "https://file.j1.sale/api/file"
 
@@ -156,6 +157,8 @@ def 存储文件(content, suffix=None, 返回路径=False, base_dir=BASE_DIR_56T
     print('保存完毕===========================')
     return 路径到链接(fpath, base_dir=base_dir) if not 返回路径 else fpath
 
+def 存储图片到文件(img, suffix, 返回路径=False, base_dir=BASE_DIR_56T):
+    return 存储文件(to_buffer(img, suffix), suffix, 返回路径, base_dir=base_dir)
 
 def 存储字典到文件(d, suffix, 返回路径=False, base_dir=BASE_DIR_56T):
     return 存储文件(json.dumps(d).encode("utf8"), suffix, 返回路径, base_dir=base_dir)

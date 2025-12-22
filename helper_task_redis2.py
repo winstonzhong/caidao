@@ -4,8 +4,12 @@ import bz2
 import redis
 from typing import Any
 import time
-import os
-import tool_env
+# import os
+# import tool_env
+
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent
+
 
 
 class RedisTaskHandler:
@@ -21,7 +25,8 @@ class RedisTaskHandler:
             max_retries=3
     ):
         # 初始化配置
-        self.db = db or int(os.getenv("REDIS_DB_INDEX_NUM", 15 if not tool_env.U4080 else 14))
+        # self.db = db or int(os.getenv("REDIS_DB_INDEX_NUM", 15 if not tool_env.U4080 else 14))
+        self.db = db or 14
         self.redis_config = {
             "host": host,
             "port": port,
@@ -34,6 +39,13 @@ class RedisTaskHandler:
         self.max_retries = max_retries
         self._conn = None
 
+    @classmethod
+    def from_inner_json(cls):
+        fpath = BASE_DIR / "queue_redis_json.cfg"
+        with open(fpath, encoding="utf-8") as f:
+            config = json.load(f)
+        return cls(**config)
+    
     # 内部方法：获取/验证连接
     def _get_conn(self):
         if self._conn is None:

@@ -222,7 +222,7 @@ def 处理列表完成(job):
         记录最后已处理记录(job, v)
 
 
-def 处理通讯列表(job, results, save_ut=False):
+def 处理微信会话列表(job, results, save_ut=False):
     df = 获取列表详情(results)
     df = 时间列表Bug修正(df)
     print(df)
