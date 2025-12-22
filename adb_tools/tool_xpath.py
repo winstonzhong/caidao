@@ -78,6 +78,10 @@ from douyin.tool_dy_score import (
     计算下一次运行等待秒数,
 )
 
+from helper_task_redis2 import RedisTaskHandler
+
+global_redis = RedisTaskHandler()
+
 # def execute_lines(job, lines, self=None):
 #     if self is not None:
 #         if self.matched:

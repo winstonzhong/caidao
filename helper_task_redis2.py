@@ -7,7 +7,11 @@ import time
 # import os
 # import tool_env
 
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent
 
+
+print(BASE_DIR)
 class RedisTaskHandler:
     def __init__(
             self,
@@ -35,6 +39,10 @@ class RedisTaskHandler:
         self.max_retries = max_retries
         self._conn = None
 
+    @classmethod
+    def from_inner_json(cls):
+        pass
+    
     # 内部方法：获取/验证连接
     def _get_conn(self):
         if self._conn is None:
