@@ -11,7 +11,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 
 
-print(BASE_DIR)
+
 class RedisTaskHandler:
     def __init__(
             self,
@@ -41,7 +41,10 @@ class RedisTaskHandler:
 
     @classmethod
     def from_inner_json(cls):
-        pass
+        fpath = BASE_DIR / "queue_redis_json.cfg"
+        with open(fpath, encoding="utf-8") as f:
+            config = json.load(f)
+        return cls(**config)
     
     # 内部方法：获取/验证连接
     def _get_conn(self):

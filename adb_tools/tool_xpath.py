@@ -80,7 +80,7 @@ from douyin.tool_dy_score import (
 
 from helper_task_redis2 import RedisTaskHandler
 
-global_redis = RedisTaskHandler()
+global_redis = RedisTaskHandler.from_inner_json()
 
 # def execute_lines(job, lines, self=None):
 #     if self is not None:
