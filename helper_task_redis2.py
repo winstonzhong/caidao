@@ -21,7 +21,8 @@ class RedisTaskHandler:
             max_retries=3
     ):
         # 初始化配置
-        self.db = db or int(os.getenv("REDIS_DB_INDEX_NUM", 15 if not tool_env.U4080 else 14))
+        # self.db = db or int(os.getenv("REDIS_DB_INDEX_NUM", 15 if not tool_env.U4080 else 14))
+        self.db = db or 14
         self.redis_config = {
             "host": host,
             "port": port,

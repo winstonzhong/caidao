@@ -250,8 +250,8 @@ def to_buffer(img, suffix=".png"):
         return buffer if is_success else None
 
 
-def img2io(img):
-    return io.BytesIO(to_buffer(img))
+def img2io(img, suffix=".png"):
+    return io.BytesIO(to_buffer(img, suffix))
 
 
 def img2base64(img):

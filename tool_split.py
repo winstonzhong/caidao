@@ -94,6 +94,7 @@ def 绘制切分结果(img: numpy.ndarray, rlist: list):
 
         # 绘制矩形：cv2.rectangle(图片, 左上角坐标, 右下角坐标, 颜色, 线条粗细)
         # 左上角：(left, top)，右下角：(right, bottom)
+        print("绘制矩形：", left, top, right, bottom, 'region:',region)
         cv2.rectangle(
             img_draw,
             (int(left), int(top)),  # 确保坐标为整数（防止传入浮点数）
