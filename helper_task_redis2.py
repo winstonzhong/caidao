@@ -65,7 +65,7 @@ class RedisTaskHandler:
 
     def 推入数据队列(self, 数据: dict):
         return self.推入Redis("全局数据处理队列", 数据)
-    
+
     def 获取全局数据处理队列数据(self, 阻塞=False):
         return self.拉出Redis("全局数据处理队列", 阻塞=阻塞)
 
@@ -76,8 +76,6 @@ class RedisTaskHandler:
     #     else:
     #         task_data = self._get_conn().lpop(任务队列名称)
     #     return json.loads(bz2.decompress(task_data)) if task_data is not None else None
-
-
 
     # def 写任务到缓存(
     #     self, task_key: str, task_data: Any, expire_seconds: int = 1800
@@ -99,7 +97,7 @@ class RedisTaskHandler:
     def 清空当前数据库(self):
         return self._get_conn().flushdb()
 
-    def 推入Redis(self, task_key:str, d:dict, expire_seconds=1800):
+    def 推入Redis(self, task_key: str, d: dict, expire_seconds=1800):
         buf = io.StringIO()
         json.dump(d, buf)
         data = buf.getvalue()
@@ -108,7 +106,6 @@ class RedisTaskHandler:
         if expire_seconds and result:
             self._get_conn().expire(task_key, expire_seconds)
         return result
-
 
     def has_tasks(self, task_key):
         return len(self._get_conn().lrange(task_key, 0, 0)) == 1
@@ -129,7 +126,6 @@ class RedisTaskHandler:
         else:
             task_data = self._get_conn().lpop(任务队列名称)
         return json.loads(bz2.decompress(task_data)) if task_data is not None else None
-
 
     # 跨进程锁逻辑
     def 获取锁(self, lock_key):
