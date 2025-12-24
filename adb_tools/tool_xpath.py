@@ -82,20 +82,11 @@ from helper_task_redis2 import RedisTaskHandler
 
 global_redis = RedisTaskHandler.from_inner_json()
 
-# def execute_lines(job, lines, self=None):
-#     if self is not None:
-#         if self.matched:
-#             try:
-#                 exec(lines)
-#                 return True
-#             except Exception as e:
-#                 print(f"error when executing:{self.id}:{e}")
-#                 traceback.print_exc()
-#     else:
-#         exec(lines)
 global_cache = tool_dict.PropDict()
 
 全局缓存 = global_cache
+
+全局队列 = global_redis
 
 URL_TASK_QUEUE = f"https://{tool_env.HOST_TASK}"
 
@@ -941,14 +932,7 @@ class 基本任务(抽象持久序列):
 
     def init(self, d):
         self.d = d
-        # print('==========================', self.paras)
         self._blocks = [操作块(x, self.paras) for x in self.d.get("blocks")]
-
-        # device_pointed = self.device_pointed or self.d.get("device")
-        # if device_pointed.get("is_windows"):
-        #     self.device = Windows窗口设备(device_pointed)
-        # else:
-        #     self.device = SteadyDevice.from_ip_port(device_pointed.get("ip_port"))
 
     @cached_property
     def device(self):
@@ -960,6 +944,10 @@ class 基本任务(抽象持久序列):
 
     @property
     def serialno(self):
+        return self.device.adb.serialno
+
+    @property
+    def 串口号(self):
         return self.device.adb.serialno
 
     def 打开应用(self, package=None, activity=None):
