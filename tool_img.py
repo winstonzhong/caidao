@@ -1621,7 +1621,39 @@ def cv2jpg_b64(img: np.ndarray) -> str:
     bytes_io = cv2_img_to_bytesio(img, ext=".jpg")
     return base64.b64encode(bytes_io.getvalue()).decode("utf-8")
 
+def b642cv2_jpg(data: str) -> np.ndarray:
+    """
+    将 JPG 格式的 Base64 字符串解码为 OpenCV 图像（numpy.ndarray）
 
+    作为 cv2jpg_b64 函数的反函数，解码后得到的图像为 BGR 格式（符合 OpenCV 标准）
+
+    Args:
+        data: JPG 格式的 Base64 编码字符串
+
+    Returns:
+        np.ndarray: OpenCV 图像数组（BGR 格式）
+
+    Raises:
+        ValueError: Base64 解码失败或 JPG 图像解码失败时抛出
+    """
+    try:
+        # 1. Base64 字符串解码为字节数据
+        img_bytes = base64.b64decode(data)
+    except base64.binascii.Error as e:
+        raise ValueError(f"Base64 解码失败：{str(e)}") from e
+
+    # 2. 将字节数据转换为 numpy 数组（cv2.imdecode 要求输入 uint8 类型的一维数组）
+    img_np = np.frombuffer(img_bytes, dtype=np.uint8)
+
+    # 3. 解码 JPG 字节数据为 OpenCV 图像（BGR 格式）
+    # cv2.IMREAD_COLOR：强制读取彩色图像（忽略透明度），返回 BGR 格式数组
+    img = cv2.imdecode(img_np, cv2.IMREAD_COLOR)
+
+    # 4. 检查解码是否成功（img 为 None 表示解码失败）
+    if img is None:
+        raise ValueError("JPG 图像解码失败，输入的 Base64 数据可能不是合法的 JPG 格式")
+
+    return img
 
 if __name__ == "__main__":
     import doctest
