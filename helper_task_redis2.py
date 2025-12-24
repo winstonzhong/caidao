@@ -66,8 +66,8 @@ class RedisTaskHandler:
     def 推入数据队列(self, 数据: dict):
         return self.推入Redis("全局数据处理队列", 数据)
 
-    def 获取全局数据处理队列数据(self, 阻塞=False):
-        return self.拉出Redis("全局数据处理队列", 阻塞=阻塞)
+    def 获取全局数据处理队列数据(self, 阻塞=False, 超时时间=0):
+        return self.拉出Redis("全局数据处理队列", 阻塞=阻塞, 超时时间=超时时间)
 
     # ========== 原有函数改造为类方法 ==========
     # def 获取(self, 任务队列名称, 阻塞=False, 超时时间=0):
@@ -122,10 +122,12 @@ class RedisTaskHandler:
 
     def 拉出Redis(self, 任务队列名称, 阻塞=False, 超时时间=0):
         if 阻塞:
-            _, task_data = self._get_conn().blpop(任务队列名称, timeout=超时时间)
+            r = self._get_conn().blpop(任务队列名称, timeout=超时时间)
+            _, task_data = r if r is not None else None, None
         else:
             task_data = self._get_conn().lpop(任务队列名称)
-        return json.loads(bz2.decompress(task_data)) if task_data is not None else None
+        if task_data is not None:
+            return json.loads(bz2.decompress(task_data)) if task_data is not None else None
 
     # 跨进程锁逻辑
     def 获取锁(self, lock_key):

@@ -807,11 +807,13 @@ def is_endswith_question(text: str) -> bool:
     question_end_pattern = r"[?？]\s*$"
     return re.search(question_end_pattern, text)
 
+
 def is_contains_question(text: str) -> bool:
     question_pattern = r"[?？]"
     return re.search(question_pattern, text)
 
-def 查找并截断(text: str, target_puncts: str="～~。？！?!"):
+
+def 查找并截断(text: str, target_puncts: str = "～~。？！?!"):
     last_punct_idx = -1
     for punct in target_puncts:
         current_idx = text.rfind(punct)
@@ -853,23 +855,31 @@ def truncate_at_last_punct_if_question(text: str) -> str:
         text = 查找并截断(text)
     return text.strip()
 
+
 def 截断问句和废话(txt):
-    '''
+    """
     截断问句和废话 的 Docstring
-    
+
     :param txt: 说明
     :type txt: str
     :return: 说明
     :rtype: str
-    
+
     >>> 截断问句和废话("视频里的对话好有烟火气呀！听着像在和老朋友聊天一样～你平时玩这个游戏时，最喜欢和里面的哪个角色互动呀？")
     '视频里的对话好有烟火气呀！听着像在和老朋友聊天一样～'
     >>> 截断问句和废话("哇，把红豆元素画成彩绘也太有创意了吧！我之前画彩绘总担心颜料蹭掉，后来发现先涂层薄定妆粉会好很多～你平时也常做这种有诗意的彩绘吗？")
     '哇，把红豆元素画成彩绘也太有创意了吧！我之前画彩绘总担心颜料蹭掉，后来发现先涂层薄定妆粉会好很多～'
     >>> 截断问句和废话("这渐变紫蓝的绒花也太温柔了吧！我之前做绒花总掉绒，后来用少量定型喷雾就好很多~你平时也喜欢戴这类配饰吗？")
     '这渐变紫蓝的绒花也太温柔了吧！我之前做绒花总掉绒，后来用少量定型喷雾就好很多~'
-    '''
-    return truncate_at_last_punct_if_question(精确识别并截断废话(txt))
+    >>> 截断问句和废话("从视频里能感受到手工编绳的用心，貔貅和吞金兽的搭配很有特色，色彩丰富也显得很有活力呢！要是你在编绳配色或技巧上有想")
+    '能感受到手工编绳的用心，貔貅和吞金兽的搭配很有特色，色彩丰富也显得很有活力呢！要是你在编绳配色或技巧上有想'
+    >>> 截断问句和废话("看视频里能感受到手工编绳的用心，貔貅和吞金兽的搭配很有特色，色彩丰富也显得很有活力呢！要是你在编绳配色或技巧上有想")
+    '能感受到手工编绳的用心，貔貅和吞金兽的搭配很有特色，色彩丰富也显得很有活力呢！要是你在编绳配色或技巧上有想'
+    """
+    s = truncate_at_last_punct_if_question(精确识别并截断废话(txt))
+    return re.sub(r'^(感觉|看|从).*视频里', '', s)
+
+
 
 def has_valid_result(txt):
     """
