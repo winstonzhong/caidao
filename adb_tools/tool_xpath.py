@@ -13,7 +13,7 @@ from uiautomator2.xpath import XPath, XMLElement
 
 from helper_hash import get_hash
 from tool_env import bounds_to_rect
-from tool_img import get_template_points, show, pil2cv2, cv2pil, b642cv2
+from tool_img import get_template_points, show, pil2cv2, cv2pil, b642cv2, cv2jpg_b64, is_cv2_image
 import image_hash_comparison
 from lxml import etree
 
@@ -82,20 +82,11 @@ from helper_task_redis2 import RedisTaskHandler
 
 global_redis = RedisTaskHandler.from_inner_json()
 
-# def execute_lines(job, lines, self=None):
-#     if self is not None:
-#         if self.matched:
-#             try:
-#                 exec(lines)
-#                 return True
-#             except Exception as e:
-#                 print(f"error when executing:{self.id}:{e}")
-#                 traceback.print_exc()
-#     else:
-#         exec(lines)
 global_cache = tool_dict.PropDict()
 
 全局缓存 = global_cache
+
+全局队列 = global_redis
 
 URL_TASK_QUEUE = f"https://{tool_env.HOST_TASK}"
 
@@ -866,10 +857,14 @@ class 基本任务(抽象持久序列):
         self.cache = tool_dict.PropDict()
         self.remote_obj = 0
 
-    @classmethod
-    def 推入总队列(cls, 队列名称, 队列数据):
-        # 队列名称 = self.获取设备相关队列名称(队列名称)
-        cls.集成的队列任务数据.setdefault(队列名称, []).append(队列数据)
+    # @classmethod
+    # def 推入总队列(cls, 队列名称, 队列数据):
+    #     cls.集成的队列任务数据.setdefault(队列名称, []).append(队列数据)
+
+    def 推入数据队列(self, **kwargs):
+        数据 = {k:v if not is_cv2_image(v) else cv2jpg_b64(v) for k,v in kwargs.items()}
+        数据['串口号'] = self.串口号
+        return global_redis.推入数据队列(数据)
 
     @classmethod
     def 队列拉取地址(cls, task_key):
@@ -897,9 +892,6 @@ class 基本任务(抽象持久序列):
         return global_cache.task_data
 
     def 直接获取任务(self):
-        # data_list = self.集成的队列任务数据.setdefault(self.队列名称, [])
-        # global_cache.task_data = data_list.pop(0) if data_list else None
-        # return global_cache.task_data
         return self.直接获取其他队列任务(self.队列名称)
 
     def 拉取任务(self, task_key, 是否设备相关=True):
@@ -941,14 +933,7 @@ class 基本任务(抽象持久序列):
 
     def init(self, d):
         self.d = d
-        # print('==========================', self.paras)
         self._blocks = [操作块(x, self.paras) for x in self.d.get("blocks")]
-
-        # device_pointed = self.device_pointed or self.d.get("device")
-        # if device_pointed.get("is_windows"):
-        #     self.device = Windows窗口设备(device_pointed)
-        # else:
-        #     self.device = SteadyDevice.from_ip_port(device_pointed.get("ip_port"))
 
     @cached_property
     def device(self):
@@ -960,6 +945,10 @@ class 基本任务(抽象持久序列):
 
     @property
     def serialno(self):
+        return self.device.adb.serialno
+
+    @property
+    def 串口号(self):
         return self.device.adb.serialno
 
     def 打开应用(self, package=None, activity=None):

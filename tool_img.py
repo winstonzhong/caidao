@@ -250,6 +250,10 @@ def to_buffer(img, suffix=".png"):
         return buffer if is_success else None
 
 
+def to_jpeg_buffer(img):
+    return to_buffer(img, ".jpg")
+
+
 def img2io(img, suffix=".png"):
     return io.BytesIO(to_buffer(img, suffix))
 
@@ -315,7 +319,6 @@ def show_in_plt(img):
 
     matplotlib.use("TkAgg")  # 指定后端（保持原逻辑）
     import matplotlib.pyplot as plt
-
 
     # 处理图片格式：CV2读取的是BGR，matplotlib需要RGB；灰度图无需转换
     if len(img.shape) == 3 and img.shape[2] == 3:  # 彩色图片（3通道）
@@ -1454,6 +1457,203 @@ def stitch_images(image_paths, direction="horizontal"):
 
     return new_image
 
+
+def is_cv2_image(arr):
+    """
+    判断输入是否为 cv2 读取的图片（numpy.ndarray 格式）
+
+    参数：
+        arr: 待判断的对象
+    返回：
+        bool: True=是cv2图片，False=否
+
+    示例：
+    >>> # 测试1：模拟cv2读取的彩色图片（3维 H×W×3，uint8）
+    >>> img_color = np.random.randint(0, 255, (100, 200, 3), dtype=np.uint8)
+    >>> is_cv2_image(img_color)
+    True
+
+    >>> # 测试2：模拟cv2读取的灰度图片（2维 H×W，uint8）
+    >>> img_gray = np.random.randint(0, 255, (100, 200), dtype=np.uint8)
+    >>> is_cv2_image(img_gray)
+    True
+
+    >>> # 测试3：模拟cv2读取的透明PNG（3维 H×W×4，uint8）
+    >>> img_alpha = np.random.randint(0, 255, (100, 200, 4), dtype=np.uint8)
+    >>> is_cv2_image(img_alpha)
+    True
+
+    >>> # 测试4：模拟cv2读取的16位深度图（2维 H×W，uint16）
+    >>> img_16bit = np.random.randint(0, 65535, (100, 200), dtype=np.uint16)
+    >>> is_cv2_image(img_16bit)
+    True
+
+    >>> # 测试5：1维NumPy数组（非图片维度）
+    >>> arr_1d = np.array([1, 2, 3], dtype=np.uint8)
+    >>> is_cv2_image(arr_1d)
+    False
+
+    >>> # 测试6：空NumPy数组（无有效像素）
+    >>> arr_empty = np.array([], dtype=np.uint8)
+    >>> is_cv2_image(arr_empty)
+    False
+
+    >>> # 测试7：2维数组但高度为0（无效图片形状）
+    >>> arr_invalid_h = np.random.randint(0, 255, (0, 200), dtype=np.uint8)
+    >>> is_cv2_image(arr_invalid_h)
+    False
+
+    >>> # 测试8：2维数组但宽度为0（无效图片形状）
+    >>> arr_invalid_w = np.random.randint(0, 255, (100, 0), dtype=np.uint8)
+    >>> is_cv2_image(arr_invalid_w)
+    False
+
+    >>> # 测试9：3维数组但通道数为5（非cv2图片常见通道数）
+    >>> arr_bad_channel = np.random.randint(0, 255, (100, 200, 5), dtype=np.uint8)
+    >>> is_cv2_image(arr_bad_channel)
+    False
+
+    >>> # 测试10：4维数组（超出cv2图片维度范围）
+    >>> arr_4d = np.random.randint(0, 255, (2, 100, 200, 3), dtype=np.uint8)
+    >>> is_cv2_image(arr_4d)
+    False
+
+    >>> # 测试11：uint8数组但数值超出0-255（注：uint8本身会截断，此处用int32模拟异常）
+    >>> arr_bad_value = np.array([[256, -1]], dtype=np.int32)
+    >>> is_cv2_image(arr_bad_value)
+    False
+
+    >>> # 测试12：非NumPy数组（普通Python列表）
+    >>> arr_list = [[1, 2], [3, 4]]
+    >>> is_cv2_image(arr_list)
+    False
+
+    >>> # 测试13：float32类型数组（非cv2默认图片类型）
+    >>> arr_float = np.random.random((100, 200, 3)).astype(np.float32)
+    >>> is_cv2_image(arr_float)
+    False
+    """
+    # 1. 基础判断：是否为numpy.ndarray，且非空
+    if not isinstance(arr, np.ndarray):
+        return False
+    if arr.size == 0:
+        return False
+
+    # 2. 维度判断：只能是2维（灰度图）或3维（彩色/透明图）
+    dim = arr.ndim
+    if dim not in (2, 3):
+        return False
+
+    # 3. 形状合理性判断：高度、宽度均为正整数
+    h, w = arr.shape[0], arr.shape[1]
+    if h <= 0 or w <= 0:
+        return False
+
+    # 4. 3维时校验通道数（仅支持1/3/4通道，覆盖cv2图片主流场景）
+    if dim == 3:
+        c = arr.shape[2]
+        if c not in (1, 3, 4):
+            return False
+
+    # 5. 数据类型校验：仅支持cv2图片常见的uint8/uint16
+    if arr.dtype not in (np.uint8, np.uint16):
+        return False
+
+    # 6. 数值范围校验：匹配对应 dtype 的合法范围
+    if arr.dtype == np.uint8 and (arr.min() < 0 or arr.max() > 255):
+        return False
+    if arr.dtype == np.uint16 and (arr.min() < 0 or arr.max() > 65535):
+        return False
+
+    # 所有特征均符合
+    return True
+
+
+def cv2_img_to_bytesio(
+    img: np.ndarray, ext: str = ".jpg", params: list = None
+) -> io.BytesIO:
+    """
+    将 OpenCV 图像（numpy.ndarray）写入 io.BytesIO 字节流
+
+    Args:
+        img: OpenCV 图像数组（BGR 格式，numpy.ndarray）
+        ext: 图像格式后缀（如 .jpg/.png/.webp）
+        params: 编码参数（同 cv2.imwrite 的参数，如 [cv2.IMWRITE_JPEG_QUALITY, 95]）
+
+    Returns:
+        io.BytesIO: 包含图像字节数据的内存流
+
+    Raises:
+        ValueError: 图像编码失败时抛出
+    """
+    # 默认编码参数（JPG 质量 95，PNG 压缩级别 3）
+    if params is None:
+        if ext.lower() == ".jpg" or ext.lower() == ".jpeg":
+            params = [cv2.IMWRITE_JPEG_QUALITY, 95]
+        elif ext.lower() == ".png":
+            params = [cv2.IMWRITE_PNG_COMPRESSION, 3]
+
+    # 1. 编码图像为字节数组（cv2.imencode 返回 (是否成功, 编码后的字节数组)）
+    retval, img_buf = cv2.imencode(ext, img, params)
+    if not retval:
+        raise ValueError(f"图像编码失败，格式：{ext}")
+
+    # 2. 将字节数组写入 BytesIO
+    bytes_io = io.BytesIO()
+    bytes_io.write(img_buf.tobytes())  # 转成 Python 字节串后写入
+    bytes_io.seek(0)  # 重置指针到开头（方便后续读取）
+
+    return bytes_io
+
+def cv2jpg_b64(img: np.ndarray) -> str:
+    """
+    将 OpenCV 图像（numpy.ndarray）编码为 JPG 格式的 Base64 字符串
+
+    Args:
+        img: OpenCV 图像数组（BGR 格式，numpy.ndarray）
+
+    Returns:
+        str: JPG 格式的 Base64 字符串
+
+    Raises:
+        ValueError: 图像编码失败时抛出
+    """
+    bytes_io = cv2_img_to_bytesio(img, ext=".jpg")
+    return base64.b64encode(bytes_io.getvalue()).decode("utf-8")
+
+def b642cv2_jpg(data: str) -> np.ndarray:
+    """
+    将 JPG 格式的 Base64 字符串解码为 OpenCV 图像（numpy.ndarray）
+
+    作为 cv2jpg_b64 函数的反函数，解码后得到的图像为 BGR 格式（符合 OpenCV 标准）
+
+    Args:
+        data: JPG 格式的 Base64 编码字符串
+
+    Returns:
+        np.ndarray: OpenCV 图像数组（BGR 格式）
+
+    Raises:
+        ValueError: Base64 解码失败或 JPG 图像解码失败时抛出
+    """
+    try:
+        # 1. Base64 字符串解码为字节数据
+        img_bytes = base64.b64decode(data)
+    except base64.binascii.Error as e:
+        raise ValueError(f"Base64 解码失败：{str(e)}") from e
+
+    # 2. 将字节数据转换为 numpy 数组（cv2.imdecode 要求输入 uint8 类型的一维数组）
+    img_np = np.frombuffer(img_bytes, dtype=np.uint8)
+
+    # 3. 解码 JPG 字节数据为 OpenCV 图像（BGR 格式）
+    # cv2.IMREAD_COLOR：强制读取彩色图像（忽略透明度），返回 BGR 格式数组
+    img = cv2.imdecode(img_np, cv2.IMREAD_COLOR)
+
+    # 4. 检查解码是否成功（img 为 None 表示解码失败）
+    if img is None:
+        raise ValueError("JPG 图像解码失败，输入的 Base64 数据可能不是合法的 JPG 格式")
+
+    return img
 
 if __name__ == "__main__":
     import doctest
