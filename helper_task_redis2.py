@@ -41,6 +41,10 @@ class RedisTaskHandler:
 
     @classmethod
     def from_inner_json(cls):
+        """
+        {"host": "xxx", "port": 6379, "password": "xx", "db": 0}
+        :return:
+        """
         fpath = BASE_DIR / "queue_redis_json.cfg"
         with open(fpath, encoding="utf-8") as f:
             config = json.load(f)
