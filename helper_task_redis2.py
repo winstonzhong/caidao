@@ -133,6 +133,27 @@ class RedisTaskHandler:
         if task_data is not None:
             return json.loads(bz2.decompress(task_data)) if task_data is not None else None
 
+
+
+    def 设置Redis(self, task_key: str, d: dict, expire_seconds=1800):
+        buf = io.StringIO()
+        json.dump(d, buf)
+        data = buf.getvalue()
+        data = bz2.compress(data.encode())
+        result = self._get_conn().set(task_key, data)
+        if expire_seconds and result:
+            self._get_conn().expire(task_key, expire_seconds)
+        return result
+
+    def 获取Redis(self, 任务队列名称, 阻塞=False, 超时时间=0):
+        if 阻塞:
+            r = self._get_conn().blpop(任务队列名称, timeout=超时时间)
+            _, task_data = r if r is not None else None, None
+        else:
+            task_data = self._get_conn().get(任务队列名称)
+        if task_data is not None:
+            return json.loads(bz2.decompress(task_data)) if task_data is not None else None
+
     # 跨进程锁逻辑
     def 获取锁(self, lock_key):
         while self.has_tasks(lock_key):
