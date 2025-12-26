@@ -13,7 +13,15 @@ from uiautomator2.xpath import XPath, XMLElement
 
 from helper_hash import get_hash
 from tool_env import bounds_to_rect
-from tool_img import get_template_points, show, pil2cv2, cv2pil, b642cv2, cv2jpg_b64, is_cv2_image
+from tool_img import (
+    get_template_points,
+    show,
+    pil2cv2,
+    cv2pil,
+    b642cv2,
+    cv2jpg_b64,
+    is_cv2_image,
+)
 import image_hash_comparison
 from lxml import etree
 
@@ -862,8 +870,10 @@ class 基本任务(抽象持久序列):
     #     cls.集成的队列任务数据.setdefault(队列名称, []).append(队列数据)
 
     def 推入数据队列(self, **kwargs):
-        数据 = {k:v if not is_cv2_image(v) else cv2jpg_b64(v) for k,v in kwargs.items()}
-        数据['串口号'] = self.串口号
+        数据 = {
+            k: v if not is_cv2_image(v) else cv2jpg_b64(v) for k, v in kwargs.items()
+        }
+        数据["串口号"] = self.串口号
         return global_redis.推入数据队列(数据)
 
     @classmethod
@@ -1406,7 +1416,9 @@ class 基本任务(抽象持久序列):
         历史页 = 全局缓存.临时历史页
         当前页 = self.得到当前缓存页()
         当前页 = tool_pandas.将某列缺失时间向前补齐并每行自动加1秒(当前页, "时间")
-        当前页 = tool_wx_df3.截断已存储的历史部分(当前页, 全局缓存.最后历史时间, colname="时间")
+        当前页 = tool_wx_df3.截断已存储的历史部分(
+            当前页, 全局缓存.最后历史时间, colname="时间"
+        )
 
         df = tool_wx_df3.合并上下df(历史页, 当前页)
         df = tool_pandas.将某列缺失时间向前补齐并每行自动加1秒(df, "时间")
@@ -1508,6 +1520,9 @@ class 基本任务(抽象持久序列):
 
     def 打开豆包(self):
         self.打开应用("com.larus.nova", None)
+
+    def 元素转字符串(self, e):
+        return self.device.element2text(e)
 
 
 class 前置预检查任务(基本任务):

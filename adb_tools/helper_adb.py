@@ -32,7 +32,7 @@ from adb_tools.tool_xpath import find_by_xpath, SteadyDevice
 import helper_icmp
 from helper_net import retry
 from tool_cmd import 得到ADB连接状态
-from tool_env import OS_WIN, is_ipv4, is_string, bounds_to_center, first, last
+from tool_env import OS_WIN, is_ipv4, is_string, bounds_to_center, first, last, bounds_to_rect
 from tool_file import get_suffix
 from tool_img import (
     bin2img,
@@ -1990,8 +1990,12 @@ class BaseAdb(object):
         if half:
             end_y = end_y + (start_y - end_y) // 2
 
-        print(start_x, start_y, end_x, end_y)
+        # print(start_x, start_y, end_x, end_y)
         self.ua2.swipe(start_x, start_y, end_x, end_y, duration, steps)
+    
+    def 向上滑动控件(self, e):
+        rect = bounds_to_rect(e.bounds)
+        self.ua2.swipe(rect.center_x, rect.bottom, rect.center_x, rect.top)
 
     def 顶部下拉(self, duration=None, steps=None):
         w, h = self.get_sys_width_height()
