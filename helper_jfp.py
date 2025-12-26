@@ -67,9 +67,10 @@ class EncryptedAutoRoutingFilePersistence:
 
     def read(self) -> Optional[str]:
         """从本地读取文件或从服务器下载并解密"""
-        if os.path.exists(self.file_path):
+        file_path = self.file_path
+        if os.path.exists(file_path):
             # 文件存在，读取并解密
-            with open(self.file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, 'r', encoding='utf-8') as f:
                 encrypted_content = f.read()
             return self._decrypt(encrypted_content)
         else:
