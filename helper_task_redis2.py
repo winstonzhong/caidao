@@ -101,16 +101,6 @@ class RedisTaskHandler:
     def 清空当前数据库(self):
         return self._get_conn().flushdb()
 
-    def 推入Redis(self, task_key: str, d: dict, expire_seconds=1800):
-        buf = io.StringIO()
-        json.dump(d, buf)
-        data = buf.getvalue()
-        data = bz2.compress(data.encode())
-        result = self._get_conn().lpush(task_key, data)
-        if expire_seconds and result:
-            self._get_conn().expire(task_key, expire_seconds)
-        return result
-
     def has_tasks(self, task_key):
         return len(self._get_conn().lrange(task_key, 0, 0)) == 1
 
@@ -123,6 +113,17 @@ class RedisTaskHandler:
     # def 拉出Redis(self, task_key):
     #     a = self._get_conn().rpop(task_key)
     #     return json.loads(bz2.decompress(a)) if a is not None else None
+
+    def 推入Redis(self, task_key: str, d: dict, expire_seconds=1800):
+        buf = io.StringIO()
+        json.dump(d, buf)
+        data = buf.getvalue()
+        data = bz2.compress(data.encode())
+        result = self._get_conn().lpush(task_key, data)
+        if expire_seconds and result:
+            self._get_conn().expire(task_key, expire_seconds)
+        return result
+
 
     def 拉出Redis(self, 任务队列名称, 阻塞=False, 超时时间=0):
         if 阻塞:
