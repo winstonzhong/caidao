@@ -1519,7 +1519,7 @@ class 基本任务(抽象持久序列):
         return self.持久对象.获取其他记录(name)
 
     def 打开豆包(self):
-        self.打开应用("com.larus.nova", None)
+        self.打开应用("com.larus.nova", "com.larus.home.impl.MainActivity")
 
     def 元素转字符串(self, e):
         return self.device.element2text(e)
