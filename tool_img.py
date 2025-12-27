@@ -1205,7 +1205,6 @@ def get_bounding_dict_list_by_group(a, gap, x, y, max_width, max_height):
         for i in range(a.shape[0])
     ]
 
-
 def img2rgb_with_alpha(img, bgr=True, background=(255, 255, 255)):
     """
     将RGBA图像合成到指定背景上，生成RGB图像
