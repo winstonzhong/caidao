@@ -124,7 +124,6 @@ class RedisTaskHandler:
             self._get_conn().expire(task_key, expire_seconds)
         return result
 
-
     def 拉出Redis(self, 任务队列名称, 阻塞=False, 超时时间=0):
         if 阻塞:
             r = self._get_conn().blpop(任务队列名称, timeout=超时时间)
@@ -133,8 +132,6 @@ class RedisTaskHandler:
             task_data = self._get_conn().lpop(任务队列名称)
         if task_data is not None:
             return json.loads(bz2.decompress(task_data)) if task_data is not None else None
-
-
 
     def 设置Redis(self, task_key: str, d: dict, expire_seconds=1800):
         buf = io.StringIO()
@@ -148,7 +145,7 @@ class RedisTaskHandler:
 
     def 获取Redis(self, 任务队列名称, 阻塞=False, 超时时间=0):
         if 阻塞:
-            r = self._get_conn().blpop(任务队列名称, timeout=超时时间)
+            r = self._get_conn().get(任务队列名称, timeout=超时时间)
             _, task_data = r if r is not None else None, None
         else:
             task_data = self._get_conn().get(任务队列名称)
