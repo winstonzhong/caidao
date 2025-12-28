@@ -86,9 +86,9 @@ from douyin.tool_dy_score import (
     计算下一次运行等待秒数,
 )
 
-from helper_task_redis2 import RedisTaskHandler
+from helper_task_redis2 import GLOBAL_REDIS
 
-global_redis = RedisTaskHandler.from_inner_json()
+global_redis = GLOBAL_REDIS
 
 global_cache = tool_dict.PropDict()
 
@@ -1072,6 +1072,7 @@ class 基本任务(抽象持久序列):
 
             if 最大执行秒 > 0 and executed_seconds >= 最大执行秒:
                 print("达到最大执行秒，停止执行:", executed_seconds, 最大执行秒)
+                self.关闭应用()
                 raise ValueError(f"达到最大执行秒异常:{executed_seconds} {最大执行秒}")
 
             if not self.blocks:
