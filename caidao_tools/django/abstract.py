@@ -40,6 +40,8 @@ import pandas
 
 from douyin.tool_dy_score import 计算下一次运行等待秒数
 
+import tool_dict
+
 NEW_RECORD = 0
 DOWNLOADED_RECORD = 1
 PRODUCED_RECORD = 2
@@ -216,6 +218,10 @@ class BaseModel(models.Model):
 
     def 获取字段值(self, field: str, 弹出=False):
         return self.数据.get(field) if not 弹出 else self.数据.pop(field, None)
+
+    @property
+    def 配置数据(self):
+        return tool_dict.PropDictOfModel(self)
 
     def 变更间隔秒数(
         self, 每小时最多运行次数: int = 8, 两次运行最小间隔秒数=10 * 60, 间隔秒数=None

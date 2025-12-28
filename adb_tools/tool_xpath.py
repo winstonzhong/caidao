@@ -1524,6 +1524,10 @@ class 基本任务(抽象持久序列):
 
     def 元素转字符串(self, e):
         return self.device.element2text(e)
+    
+    @property
+    def 数据(self):
+        return self.持久对象.配置数据
 
 
 class 前置预检查任务(基本任务):

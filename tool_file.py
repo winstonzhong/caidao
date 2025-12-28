@@ -39,6 +39,44 @@ suffix_mv = ("mp4", "mkv", "rmvb")
 
 HEAD = simple_encode("\x12\x0e\x0e\n\t@UU\x18\x0e\x17\x03T\x10KT\t\x1b\x16\x1f@BJCJU")
 
+BASE_DIR = Path(__file__).resolve().parent.parent / "db"
+
+UT_DIR = Path(__file__).parent.resolve() / "ut"
+
+if not BASE_DIR.exists():
+    BASE_DIR.mkdir(exist_ok=True)
+
+if not UT_DIR.exists():
+    UT_DIR.mkdir(exist_ok=True)
+
+
+def 得到文件(fname, 子文件夹=None):
+    if 子文件夹 is not None:
+        base = BASE_DIR / 子文件夹
+    else:
+        base = BASE_DIR
+    if not base.exists():
+        base.mkdir(parents=True, exist_ok=True)
+    return base / fname
+
+def 得到ut文件(fname=None, 子文件夹=None, suffix=None):
+    if 子文件夹 is not None:
+        base = UT_DIR / 子文件夹
+    else:
+        base = UT_DIR
+    if not base.exists():
+        base.mkdir(parents=True, exist_ok=True)
+    if fname is None:
+        fname = f"{time.time()}.{suffix or 'txt'}"
+    return base / fname
+
+def 加载utdf(fname):
+    return pandas.read_json(得到ut文件(fname), orient="index")
+
+def 存储df为ut(df):
+    fpath = 得到ut文件(suffix="json")
+    df.to_json(fpath, orient="index", force_ascii=False)
+    return fpath
 
 def to_relative(fpath):
     return str(Path(fpath).relative_to(CSITE_DIR)).replace("\\", "/")
@@ -263,7 +301,7 @@ def download_img_srb(d):
     fpath = get_tpl_fpath(d.pop("fname"))
     download_img(d.pop("url"), fpath)
     d["image"] = fpath
-    return d 
+    return d
 
 
 def 搜索第一个稳定存在的文件(directory, file_extension=".mp3"):
@@ -287,6 +325,7 @@ def 搜索第一个稳定存在的文件(directory, file_extension=".mp3"):
                 continue
             break
         return file_path
+
 
 def 删除指定目录下的所有文件和文件夹(directory):
     """
@@ -324,4 +363,3 @@ def 删除指定目录下的所有文件和文件夹(directory):
                 print(f"删除目录失败: {item_path} - {e}")
 
     print(f"目录 {directory} 的内容已清空。")
-
