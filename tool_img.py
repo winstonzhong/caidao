@@ -17,7 +17,7 @@ from helper_net import get_with_random_agent
 from tool_rect import Rect
 from tool_env import is_string
 import numpy as np
-
+import tool_file
 
 # import matplotlib.pyplot as plt
 
@@ -1205,7 +1205,6 @@ def get_bounding_dict_list_by_group(a, gap, x, y, max_width, max_height):
         for i in range(a.shape[0])
     ]
 
-
 def img2rgb_with_alpha(img, bgr=True, background=(255, 255, 255)):
     """
     将RGBA图像合成到指定背景上，生成RGB图像
@@ -1654,6 +1653,13 @@ def b642cv2_jpg(data: str) -> np.ndarray:
         raise ValueError("JPG 图像解码失败，输入的 Base64 数据可能不是合法的 JPG 格式")
 
     return img
+
+def png2jpg(fpath, q=90):
+    jpeg_params = [int(cv2.IMWRITE_JPEG_QUALITY), q]
+    dst = tool_file.change_suffix(fpath, 'jpg')
+    cv2.imwrite(dst, cv2.imread(fpath), jpeg_params)
+    return dst
+
 
 if __name__ == "__main__":
     import doctest

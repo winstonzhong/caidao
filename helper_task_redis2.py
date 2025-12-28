@@ -110,10 +110,6 @@ class RedisTaskHandler:
     def clear_tasks(self, task_key):
         self._get_conn().delete(task_key)
 
-    # def 拉出Redis(self, task_key):
-    #     a = self._get_conn().rpop(task_key)
-    #     return json.loads(bz2.decompress(a)) if a is not None else None
-
     def 推入Redis(self, task_key: str, d: dict, expire_seconds=1800):
         buf = io.StringIO()
         json.dump(d, buf)
@@ -161,6 +157,8 @@ class RedisTaskHandler:
     def 释放锁(self, lock_key):
         self.clear_tasks(lock_key)
 
+
+GLOBAL_REDIS = RedisTaskHandler.from_inner_json()
 
 # ========== 使用示例 ==========
 if __name__ == "__main__":

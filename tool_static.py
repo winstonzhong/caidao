@@ -55,9 +55,37 @@ def upload_file(content, token, fname, project_name="default", keep_fname=False)
         "token": token,
         "url": url,
     }
-    data = requests.post(service_url, data=data, files=form_data).json()
-    result_url = data["data"].get("url")
-    return f"""https://file.j1.sale{result_url}""" if result_url else data
+    print('service_url:', service_url)
+    try:
+        # 先获取完整的响应对象，而不是直接链式调用.json()
+        response = requests.post(service_url, data=data, files=form_data)
+        
+        # 打印响应的基础信息，方便排查
+        print(f"响应状态码: {response.status_code}")
+        print(f"响应头部: {response.headers}")
+        
+        # 尝试解析 JSON
+        data = response.json()        
+        # data = requests.post(service_url, data=data, files=form_data).json()
+        result_url = data["data"].get("url")
+        return f"""https://file.j1.sale{result_url}""" if result_url else data
+    except requests.exceptions.JSONDecodeError as e:
+        # JSON 解析失败时，打印真实的返回内容
+        print("=" * 50)
+        print("JSON 解析失败！服务器真实返回内容：")
+        print("=" * 50)
+        print(response.text)  # 核心：输出原始响应文本
+        print("=" * 50)
+        # 可以选择返回原始内容，或者抛出异常，根据你的需求调整
+        return {
+            "error": "JSON 解析失败",
+            "status_code": response.status_code,
+            "raw_response": response.text
+        }
+    except Exception as e:
+        # 捕获其他可能的异常（如网络错误、KeyError 等）
+        print(f"其他错误发生: {str(e)}")
+        raise  # 也可以根据需求返回自定义错误信息    
 
 
 def upload_file_by_path(fpath, token, project_name="default", keep_fname=False):

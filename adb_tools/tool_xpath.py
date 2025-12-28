@@ -86,9 +86,9 @@ from douyin.tool_dy_score import (
     计算下一次运行等待秒数,
 )
 
-from helper_task_redis2 import RedisTaskHandler
+from helper_task_redis2 import GLOBAL_REDIS
 
-global_redis = RedisTaskHandler.from_inner_json()
+global_redis = GLOBAL_REDIS
 
 global_cache = tool_dict.PropDict()
 
@@ -1072,6 +1072,7 @@ class 基本任务(抽象持久序列):
 
             if 最大执行秒 > 0 and executed_seconds >= 最大执行秒:
                 print("达到最大执行秒，停止执行:", executed_seconds, 最大执行秒)
+                self.关闭应用()
                 raise ValueError(f"达到最大执行秒异常:{executed_seconds} {最大执行秒}")
 
             if not self.blocks:
@@ -1519,7 +1520,7 @@ class 基本任务(抽象持久序列):
         return self.持久对象.获取其他记录(name)
 
     def 打开豆包(self):
-        self.打开应用("com.larus.nova", None)
+        self.打开应用("com.larus.nova", "com.larus.home.impl.MainActivity")
 
     def 元素转字符串(self, e):
         return self.device.element2text(e)
