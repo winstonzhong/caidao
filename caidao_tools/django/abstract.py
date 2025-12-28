@@ -638,6 +638,7 @@ class 抽象定时任务(BaseModel):
             print(*a)
 
     def step(self, seconds_sleep_when_exception=1):
+        from selenium.common.exceptions import SessionNotCreatedException
         executed = False
         try:
             self.下载任务数据()
@@ -645,6 +646,9 @@ class 抽象定时任务(BaseModel):
                 self.print_info(f"开始执行任务:{self.名称} - {self.执行函数}")
                 executed = getattr(self, self.执行函数)()
             self.save()
+
+        except SessionNotCreatedException:
+            raise SessionNotCreatedException
 
         except Exception:
             print(traceback.format_exc())
