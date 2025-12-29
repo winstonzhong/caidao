@@ -1,6 +1,12 @@
 import pathlib
 
-base_dir = pathlib.Path(__file__).parent
+import helper_tpls
+import tool_img
+
+import tool_static
+
+
+BASE_DIR = pathlib.Path(__file__).parent
 
 CFG = {
     "测试微信客服": {
@@ -10,8 +16,10 @@ CFG = {
         "字数上限": 100,
         "会话提示词模版": "1766401795.1807850.3385.html",
     },
-    "月亮正在充电回复自己视频": {
+    "月亮正在充电回复自己视频的评论": {
+        "模版文件": "评论回复模版.html",
         "UP主昵称": "月亮正在充电",
+        "回复网友名": None,
         "语气风格": "中肯",
         "性格关键词": "活泼",
         "字数上限": 100,
@@ -103,14 +111,59 @@ CFG = {
 五、核心传播关键词（用于视频标签、评论区互动）
 商业的本质是诚信、买卖互惠互利、相互尊重相互便利、抵制不法平台、国家监管在行动、诚信经营、理性消费、正向维权、市场环境越来越好、共赢才是长久之道""",
     },
-    "月亮正在充电复评别人的评论": {
-        "UP主昵称": "月亮正在充电",
-        "语气风格": "中肯",
-        "性格关键词": "活泼",
-        "字数上限": 100,
-        "会话提示词模版": "复评模版.html",
-        "网友评论截图": None,
-    },
 }
 
 
+# fp = open('/mnt/56T/tmp/test.json', 'r')
+# 全局缓存.任务数据 = json.load(fp)
+# fp.close()
+# 全局缓存.任务数据['WX_NAME'] = '富贵杠上花'
+# 全局缓存.任务数据.update(性格关键词='活泼')
+# 全局缓存.任务数据.update(语气风格='中肯')
+# 全局缓存.任务数据.update(字数上限=100)
+# img_url = job.上传文件(tool_img.b642bin(全局缓存.任务数据.get('会话截图')), suffix='.jpg')
+# print(img_url)
+# 全局缓存.任务数据.update(会话截图=img_url)
+# url = 'https://file.j1.sale/api/file/2025-12-22/1766401795.1807850.3385.html'
+# html = helper_tpls.render_template_url_to_string(url, **全局缓存.任务数据)
+
+# url = job.上传文件(html)
+# print(f'''请严格根据链接中的提示词执行:
+# {url}''')
+
+
+def 获得模版(fname):
+    return BASE_DIR / fname.strip()
+
+
+def 渲染模版(fname, kwargs):
+    with open(获得模版(fname), encoding="utf-8") as f:
+        return helper_tpls.render_template_string_to_string(f.read(), kwargs)
+
+
+def 获得豆包提示词(d: dict):
+    """
+    获得豆包提示词 的 Docstring
+
+    :param d: 说明
+    :type d: dict
+
+    >>> 获得豆包提示词(d1)
+    """
+    cfg = CFG.get(d.pop("类型")).copy()
+    fname = cfg.pop("模版文件")
+    cfg["回复网友名"] = d.get("回复")
+    cfg["网友评论截图"] = d.get("截屏")
+    return 渲染模版(fname, cfg)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    d1 = {
+        "截屏": "https://file.j1.sale/api/file/tmp/2025-12-29/36f6b8e6-e48e-11f0-bfb6-0242ac120006.jpg",
+        "回复": "回复 @镜子（关注上限明日必关）",
+        "类型": "月亮正在充电回复自己视频的评论",
+    }
+
+    print(doctest.testmod(verbose=False, report=False))

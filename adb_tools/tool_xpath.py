@@ -21,6 +21,7 @@ from tool_img import (
     b642cv2,
     cv2jpg_b64,
     is_cv2_image,
+    cv2_img_to_bytesio,
 )
 import image_hash_comparison
 from lxml import etree
@@ -87,6 +88,8 @@ from douyin.tool_dy_score import (
 )
 
 from helper_task_redis2 import GLOBAL_REDIS
+
+from mobans import tool_moban_configs
 
 global_redis = GLOBAL_REDIS
 
@@ -534,25 +537,6 @@ class SteadyDevice(DummyDevice):
         return self.将手机文件上传56T(
             token=token, 手机端路径=self.remote_fpath_wx_images
         )
-        # if tool_static.is_inner():
-        #     fpath = self.adb.pull_lastest_file_until(
-        #         base_dir=self.remote_fpath_wx_images, to_56T=True
-        #     )
-        #     return tool_static.路径到链接(fpath)
-        # else:
-        #     """
-        #     下载该文件到本地
-        #     上传至56T
-        #     源文件移动至robot临时目录且按照56T链接返回的文件名(可选touch)
-        #     """
-        #     fpath = self.adb.pull_lastest_file_until(
-        #         base_dir=self.remote_fpath_wx_images, to_56T=False, clear_tmp_dir=True
-        #     )
-        #     url = tool_static.upload_file_by_path(fpath, token)
-        #     fname = url.split("/")[-1]
-        #     src = self.adb.get_latest_file(base_dir=self.remote_fpath_wx_images)
-        #     self.adb.move_file_to_robot_temp(src, fname)
-        #     return url
 
     def 下载微信图片并返回链接和唯一码_内网(self):
         fpath = self.adb.pull_lastest_file_until(
@@ -572,9 +556,6 @@ class SteadyDevice(DummyDevice):
 
         if url is None:
             url = tool_static.upload_file_by_path(fpath, token)
-            # fname = url.split("/")[-1]
-            # src = self.adb.get_latest_file(base_dir=self.remote_fpath_wx_images)
-            # self.adb.move_file_to_robot_temp(src, fname)
         return url, img_key
 
     def 下载微信图片并返回链接和唯一码(self, token):
@@ -592,10 +573,6 @@ class SteadyDevice(DummyDevice):
 
     def 点击并上传手机端微信图片(self, e, token):
         return self.点击并上传手机端文件(e, token, self.remote_fpath_wx_images)
-        # self.clear_remote_wx_images()
-        # e.click()
-        # time.sleep(1)
-        # return self.download_wx_image(token)
 
     def cut_wx_df(self, df):
         tmp = df[df.自己]
@@ -627,12 +604,6 @@ class SteadyDevice(DummyDevice):
     @property
     def xpath_更多信息_微信(self):
         return '//android.widget.ImageView[re:match(@text,"")][re:match(@content-desc,"聊天信息|更多信息")]'
-
-    # def 是否在会话页面(self):
-    #     # return self.has_xpath(self.xpath_更多信息)
-    #     return self.has_xpath(
-    #         '////android.widget.ImageView[re:match(@text,"")][re:match(@content-desc,"聊天信息|更多信息")]/../../../../..//android.widget.TextView[re:match(@text,".+")]'
-    #     )
 
     @property
     def 微信会话名称(self):
@@ -1524,10 +1495,20 @@ class 基本任务(抽象持久序列):
 
     def 元素转字符串(self, e):
         return self.device.element2text(e)
-    
+
     @property
     def 数据(self):
         return self.持久对象.配置数据
+
+    def 获取设备屏幕截图url(self):
+        img = self.device.adb.screen_shot()
+        content = cv2_img_to_bytesio(img, ".jpg").getvalue()
+        return self.上传文件(content, suffix=".jpg", project_name="tmp")
+
+    def 获得豆包提示词(self, d):
+        html_content = tool_moban_configs.获得豆包提示词(d)
+        url = self.上传文件(html_content)
+        return f'''请严格根据链接中的提示词执行:\n{url}'''
 
 
 class 前置预检查任务(基本任务):
