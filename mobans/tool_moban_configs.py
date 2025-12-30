@@ -1,3 +1,4 @@
+import re
 import pathlib
 
 import helper_tpls
@@ -141,6 +142,19 @@ def 渲染模版(fname, kwargs):
         return helper_tpls.render_template_string_to_string(f.read(), kwargs)
 
 
+def 处理回复网友名称(line: str):
+    """
+    处理回复网友名称 的 Docstring
+
+    :param line: 说明
+    :type line: str
+
+    >>> 处理回复网友名称("回复 @镜子（关注上限明日必关）")
+    '@镜子（关注上限明日必关）'
+    """
+    return re.sub(r"^回复\s*", "", line)
+
+
 def 获得豆包提示词(d: dict):
     """
     获得豆包提示词 的 Docstring
@@ -148,11 +162,11 @@ def 获得豆包提示词(d: dict):
     :param d: 说明
     :type d: dict
 
-    >>> 获得豆包提示词(d1)
+    #>>> 获得豆包提示词(d1)
     """
     cfg = CFG.get(d.pop("类型")).copy()
     fname = cfg.pop("模版文件")
-    cfg["回复网友名"] = d.get("回复")
+    cfg["回复网友名"] = 处理回复网友名称(d.get("回复"))
     cfg["网友评论截图"] = d.get("截屏")
     return 渲染模版(fname, cfg)
 
