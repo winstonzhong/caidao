@@ -845,7 +845,17 @@ def is_weekend(date=None) -> bool:
     return to_date(date or 今天()).weekday() >= 5
 
 
-
+# def 当前日期的带时区的0点时间(tdate=None):
+#     """
+#     当前日期的带时区的0点时间
+#     :return: 时间戳
+#     >>> 当前日期的带时区的0点时间()
+#     1695734400
+#     """
+#     tdate = tdate or 今天()
+#     naive_datetime = datetime.datetime.strptime(dash_date(tdate), "%Y-%m-%d")
+#     aware_datetime = timezone.make_aware(naive_datetime)
+#     return aware_datetime
 
 
 if __name__ == "__main__":

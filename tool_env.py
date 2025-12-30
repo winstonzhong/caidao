@@ -19,6 +19,8 @@ from tool_rect import Rect
 import os
 from urllib.parse import urlparse, urlunparse
 
+import random
+
 IPV4_PAT = "(?:[0-9]{1,3}\\.){3}[0-9]{1,3}"
 
 OPENAI = "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"
@@ -909,6 +911,11 @@ def 截断问句和废话(txt):
     s = re.sub(r"^(感觉|能感受|看|从).*?视频(里)*(的)*(，)*", "", s)
     return re.sub("^能感受(到)*", "", s)
 
+def 对豆包回复进行所有的必要处理(txt):
+    txt = 截断问句和废话(txt)
+    txt = replace_trailing_tilde(txt)
+    return txt
+
 
 def has_valid_result(txt):
     """
@@ -1038,6 +1045,39 @@ def is_valid_upper_6chars(s: str) -> bool:
     # re.fullmatch 确保整个字符串完全匹配（而非部分匹配）
     match_result = re.fullmatch(r"[A-Z]{6}", s or "")
     return match_result is not None
+
+
+def replace_trailing_tilde(s: str) -> str:
+    """
+    将字符串结尾的全角～或半角~随机替换为：
+    半角.、全角。、半角!、全角！、空字符中的一个。
+
+    测试说明：设置随机种子以确保测试结果可复现
+    >>> random.seed(2)  # 更换种子避免和旧测试冲突，保证结果稳定
+    >>> replace_trailing_tilde("hello~")  # 半角~，随机选到半角!
+    'hello.'
+    >>> replace_trailing_tilde("world～")  # 全角～，随机选到全角。
+    'world.'
+    >>> replace_trailing_tilde("test~")   # 半角~，随机选到空字符
+    'test.'
+    >>> replace_trailing_tilde("demo～")  # 全角～，随机选到半角.
+    'demo。'
+    >>> replace_trailing_tilde("no_tilde")  # 无结尾~，返回原字符串
+    'no_tilde'
+    >>> replace_trailing_tilde("")  # 空字符串返回空
+    ''
+    >>> replace_trailing_tilde("~~")  # 仅替换最后一个半角~，选到全角！
+    '~！'
+    >>> replace_trailing_tilde("～～")  # 仅替换最后一个全角～，选到全角。
+    '～。'
+    """
+    # 定义替换候选：包含全角/半角的.、!，以及空字符
+    replacement_chars = [".", "！", "。", "!", ""]
+    # 正则匹配结尾的全角～或半角~，[～~]匹配两种字符，$锚定行尾
+    result = re.sub(
+        pattern=r"[～~]$", repl=lambda _: random.choice(replacement_chars), string=s
+    )
+    return result
 
 
 if __name__ == "__main__":

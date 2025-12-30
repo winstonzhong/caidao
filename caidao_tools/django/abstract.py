@@ -577,10 +577,6 @@ class 抽象定时任务(BaseModel):
             not self.id or self.得到所有待执行的任务().filter(id__in=[self.id]).exists()
         )
 
-    # @property
-    # def 执行函数实例(self):
-    #     return getattr(self, self.执行函数)
-
     @classmethod
     def 构建所有待执行的任务查询字典(cls, **kwargs):
         _without_updated = kwargs.pop("_without_updated", None)
@@ -606,16 +602,45 @@ class 抽象定时任务(BaseModel):
         now = timezone.localtime(timezone.now())
         return now.replace(hour=hour, minute=minute, second=second)
 
+    # @classmethod
+    # def 得到所有待执行的任务(cls, **kwargs):
+    #     exclude = kwargs.pop("_exclude", "")
+    #     if "id" not in kwargs:
+    #         q = cls.objects.filter(
+    #             *cls.编写起止参数集合(), **cls.构建所有待执行的任务查询字典(**kwargs)
+    #         )
+    #     else:
+    #         q = cls.objects.filter(id=kwargs["id"])
+    #     return q if not exclude else q.exclude(id__in=exclude.strip().split(","))
+    
     @classmethod
     def 得到所有待执行的任务(cls, **kwargs):
-        exclude = kwargs.pop("_exclude", "")
-        if "id" not in kwargs:
-            q = cls.objects.filter(
-                *cls.编写起止参数集合(), **cls.构建所有待执行的任务查询字典(**kwargs)
+        # exclude = kwargs.pop("_exclude", "")
+        kwargs = kwargs.copy()
+        不考虑任务时间因素 = kwargs.pop("不考虑任务时间因素", None)
+        if not 不考虑任务时间因素:
+            kwargs["update_time__lte"] = timezone.now() - ExpressionWrapper(
+                Value(datetime.timedelta(seconds=1)) * F("间隔秒"),
+                output_field=DurationField(),
+            )
+
+            t = timezone.localtime().time()
+            a = (
+                Q(begin_time__isnull=True) | Q(begin_time__lte=t),
+                Q(end_time__isnull=True) | Q(end_time__gte=t),
             )
         else:
-            q = cls.objects.filter(id=kwargs["id"])
-        return q if not exclude else q.exclude(id__in=exclude.strip().split(","))
+            a = ()
+
+        kwargs["激活"] = True
+        # if "id" not in kwargs:
+        #     q = cls.objects.filter(
+        #         *cls.编写起止参数集合(), **cls.构建所有待执行的任务查询字典(**kwargs)
+        #     )
+        # else:
+        #     q = cls.objects.filter(id=kwargs["id"])
+        # return q if not exclude else q.exclude(id__in=exclude.strip().split(","))
+        return cls.objects.filter(*a, **kwargs)
 
     @classmethod
     def 动态初始化(cls, **kwargs):
