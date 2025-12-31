@@ -835,10 +835,14 @@ class 基本任务(抽象持久序列):
         self.last_executed_block_id = None
         self.cache = tool_dict.PropDict()
         self.remote_obj = 0
+        self.old_time = time.time()
 
     # @classmethod
     # def 推入总队列(cls, 队列名称, 队列数据):
     #     cls.集成的队列任务数据.setdefault(队列名称, []).append(队列数据)
+    @property
+    def 当前运行秒数(self):
+        return round((time.time() - self.old_time), 0)
 
     def 推入数据队列(self, **kwargs):
         数据 = {

@@ -824,7 +824,23 @@ def is_contains_question(text: str) -> bool:
     return re.search(question_pattern, text)
 
 
-def 查找并截断(text: str, target_puncts: str = "～~。？！?!"):
+def 查找并截断(
+    text: str, target_puncts: str = "～~。？！?!", is_question_search_mode=False
+):
+    """
+    截断文本，返回截断后的文本。
+
+    参数：
+    - text: 待截断的文本
+    - target_puncts: 截断的标点列表，默认为"～~。？！?!", 表示截断到最后一个"～~。？！?!",
+    - is_question_search_mode: 是否以问号结尾的搜索模式，默认为False
+    >>> 查找并截断("视频里“又刷到我了吧？这就是命，你躲都躲不掉”这句话特别有梗，带着点小俏皮的调侃感，像朋友间的轻松互动，让人看了忍不住会心一笑，很有日常打发时间的欢乐氛围～不知道你是觉得这句文案很有趣，还是也喜欢这种轻松好玩的对口型视频风格呀？	", "？?", is_question_search_mode=True)
+    '视频里“又刷到我了吧？这就是命，你躲都躲不掉”这句话特别有梗，带着点小俏皮的调侃感，像朋友间的轻松互动，让人看了忍不住会心一笑，很有日常打发时间的欢乐氛围～不知道你是觉得这句文案很有趣，还是也喜欢这种轻松好玩的对口型视频风格呀？'
+    >>> 查找并截断("视频里“又刷到我了吧？这就是命，你躲都躲不掉”这句话特别有梗，带着点小俏皮的调侃感，像朋友间的轻松互动，让人看了忍不住会心一笑，很有日常打发时间的欢乐氛围～", "？?", is_question_search_mode=True)
+    '这就是命，你躲都躲不掉”这句话特别有梗，带着点小俏皮的调侃感，像朋友间的轻松互动，让人看了忍不住会心一笑，很有日常打发时间的欢乐氛围～'
+    """
+    
+    # is_question_search_mode = '?' in target_puncts
     last_punct_idx = -1
     for punct in target_puncts:
         current_idx = text.rfind(punct)
@@ -832,7 +848,16 @@ def 查找并截断(text: str, target_puncts: str = "～~。？！?!"):
             last_punct_idx = current_idx
             break
 
-    return text[: last_punct_idx + 1] if last_punct_idx != -1 else text
+    # return text[: last_punct_idx + 1] if last_punct_idx != -1 else text
+    if last_punct_idx == -1:
+        return text
+
+    if len(text) * 0.5 < last_punct_idx or not is_question_search_mode:
+        return text[: last_punct_idx + 1]
+
+    return text[last_punct_idx + 1 :]
+
+    # return text[: last_punct_idx + 1] if last_punct_idx != -1 else text
 
 
 def truncate_at_last_punct_if_question(text: str) -> str:
@@ -843,7 +868,7 @@ def truncate_at_last_punct_if_question(text: str) -> str:
     >>> truncate_at_last_punct_if_question("这是第一段。这是第二段？")  # 最后标点是。
     '这是第一段。'
     >>> truncate_at_last_punct_if_question("测试1？测试2！   ")  # 末尾带空白，最后标点是？
-    '测试1'
+    '测试2！'
     >>> truncate_at_last_punct_if_question("示例！结尾是？")  # 最后标点是！
     '示例！'
     >>> truncate_at_last_punct_if_question("半角!结尾？")  # 半角!匹配
@@ -862,9 +887,15 @@ def truncate_at_last_punct_if_question(text: str) -> str:
     '这个视频还, 于。'
     >>> truncate_at_last_punct_if_question("看这个视频特别有中式韵味！感觉这个视频里的串门氛围好轻松呀")
     '看这个视频特别有中式韵味！感觉这个视频里的串门氛围好轻松呀'
+    >>> truncate_at_last_punct_if_question("视频里“又刷到我了吧？这就是命，你躲都躲不掉”这句话特别有梗，带着点小俏皮的调侃感，像朋友间的轻松互动，让人看了忍不住会心一笑，很有日常打发时间的欢乐氛围～不知道你是觉得这句文案很有趣，还是也喜欢这种轻松好玩的对口型视频风格呀？	")
+    '这就是命，你躲都躲不掉”这句话特别有梗，带着点小俏皮的调侃感，像朋友间的轻松互动，让人看了忍不住会心一笑，很有日常打发时间的欢乐氛围'
+    >>> truncate_at_last_punct_if_question("视频里“串门了都在家吗？在家的吱一声”的招呼特别热情，配上那句笑声，像邻里间热络的互动，一下子就拉近距离，特别有生活里的热闹劲儿～ 不过我有点好奇，你平时和朋友邻居串门，会不会也像这样用轻松的方式打招呼呀？或者视频里有没有哪个小细节让你觉得特别有意思呀？	")
+    '在家的吱一声”的招呼特别热情，配上那句笑声，像邻里间热络的互动，一下子就拉近距离，特别有生活里的热闹劲儿'
     """
     while is_contains_question(text):
-        text = 查找并截断(text, "？?")[:-1]
+        text = 查找并截断(text, "？?", is_question_search_mode=True)[:-1]
+        if is_endswith_question(text):
+            text = text[:-1]
         text = 查找并截断(text)
     return text.strip()
 
@@ -911,9 +942,18 @@ def 截断问句和废话(txt):
     s = re.sub(r"^(感觉|能感受|看|从).*?视频(里)*(的)*(，)*", "", s)
     return re.sub("^能感受(到)*", "", s)
 
+
 def 对豆包回复进行所有的必要处理(txt):
+    '''
+    对豆包回复进行所有的必要处理 的 Docstring
+    
+    :param txt: 说明
+    >>> 对豆包回复进行所有的必要处理("视频里的对话好有烟火气呀！听着像在和老朋友聊天一样！你平时玩这个游戏时，最喜欢和里面的哪个角色互动呀？")
+    '对话好有烟火气呀！听着像在和老朋友聊天一样！'
+    '''
     txt = 截断问句和废话(txt)
     txt = replace_trailing_tilde(txt)
+    txt = re.sub(r"^(视频里)的{0,1}", "", txt)
     return txt
 
 

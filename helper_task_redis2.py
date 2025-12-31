@@ -74,7 +74,7 @@ class RedisTaskHandler:
     def 拉出Redis(self, 任务队列名称, 阻塞=False, 超时时间=0):
         if 阻塞:
             r = self._get_conn().blpop(任务队列名称, timeout=超时时间)
-            _, task_data = r if r is not None else None, None
+            task_data = r[1] if r is not None else None
         else:
             task_data = self._get_conn().lpop(任务队列名称)
         if task_data is not None:
