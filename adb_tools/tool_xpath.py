@@ -95,6 +95,8 @@ global_redis = GLOBAL_REDIS
 
 global_cache = tool_dict.PropDict()
 
+global_rom = tool_dict.PropDict()
+
 全局缓存 = global_cache
 
 全局队列 = global_redis
