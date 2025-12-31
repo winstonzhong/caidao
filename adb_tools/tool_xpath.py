@@ -36,6 +36,8 @@ import numpy
 
 import lxml
 
+import tool_file
+
 from functools import cached_property
 
 import tool_pandas
@@ -1182,9 +1184,10 @@ class 基本任务(抽象持久序列):
         self.device.adb.page_up(randomize=模拟人工, half=是否一半翻)
 
     def 读取文件内容(self, fname):
-        with open(fname, "r") as fp:
-            content = fp.read()
-        return content
+        return tool_file.得到文件(fname).read_text()
+        # with open(fname, "r") as fp:
+        #     content = fp.read()
+        # return content
 
     def 处理提示词(self, prompt):
         if prompt.strip().startswith("<!DOCTYPE html>"):
