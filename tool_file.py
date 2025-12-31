@@ -39,6 +39,8 @@ suffix_mv = ("mp4", "mkv", "rmvb")
 
 HEAD = simple_encode("\x12\x0e\x0e\n\t@UU\x18\x0e\x17\x03T\x10KT\t\x1b\x16\x1f@BJCJU")
 
+CUR_DIR = Path(__file__).resolve().parent
+
 BASE_DIR = Path(__file__).resolve().parent.parent / "db"
 
 UT_DIR = Path(__file__).parent.resolve() / "ut"
@@ -50,14 +52,17 @@ if not UT_DIR.exists():
     UT_DIR.mkdir(exist_ok=True)
 
 
-def 得到文件(fname, 子文件夹=None):
+def 得到文件(fname, 子文件夹=None, 当前目录=False):
+    root = CUR_DIR if 当前目录 else BASE_DIR
+
     if 子文件夹 is not None:
-        base = BASE_DIR / 子文件夹
+        base = root / 子文件夹
     else:
-        base = BASE_DIR
+        base = root
     if not base.exists():
         base.mkdir(parents=True, exist_ok=True)
     return base / fname
+
 
 def 得到ut文件(fname=None, 子文件夹=None, suffix=None):
     if 子文件夹 is not None:
@@ -70,13 +75,16 @@ def 得到ut文件(fname=None, 子文件夹=None, suffix=None):
         fname = f"{time.time()}.{suffix or 'txt'}"
     return base / fname
 
+
 def 加载utdf(fname):
     return pandas.read_json(得到ut文件(fname), orient="index")
+
 
 def 存储df为ut(df):
     fpath = 得到ut文件(suffix="json")
     df.to_json(fpath, orient="index", force_ascii=False)
     return fpath
+
 
 def to_relative(fpath):
     return str(Path(fpath).relative_to(CSITE_DIR)).replace("\\", "/")

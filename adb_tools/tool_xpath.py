@@ -1184,7 +1184,7 @@ class 基本任务(抽象持久序列):
         self.device.adb.page_up(randomize=模拟人工, half=是否一半翻)
 
     def 读取文件内容(self, fname):
-        return tool_file.得到文件(fname).read_text()
+        return tool_file.得到文件(fname, 当前目录=True).read_text()
         # with open(fname, "r") as fp:
         #     content = fp.read()
         # return content
