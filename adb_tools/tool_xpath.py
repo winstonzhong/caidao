@@ -26,6 +26,8 @@ from tool_img import (
 import image_hash_comparison
 from lxml import etree
 
+import tool_time
+
 import functools
 
 import json
@@ -87,6 +89,7 @@ from douyin.tool_dy_score import (
     精确获取文本中的数字,
     计算评论价值评分,
     计算下一次运行等待秒数,
+    计算视频价值评分,
 )
 
 from helper_task_redis2 import GLOBAL_REDIS
