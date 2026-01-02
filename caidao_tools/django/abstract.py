@@ -221,7 +221,7 @@ class BaseModel(models.Model):
 
     @property
     def 配置数据(self):
-        return tool_dict.PropDictOfModel(self)
+        return tool_dict.模型的便捷属性字典(self)
 
     def 变更间隔秒数(
         self, 每小时最多运行次数: int = 8, 两次运行最小间隔秒数=10 * 60, 间隔秒数=None

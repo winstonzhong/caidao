@@ -213,7 +213,7 @@ class PropDictOfModel(PropDict):
         self._model_instance.save()
 
 
-class FixedLengthQueueOfModel(object):
+class 模型的定长先入先出队列(object):
     """
     从object继承的定长先入先出（FIFO）队列类。
     当队列达到设定的最大长度时，添加新元素会自动删除最早加入的元素。
@@ -221,7 +221,7 @@ class FixedLengthQueueOfModel(object):
 
     示例:
     >>> # 基础功能测试
-    >>> q = FixedLengthQueueOfModel(3, DummyModel(), '定长队列')
+    >>> q = 模型的定长先入先出队列(3, DummyModel(), '定长队列')
     >>> q.enqueue(1)
     >>> q.enqueue(2)
     >>> q.enqueue(3)
@@ -231,7 +231,7 @@ class FixedLengthQueueOfModel(object):
     >>> q.list
     [2, 3, 4]
     >>> # 测试最大长度为1的边界场景
-    >>> q2 = FixedLengthQueueOfModel(1, DummyModel(), '定长队列')
+    >>> q2 = 模型的定长先入先出队列(1, DummyModel(), '定长队列')
     >>> q2.enqueue(10)
     >>> q2.list
     [10]
@@ -239,7 +239,7 @@ class FixedLengthQueueOfModel(object):
     >>> q2.list
     [20]
     >>> # 场景2：初始list长度等于max_length
-    >>> q4 = FixedLengthQueueOfModel(4, q._model_instance, '定长队列')
+    >>> q4 = 模型的定长先入先出队列(4, q._model_instance, '定长队列')
     >>> q4.list
     [2, 3, 4]
     >>> q4._model_instance.数据.get('定长队列')
@@ -287,27 +287,27 @@ class FixedLengthQueueOfModel(object):
         if item not in self.list:
             self.list.append(item)
         self.save()
-    
+
     def clear(self):
         self.list.clear()
         self.save()
 
 
-class PropDictOfModel2(object):
+class 模型的便捷属性字典(object):
     def __init__(self, model_instance, 定长队列长度=100):
         """
         :param model_instance:
-        >>> pd = PropDictOfModel2(DummyModel())
+        >>> pd = 模型的便捷属性字典(DummyModel())
         >>> pd._model_instance is not None
         True
         >>> '_model_instance' in pd._model_instance.数据
         False
         """
         super().__setattr__("_model_instance", model_instance)
-        # self.update(model_instance.数据)
-        # self["定长队列"] = FixedLengthQueue(
-        #     max_length=定长队列长度, initial_data=self.定长队列 or []
-        # )
+        定长队列 = 模型的定长先入先出队列(
+            定长队列长度, model_instance, keyname="定长队列"
+        )
+        super().__setattr__("定长队列", 定长队列)
 
     def __getattr__(self, name):
         return self._model_instance.数据.get(name)
@@ -317,7 +317,12 @@ class PropDictOfModel2(object):
         >>> dm = DummyModel()
         >>> dm.数据.get('aaa')
         1
-        >>> pd = PropDictOfModel2(dm)
+        >>> pd = 模型的便捷属性字典(dm)
+        >>> dm.数据
+        {'aaa': 1, 'bbb': 2, '定长队列': []}
+        >>> pd.定长队列.enqueue(1)
+        >>> dm.数据
+        {'aaa': 1, 'bbb': 2, '定长队列': [1]}
         >>> pd.aaa = 2
         >>> dm.数据.get('aaa')
         2
