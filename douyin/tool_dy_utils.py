@@ -1,5 +1,7 @@
 import pandas as pd
 import re
+import tool_time
+import numpy as np
 
 def 网友评论解析(line: str) -> list[dict]:
     """
@@ -35,13 +37,18 @@ def 网友评论解析(line: str) -> list[dict]:
     (0, 447, 1080, 709)
     >>> # 测试4：带表情的评论内容
     >>> line4 = "花木蓝的头像 花木蓝 评论了你: 我也不知道有啥用[大笑][大笑] 23分钟前 回复评论 回复,按钮 赞 赞,按钮 (0, 622, 1080, 1136)"
-    >>> 网友评论解析(line4)['评论内容']
+    >>> d = 网友评论解析(line4)
+    >>> d['评论内容']
     '我也不知道有啥用[大笑][大笑]'
+    >>> d["是否需回复"]
+    True
     >>> # 测试5：作者回复的场景
     >>> line5 = "花木蓝的头像 花木蓝 作者 回复: 是的，人间烟火气息[大笑] 32分钟前 回复评论 回复,按钮 赞 赞,按钮 (0, 1379, 1080, 1711)"
     >>> res5 = 网友评论解析(line5)
     >>> res5['网友名称'], res5['评论内容']
     ('花木蓝', '是的，人间烟火气息[大笑]')
+    >>> res5['是否需回复']
+    False
     >>> # 测试6：名称含特殊字符的场景
     >>> line6 = "农村阿娟带娃记（新人起步）的头像 农村阿娟带娃记（新人起步） 赞了你的评论 7分钟前 (0, 1195, 1080, 1438)"
     >>> 网友评论解析(line6)['网友名称']
@@ -50,6 +57,8 @@ def 网友评论解析(line: str) -> list[dict]:
     >>> line7 = "花木蓝的头像 花木蓝 赞了你的图文 23分钟前 (0, 1136, 1080, 1379)"
     >>> 网友评论解析(line7)['评论内容']
     ''
+    >>> 网友评论解析(line7)['是否需回复']
+    False
     """
     # 初始化返回结果
 
@@ -67,9 +76,10 @@ def 网友评论解析(line: str) -> list[dict]:
     text_without_bounds = bounds_pattern.sub("", line).strip()
 
     # 1. 提取网友名称：匹配"的头像"后的名称（直到遇到粉丝/作者/赞了/评论了你/回复:等关键词）
-    name_pattern = re.compile(
-        r"的头像\s+([^(\s+粉丝|\s+作者|\s+赞了|\s+评论了你|\s+回复:)]+)"
-    )
+    # name_pattern = re.compile(
+    #     r"的头像\s+([^(\s+粉丝|\s+作者|\s+赞了|\s+评论了你|\s+回复:)]+)"
+    # )
+    name_pattern = re.compile(r"(.+?)的头像")
     name_match = name_pattern.search(text_without_bounds)
     网友名称 = name_match.group(1).strip() if name_match else ""
 
@@ -86,28 +96,38 @@ def 网友评论解析(line: str) -> list[dict]:
         评论内容 = ""
 
     # 3. 判断是否需要回复：精确匹配"回复评论 回复,按钮"
-    是否需回复 = "回复评论 回复,按钮" in text_without_bounds
+    是否需回复 = (
+        "回复评论 回复,按钮" in text_without_bounds and content_match1 is not None
+    )
 
     # 构建结果字典并添加到列表
     return {
-            "网友名称": 网友名称,
-            "评论内容": 评论内容,
-            "是否需回复": 是否需回复,
-            "left": left,
-            "top": top,
-            "right": right,
-            "bottom": bottom,
+        "网友名称": 网友名称,
+        "评论内容": 评论内容,
+        "是否需回复": 是否需回复,
+        "left": left,
+        "top": top,
+        "right": right,
+        "bottom": bottom,
     }
+
 
 def 网友评论提取(job, results: list):
     data = []
-    for  e in results:
-        line = f'{job.元素转字符串(e)}, {e.bounds}'
+    for e in results:
+        line = f"{job.元素转字符串(e)}, {e.bounds}"
+        # print(line)
         d = 网友评论解析(line)
-        d['e'] = e
-        d['是否需回复'] = False if not d.get('是否需回复') else d.get('网友名称') not in job.数据.定长队列
+        d["e"] = e
+        d['秒数'] = tool_time.从字符串提取时间并转为秒(line, np.nan)[0]
+        d["是否需回复"] = (
+            False
+            if not d.get("是否需回复")
+            else d.get("网友名称") not in job.数据.定长队列
+        )
         data.append(d)
     return pd.DataFrame(data)
+
 
 # 运行doctest单元测试
 if __name__ == "__main__":

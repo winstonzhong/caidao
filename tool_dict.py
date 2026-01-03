@@ -321,6 +321,14 @@ class 模型的定长先入先出队列(object):
 
     def __len__(self):
         return len(self.list)
+    
+    @property
+    def last(self):
+        """
+        获取队列中的最后一个元素
+        """
+        data = self.list
+        return data[-1] if data else None
 
 
 class 模型的便捷属性字典(object):

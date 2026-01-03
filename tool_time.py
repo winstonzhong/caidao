@@ -809,7 +809,7 @@ def 中文时长描述转小时数(描述, 保留小数点位数=None):
 
 #     # 非当天时间（昨天/星期）返回-1秒
 #     return -1
-def 从字符串提取时间并转为秒(txt: str) -> tuple[int, str]:
+def 从字符串提取时间并转为秒(txt: str, max_seconds=86400) -> tuple[int, str]:
     """
     从字符串中提取"回复评论 回复"前的时间信息并转换为秒数，非当天时间统一返回-1秒，同时返回去掉时间部分后的字符串。
 
@@ -897,7 +897,7 @@ def 从字符串提取时间并转为秒(txt: str) -> tuple[int, str]:
     match = re.search(pattern, txt)
     if not match:
         # 无匹配时返回-1和原字符串
-        return 86400, txt
+        return max_seconds, txt
 
     time_str = match.group(1)
     # 移除匹配到的时间字符串（仅替换第一次出现，避免误删）
@@ -918,7 +918,7 @@ def 从字符串提取时间并转为秒(txt: str) -> tuple[int, str]:
         return int(hour_match.group(1)) * 3600, processed_txt
 
     # 非当天时间（昨天/星期）返回-1和处理后的字符串
-    return 86400, processed_txt
+    return max_seconds, processed_txt
 
 if __name__ == "__main__":
     import doctest

@@ -96,6 +96,8 @@ from douyin import tool_dy_utils
 
 from helper_task_redis2 import GLOBAL_REDIS
 
+import helper_task_redis2
+
 from mobans import tool_moban_configs
 
 global_redis = GLOBAL_REDIS
@@ -780,7 +782,7 @@ class 操作块(基本输入字段对象):
         if ignore_status or (not job.status and not self.only_when):
             状态正确 = True
         else:
-            状态正确 = job.status == self.only_when
+            状态正确 = (job.status == self.only_when) or (self.only_when == "*")
         for tpl in self.tpls:
             if 状态正确:
                 tpl.match(job)
@@ -1549,8 +1551,11 @@ class 基本任务列表(抽象持久序列):
 
             try:
                 main_job.执行前置检查操作块()
-                # print(self.jobs)
-                for job in self.jobs:
+                if global_cache.不执行前置任务:
+                    jobs = self.jobs[-1:]
+                else:
+                    jobs = self.jobs
+                for job in jobs:
                     num_executed += job.执行任务(单步=False)
             except 任务预检查不通过异常:
                 pass
