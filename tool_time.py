@@ -885,10 +885,13 @@ def 从字符串提取时间并转为秒(txt: str) -> tuple[int, str]:
     18000
     >>> r[1]
     '老玩童,赞了你的评论 ，,按钮'
+    >>> r = 从字符串提取时间并转为秒("花木蓝,作者，回复: 是的，人间烟火气息[大笑][大笑][大笑] 刚刚，,按钮")
+    >>> r[0]
+    0
     """
     # 正则模式：匹配"回复评论 回复"前的时间部分
     # 覆盖：分钟前/小时前/昨天(含时分)/中文星期
-    pattern = r"((?:\d+分钟前|\d+小时前|昨天(?:\s+\d{2}:\d{2})?))\s*"
+    pattern = r"((?:\d+分钟前|\d+小时前|\s+刚刚|昨天(?:\s+\d{2}:\d{2})?))\s*"
 
     # 搜索匹配的时间字符串
     match = re.search(pattern, txt)
@@ -899,6 +902,10 @@ def 从字符串提取时间并转为秒(txt: str) -> tuple[int, str]:
     time_str = match.group(1)
     # 移除匹配到的时间字符串（仅替换第一次出现，避免误删）
     processed_txt = txt.replace(time_str, "", 1)
+
+    if '刚刚' in time_str:
+        return 0, processed_txt
+
 
     # 处理"分钟前"场景
     minute_match = re.search(r"(\d+)分钟前", time_str)

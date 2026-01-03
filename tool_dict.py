@@ -4,6 +4,8 @@ Created on 2024年7月24日
 @author: lenovo
 """
 
+import time
+
 
 class FixedLengthQueue(list):
     """
@@ -247,6 +249,10 @@ class 模型的定长先入先出队列(object):
     >>> q4.enqueue(5)
     >>> q4._model_instance.数据.get('定长队列')
     [2, 3, 4, 5]
+    >>> q5 = 模型的定长先入先出队列(3, DummyModel(), '定长队列')
+    >>> q5.enqueue({'aaa': 1})
+    >>> q5.list[0].get('时间') > 0
+    True
     """
 
     def __init__(self, max_length, model_instance, keyname):
@@ -285,12 +291,36 @@ class 模型的定长先入先出队列(object):
         if len(self.list) >= self.max_length:
             self.list.pop(0)
         if item not in self.list:
+            if isinstance(item, dict):
+                item.update({"时间": int(time.time())})
             self.list.append(item)
         self.save()
 
     def clear(self):
         self.list.clear()
         self.save()
+
+    def __contains__(self, item):
+        """
+        __contains__ 的 Docstring
+
+        :param self: 说明
+        :param item: 说明
+        >>> q = 模型的定长先入先出队列(3, DummyModel(), '定长队列')
+        >>> 1 in q
+        False
+        >>> q.enqueue(1)
+        >>> 1 in q
+        True
+        >>> 2 in q
+        False
+        >>> len(q)
+        1
+        """
+        return item in self.list
+
+    def __len__(self):
+        return len(self.list)
 
 
 class 模型的便捷属性字典(object):
@@ -307,7 +337,9 @@ class 模型的便捷属性字典(object):
         定长队列 = 模型的定长先入先出队列(
             定长队列长度, model_instance, keyname="定长队列"
         )
+        数据记录 = 模型的定长先入先出队列(5000, model_instance, keyname="数据记录")
         super().__setattr__("定长队列", 定长队列)
+        super().__setattr__("数据记录", 数据记录)
 
     def __getattr__(self, name):
         return self._model_instance.数据.get(name)
@@ -319,10 +351,10 @@ class 模型的便捷属性字典(object):
         1
         >>> pd = 模型的便捷属性字典(dm)
         >>> dm.数据
-        {'aaa': 1, 'bbb': 2, '定长队列': []}
+        {'aaa': 1, 'bbb': 2, '定长队列': [], '数据记录': []}
         >>> pd.定长队列.enqueue(1)
         >>> dm.数据
-        {'aaa': 1, 'bbb': 2, '定长队列': [1]}
+        {'aaa': 1, 'bbb': 2, '定长队列': [1], '数据记录': []}
         >>> pd.aaa = 2
         >>> dm.数据.get('aaa')
         2
@@ -342,7 +374,7 @@ class 模型的便捷属性字典(object):
         self.save()
 
     def pop(self, key, default=None):
-        rtn = super().pop(key, default)
+        rtn = self._model_instance.数据.pop(key, default)
         self.save()
         return rtn
 

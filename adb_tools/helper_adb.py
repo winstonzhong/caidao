@@ -1992,10 +1992,13 @@ class BaseAdb(object):
 
         # print(start_x, start_y, end_x, end_y)
         self.ua2.swipe(start_x, start_y, end_x, end_y, duration, steps)
-    
+
     def 向上滑动控件(self, e):
         rect = bounds_to_rect(e.bounds)
         self.ua2.swipe(rect.center_x, rect.bottom, rect.center_x, rect.top)
+    
+    def 滑动(self, 起始点, 结束点, duration=None, steps=None, 模拟人工=False):
+        pass
 
     def 顶部下拉(self, duration=None, steps=None):
         w, h = self.get_sys_width_height()

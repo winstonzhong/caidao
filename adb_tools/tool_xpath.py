@@ -92,6 +92,8 @@ from douyin.tool_dy_score import (
     计算视频价值评分,
 )
 
+from douyin import tool_dy_utils
+
 from helper_task_redis2 import GLOBAL_REDIS
 
 from mobans import tool_moban_configs
