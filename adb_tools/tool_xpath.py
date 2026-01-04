@@ -1522,9 +1522,55 @@ class 基本任务(抽象持久序列):
         return self.上传文件(content, suffix=".jpg", project_name="tmp")
 
     def 获得豆包提示词(self, d):
-        html_content = tool_moban_configs.获得豆包提示词(d)
-        url = self.上传文件(html_content)
-        return f'''请严格根据链接中的提示词执行:\n{url}'''
+        content, 直接使用 = tool_moban_configs.获得豆包提示词(d)
+        if not 直接使用:
+            url = self.上传文件(content)
+            return f"""请严格根据链接中的提示词执行:\n{url}"""
+        return content
+
+    @property
+    def 剪贴板(self):
+        return self.device.adb.ua2.clipboard
+
+    @property
+    def 返回队列(self):
+        return f"豆包队列_{self.串口号}"
+
+    def 从剪贴板获取回复(self):
+        history = self.数据.数据记录.list[-5:]
+        # print('--------', history)
+        history = [f"{i+1}: {x.get('修正评论')}" for i, x in enumerate(history) if x]
+        history = "\n".join(history)
+
+        data = {
+            "类型": "获取视频内容",
+            "url": tool_dy_utils.提取链接(self.剪贴板)[0],
+            "返回队列": self.返回队列,
+        }
+        # 全局队列.推入Redis(self.返回队列, data)
+        全局队列.推入Redis("豆包队列", data)
+        d = 全局队列.拉出Redis(self.返回队列, True, 5 * 60)
+        print(d)
+        视频内容 = d.get("结果") if d else None
+
+        if tool_dy_utils.是否无内容(视频内容):
+            return None
+
+        data = {
+            "类型": "主动评价模版",
+            "视频内容": 视频内容,
+            "历史回复": history,
+            "返回队列": self.返回队列,
+        }
+        print(data)
+        全局队列.推入Redis("豆包队列", data)
+        d = 全局队列.拉出Redis(self.返回队列, True, 5 * 60)
+        结果 = d.get("结果") if d else None
+
+        if tool_dy_utils.是否无内容(结果):
+            return None
+
+        return 结果
 
 
 class 前置预检查任务(基本任务):

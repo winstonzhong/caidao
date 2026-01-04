@@ -3,6 +3,7 @@ import re
 import tool_time
 import numpy as np
 
+
 def 网友评论解析(line: str) -> list[dict]:
     """
     解析单行网友评论文本，提取关键信息并返回字典列表
@@ -119,7 +120,7 @@ def 网友评论提取(job, results: list):
         # print(line)
         d = 网友评论解析(line)
         d["e"] = e
-        d['秒数'] = tool_time.从字符串提取时间并转为秒(line, np.nan)[0]
+        d["秒数"] = tool_time.从字符串提取时间并转为秒(line, np.nan)[0]
         d["是否需回复"] = (
             False
             if not d.get("是否需回复")
@@ -128,6 +129,44 @@ def 网友评论提取(job, results: list):
         data.append(d)
     return pd.DataFrame(data)
 
+
+def 提取链接(txt: str) -> list:
+    """
+    从输入文本中提取所有HTTP/HTTPS协议的链接
+
+    Doctest单元测试用例：
+    >>> 提取链接('1.76 复制打开抖音，看看【河马包包的菜园的作品】昭昭如愿，岁岁安澜# 热门 # 抖音美食推荐官 #... https://v.douyin.com/XrmRMhEVlbk/ 11/20 z@t.eb lcN:/ ')
+    ['https://v.douyin.com/XrmRMhEVlbk/']
+    >>> 提取链接('无链接的纯文本内容')
+    []
+    >>> 提取链接('多个链接测试：https://www.baidu.com 测试内容 https://www.google.com/index.html 结尾')
+    ['https://www.baidu.com', 'https://www.google.com/index.html']
+    >>> 提取链接('http开头的链接：http://example.com/123 abc')
+    ['http://example.com/123']
+    """
+    # 正则表达式模式：匹配http/https开头，直到遇到空白字符为止的所有字符
+    # https? 匹配http或https；:// 匹配协议后的固定分隔符；[^\s]+ 匹配任意非空白字符（直到空格结束）
+    link_pattern = r"https?://[^\s]+"
+
+    # 查找所有匹配的链接，返回列表
+    matched_links = re.findall(link_pattern, txt)
+
+    return matched_links
+
+def 是否无内容(txt: str):
+    '''
+    是否无内容 的 Docstring
+
+    :param txt: 说明
+    :type txt: str
+    >>> 是否无内容('由于未提供具体短视频内容，无法生成精准评论~')
+    True
+    >>> 是否无内容(None)
+    True
+    >>> 是否无内容('内容')
+    False
+    '''
+    return re.search('(无法生成|链接)', txt) is not None if txt else True
 
 # 运行doctest单元测试
 if __name__ == "__main__":

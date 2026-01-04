@@ -288,6 +288,8 @@ class 模型的定长先入先出队列(object):
         参数:
             item: 要加入队列的任意类型元素
         """
+        if item is None:
+            return
         if len(self.list) >= self.max_length:
             self.list.pop(0)
         if item not in self.list:

@@ -188,7 +188,8 @@ class BaseModel(models.Model):
 
     @property
     def df_数据记录(self):
-        df = pandas.DataFrame(self.数据.get("数据记录", []))
+        data = self.数据.get("数据记录", [])
+        df = pandas.DataFrame(filter(lambda x: x is not None, data))
         return df if df.empty else df.sort_values(by="时间")
 
     def 写入数据记录字典(self, d: dict):
@@ -221,7 +222,7 @@ class BaseModel(models.Model):
 
     @property
     def 配置数据(self):
-        return tool_dict.模型的便捷属性字典(self)
+        return tool_dict.模型的便捷属性字典(self, 30)
 
     def 变更间隔秒数(
         self, 每小时最多运行次数: int = 8, 两次运行最小间隔秒数=10 * 60, 间隔秒数=None

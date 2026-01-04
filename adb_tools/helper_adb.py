@@ -1997,6 +1997,10 @@ class BaseAdb(object):
         rect = bounds_to_rect(e.bounds)
         self.ua2.swipe(rect.center_x, rect.bottom, rect.center_x, rect.top)
     
+    def 向左滑动控件(self, e):
+        rect = bounds_to_rect(e.bounds)
+        self.ua2.swipe(rect.right, rect.center_y, rect.left, rect.center_y)
+    
     def 滑动(self, 起始点, 结束点, duration=None, steps=None, 模拟人工=False):
         pass
 
