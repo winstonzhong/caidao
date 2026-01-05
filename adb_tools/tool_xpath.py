@@ -1536,16 +1536,60 @@ class 基本任务(抽象持久序列):
     def 返回队列(self):
         return f"豆包队列_{self.串口号}"
 
-    def 从剪贴板获取回复(self):
-        history = self.数据.数据记录.list[-5:]
-        # print('--------', history)
-        history = [f"{i+1}: {x.get('修正评论')}" for i, x in enumerate(history) if x]
+    def 获取最近n条历史(self, n=5):
+        history = self.数据.数据记录.list[-n:]
+        history = [
+            f"{i+1}: {x.get('修正评论')}"
+            for i, x in enumerate(history)
+            if x and x.get("修正评论")
+        ]
         history = "\n".join(history)
+        return history
+
+    @property
+    def 传输队列字典(self):
+        return {
+            "返回队列": self.返回队列,
+        }
+
+    def 从截图获取回复(self):
+        # 返回队列 = f"豆包队列_{job.串口号}"
+        # data = {"截屏":url,"回复":e.text, "类型":类型,"返回队列": 返回队列}
+        # 全局队列.推入Redis("豆包队列", data)
+        # d = 全局队列.拉出Redis(返回队列, True, 5 * 60)
+        c = self.device.find_xpath_first(
+            '//androidx.viewpager.widget.ViewPager[@text=""][@content-desc="视频"]'
+        )
+        # return c
+        封面文字描述 = self.device.element2text(c)
+        # 全局缓存.数据记录字典
+        全局缓存.数据记录字典 = {'页面内容':封面文字描述}
+        data = {
+            "类型": "主动评价模版_图文",
+            "封面文字描述": 封面文字描述,
+            "历史回复": self.获取最近n条历史(5),
+            # "返回队列": self.返回队列,
+            "视频截图": self.获取设备屏幕截图url(),
+            **self.传输队列字典,
+        }
+        print(data)
+        全局队列.推入Redis("豆包队列", data)
+        d = 全局队列.拉出Redis(self.返回队列, True, 5 * 60)
+        结果 = d.get("结果") if d else None
+        return 结果
+
+    def 从剪贴板获取回复(self):
+        # history = self.数据.数据记录.list[-5:]
+        # # print('--------', history)
+        # history = [f"{i+1}: {x.get('修正评论')}" for i, x in enumerate(history) if x and x.get('修正评论')]
+        # history = "\n".join(history)
+        history = self.获取最近n条历史(5)
 
         data = {
             "类型": "获取视频内容",
             "url": tool_dy_utils.提取链接(self.剪贴板)[0],
-            "返回队列": self.返回队列,
+            # "返回队列": self.返回队列,
+            **self.传输队列字典,
         }
         # 全局队列.推入Redis(self.返回队列, data)
         全局队列.推入Redis("豆包队列", data)
@@ -1569,8 +1613,28 @@ class 基本任务(抽象持久序列):
 
         if tool_dy_utils.是否无内容(结果):
             return None
-
         return 结果
+
+    def 组装评论数据并变更任务状态(self, 结果):
+        print('获得的回复结果:', 结果)
+        if not 结果:
+            self.status = '结束本轮'
+            self.持久对象.变更间隔秒数(间隔秒数=1)
+        else:
+            全局缓存.数据记录字典['原始评论'] = 结果
+            print('---------------------------------')
+            全局缓存.数据记录字典['修正评论'] = 修正评论 = tool_env.对豆包回复进行所有的必要处理(结果)
+            print(修正评论)
+            print('---------------------------------')
+            全局缓存.数据记录字典['合法'] = tool_env.has_valid_result(修正评论)
+            self.数据.数据记录.enqueue(全局缓存.数据记录字典)
+            if 全局缓存.数据记录字典['合法']:
+                self.status = '开始评论'
+            else:
+                self.status = '结束本轮'
+                self.持久对象.变更间隔秒数(间隔秒数=1)
+
+
 
 
 class 前置预检查任务(基本任务):
