@@ -1559,8 +1559,7 @@ class 基本任务(抽象持久序列):
         }
 
     def 推入通用豆包任务队列(self, data: dict):
-        data = self.获得豆包提示词队列数据(data)
-        print(data)
+        data = self.获得豆包提示词队列数据(data.copy())
         全局队列.推入Redis("豆包队列", data)
         d = 全局队列.拉出Redis(self.返回队列, True, 5 * 60)
         结果 = d.get("结果") if d else None
@@ -1691,8 +1690,62 @@ class 基本任务(抽象持久序列):
                 self.持久对象.变更间隔秒数(间隔秒数=1)
                 return False
 
+    # def 组装评论数据并变更任务状态(self, 结果):
+    #     print("获得的回复结果:", 结果)
+    #     if not 结果:
+    #         # self.status = "结束本轮"
+    #         # self.持久对象.变更间隔秒数(间隔秒数=1)
+    #         return False
+    #     else:
+    #         全局缓存.数据记录字典 = {}
+    #         全局缓存.数据记录字典["原始评论"] = 结果
+    #         print("---------------------------------")
+    #         全局缓存.数据记录字典["修正评论"] = 修正评论 = (
+    #             tool_env.对豆包回复进行所有的必要处理(结果)
+    #         )
+    #         print(修正评论)
+    #         print("---------------------------------")
+    #         全局缓存.数据记录字典["合法"] = tool_env.has_valid_result(修正评论)
+    #         # self.数据.数据记录.enqueue(全局缓存.数据记录字典)
+    #         if 全局缓存.数据记录字典["合法"]:
+    #             self.status = "开始评论"
+    #             return True
+    #         else:
+    #             self.status = "结束本轮"
+    #             self.持久对象.变更间隔秒数(间隔秒数=1)
+    #             return False
+
+
     def 根据文字描述以及截图获取回复并组装结果且改变任务状态(self):
         return self.组装评论数据并变更任务状态(self.根据文字描述以及截图获取回复())
+        # 全局缓存.数据记录字典 = {}
+        # 全局缓存.数据记录字典["原始评论"] = 结果
+        # print("---------------------------------")
+        # 全局缓存.数据记录字典["修正评论"] = 修正评论 = (
+        #     tool_env.对豆包回复进行所有的必要处理(结果)
+        # )
+        # print(修正评论)
+        # print("---------------------------------")
+        # 全局缓存.数据记录字典["合法"] = tool_env.has_valid_result(修正评论)
+
+        # self.数据.数据记录.enqueue(全局缓存.数据记录字典)
+
+
+    def 根据字典数据获取回复并组装结果且改变任务状态(self, d: dict):
+        结果 = self.推入通用豆包任务队列(d)
+        d['原始'] = 结果
+        d['修正'] = 结果 = tool_env.对豆包回复进行所有的必要处理(结果)
+        d['合法'] = tool_env.has_valid_result(结果)
+        self.数据.数据记录.enqueue(d)
+        return 结果 if d['合法'] else None
+        # if d.get('合法'):
+        #     e.click()
+        #     time.sleep(1)
+        #     job.输入(结果)
+        #     job.status = "点击回复发送"
+        # else:
+        #     job.status = '回退至互动页'
+        
 
 
 class 前置预检查任务(基本任务):
