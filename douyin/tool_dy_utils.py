@@ -207,6 +207,100 @@ def 是否为图文视频(txt: str) -> bool:
     return match_result is not None
 
 
+def 提取点赞与评论数(txt: str) -> tuple[int, int]:
+    """
+    从混合文本中提取点赞数（喜欢后接的数字）和评论数（评论后接的数字）
+
+    单元测试示例：
+    >>> 提取点赞与评论数("关注 私信，按钮 大漠雄鹰 未点赞，喜欢597，按钮 597 评论447，按钮 评论447，按钮 447 未选中，收藏收藏")
+    (597, 447)
+    """
+    # 正则匹配"喜欢"后紧跟的数字（捕获组提取数字部分）
+    like_match = re.search(r"喜欢(\d+)，按钮", txt)
+    点赞数 = int(like_match.group(1)) if like_match else 0
+
+    # 正则匹配"评论"后紧跟的数字（捕获组提取数字部分）
+    comment_match = re.search(r"评论(\d+)，按钮", txt)
+    评论数 = int(comment_match.group(1)) if comment_match else 0
+
+    return 点赞数, 评论数
+
+
+def has_interaction_keywords(text):
+    """
+    检测输入文本中是否包含指定的互动类关键词中的任意一个。
+
+    指定关键词列表：串门 互粉 窜门 互助 互关 互赞 互访 回关
+    匹配规则：严格匹配完整关键词（区分全角/半角、空格分隔等），只要包含任意一个即返回True。
+
+    参数:
+        text (str): 需要检测的文本字符串（空字符串会返回False）
+
+    返回:
+        bool: 包含任意一个关键词返回True，否则返回False
+
+    示例:
+    >>> has_interaction_keywords("我来串门了，有空一起聊")  # 包含"串门"
+    True
+    >>> has_interaction_keywords("互粉互关，一起涨粉")  # 包含"互粉"+"互关"
+    True
+    >>> has_interaction_keywords("窜门的朋友请留步")  # 包含"窜门"（注意和"串门"的区别）
+    True
+    >>> has_interaction_keywords("大家互相帮助，互助共赢")  # 包含"互助"
+    True
+    >>> has_interaction_keywords("点赞后记得回关哦")  # 包含"回关"
+    True
+    >>> has_interaction_keywords("互赞一下，谢谢啦！")  # 包含"互赞"（带标点）
+    True
+    >>> has_interaction_keywords("有空互相访问，互访增加活跃度")  # 包含"互访"
+    True
+    >>> has_interaction_keywords("今天天气不错，适合出门散步")  # 无任何关键词
+    False
+    >>> has_interaction_keywords("")  # 空文本
+    False
+    >>> has_interaction_keywords("关键词是互粉吗？是的")  # 关键词在句子中间
+    True
+    >>> has_interaction_keywords("回关")  # 仅包含单个关键词
+    True
+    >>> has_interaction_keywords("记得互助！")  # 关键词带感叹号
+    True
+    >>> has_interaction_keywords("我想要互访，你愿意吗？")  # 关键词在句子中
+    True
+    >>> has_interaction_keywords("串门和窜门都算吗？算的")  # 包含两个相似关键词
+    True
+    >>> has_interaction_keywords("互 粉 这样分开的不算")  # 关键词被空格分隔，不匹配
+    False
+    >>> has_interaction_keywords("互芬（错别字）不算")  # 关键词错别字，不匹配
+    False
+    >>> has_interaction_keywords("回 关")  # 关键词拆分，不匹配
+    False
+    >>> has_interaction_keywords('、伙伴计划 发布者：@墨墨妈(有关必回)，配文“每天进步一点点，终会成功!姐妹们一起加油!”')
+    True
+    """
+    # 定义需要检测的核心关键词列表（严格按用户要求）
+    interaction_keywords = [
+        "串门",
+        "互粉",
+        "窜门",
+        "互助",
+        "互关",
+        "互赞",
+        "互访",
+        "回关",
+        "有关必回",
+        "伙伴计划",
+    ]
+
+    # 遍历关键词列表，检查是否有任意一个出现在文本中
+    # 一旦匹配到立即返回True，提升执行效率
+    for keyword in interaction_keywords:
+        if keyword in text:
+            return True
+
+    # 未匹配到任何关键词，返回False
+    return False
+
+
 # 运行doctest单元测试
 if __name__ == "__main__":
     import doctest

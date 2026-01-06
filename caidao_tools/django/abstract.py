@@ -191,6 +191,14 @@ class BaseModel(models.Model):
         data = self.数据.get("数据记录", [])
         df = pandas.DataFrame(filter(lambda x: x is not None, data))
         return df if df.empty else df.sort_values(by="时间")
+    
+    @property
+    def df_发送记录(self):
+        df = self.df_数据记录
+        if df.empty:
+            return df
+        return df[(df.合法) & ~df.修正评论.isna()]
+       
 
     def 写入数据记录字典(self, d: dict):
         records = self.数据.setdefault("数据记录", [])
@@ -231,7 +239,7 @@ class BaseModel(models.Model):
             self.间隔秒 = 间隔秒数
         else:
             self.间隔秒 = 计算下一次运行等待秒数(
-                df=self.df_数据记录,
+                df=self.df_发送记录,
                 两次运行最小间隔秒数=两次运行最小间隔秒数,
                 每小时最多运行次数=每小时最多运行次数,
             )

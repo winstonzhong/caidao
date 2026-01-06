@@ -1528,6 +1528,12 @@ class 基本任务(抽象持久序列):
             return f"""请严格根据链接中的提示词执行:\n{url}"""
         return content
 
+    def 获得豆包提示词队列数据(self, d):
+        return {
+            "提示词": self.获得豆包提示词(d),
+            **self.传输队列字典,
+        }
+
     @property
     def 剪贴板(self):
         return self.device.adb.ua2.clipboard
@@ -1552,37 +1558,82 @@ class 基本任务(抽象持久序列):
             "返回队列": self.返回队列,
         }
 
-    def 从截图获取回复(self):
-        # 返回队列 = f"豆包队列_{job.串口号}"
-        # data = {"截屏":url,"回复":e.text, "类型":类型,"返回队列": 返回队列}
-        # 全局队列.推入Redis("豆包队列", data)
-        # d = 全局队列.拉出Redis(返回队列, True, 5 * 60)
-        c = self.device.find_xpath_first(
-            '//androidx.viewpager.widget.ViewPager[@text=""][@content-desc="视频"]'
-        )
-        # return c
-        封面文字描述 = self.device.element2text(c)
-        # 全局缓存.数据记录字典
-        全局缓存.数据记录字典 = {'页面内容':封面文字描述}
-        data = {
-            "类型": "主动评价模版_图文",
-            "封面文字描述": 封面文字描述,
-            "历史回复": self.获取最近n条历史(5),
-            # "返回队列": self.返回队列,
-            "视频截图": self.获取设备屏幕截图url(),
-            **self.传输队列字典,
-        }
+    def 推入通用豆包任务队列(self, data: dict):
+        data = self.获得豆包提示词队列数据(data)
         print(data)
         全局队列.推入Redis("豆包队列", data)
         d = 全局队列.拉出Redis(self.返回队列, True, 5 * 60)
         结果 = d.get("结果") if d else None
         return 结果
 
+    def 提取设备屏幕截图信息(self):
+        data = {
+            "类型": "提取图片信息_直接",
+            "url": self.获取设备屏幕截图url(),
+        }
+        return self.推入通用豆包任务队列(data)
+
+    def 根据模版提取设备屏幕截图信息(self):
+        data = {
+            "类型": "提取图片信息_模版",
+            "视频截图": self.获取设备屏幕截图url(),
+        }
+        return self.推入通用豆包任务队列(data)
+
+    def 根据文字描述以及截图获取回复(self):
+        c = self.device.find_xpath_first(
+            '//androidx.viewpager.widget.ViewPager[@text=""][@content-desc="视频"]'
+        )
+        封面文字描述 = self.device.element2text(c)
+
+        # x1, x2 = tool_dy_utils.提取点赞与评论数(封面文字描述)
+
+        # print(f"点赞:{x1}, 评论数: {x2}")
+
+        # if numpy.any(numpy.array([x1, x2]) > 2000):
+        #     return None
+
+        # 截图描述 = self.根据模版提取设备屏幕截图信息()
+        截图描述 = self.提取设备屏幕截图信息()
+
+        文字描述 = "\n".join([封面文字描述, 截图描述])
+
+        data = {
+            "类型": "主动评价模版_纯文字_串门",
+            "封面文字描述": 文字描述,
+            "合法": tool_dy_utils.has_interaction_keywords(文字描述),
+        }
+
+        self.数据.数据记录.enqueue(data)
+
+        return self.推入通用豆包任务队列(data) if data.get("合法") else None
+
+    def 从截图获取回复(self, 模版名="主动评价模版_图文"):
+        c = self.device.find_xpath_first(
+            '//androidx.viewpager.widget.ViewPager[@text=""][@content-desc="视频"]'
+        )
+        封面文字描述 = self.device.element2text(c)
+        全局缓存.数据记录字典 = {"页面内容": 封面文字描述}
+        data = {
+            "类型": 模版名,
+            "封面文字描述": 封面文字描述,
+            "历史回复": self.获取最近n条历史(5),
+            # "返回队列": self.返回队列,
+            "视频截图": self.获取设备屏幕截图url(),
+            # **self.传输队列字典,
+        }
+        print(data)
+        data = self.获得豆包提示词队列数据(data)
+        print(data)
+        全局队列.推入Redis("豆包队列", data)
+        d = 全局队列.拉出Redis(self.返回队列, True, 5 * 60)
+        结果 = d.get("结果") if d else None
+        return 结果
+
+    def 从截图获取回复_串门(self):
+        return self.从截图获取回复(模版名="主动评价模版_图文_串门")
+
     def 从剪贴板获取回复(self):
-        # history = self.数据.数据记录.list[-5:]
-        # # print('--------', history)
-        # history = [f"{i+1}: {x.get('修正评论')}" for i, x in enumerate(history) if x and x.get('修正评论')]
-        # history = "\n".join(history)
         history = self.获取最近n条历史(5)
 
         data = {
@@ -1616,25 +1667,32 @@ class 基本任务(抽象持久序列):
         return 结果
 
     def 组装评论数据并变更任务状态(self, 结果):
-        print('获得的回复结果:', 结果)
+        print("获得的回复结果:", 结果)
         if not 结果:
-            self.status = '结束本轮'
+            self.status = "结束本轮"
             self.持久对象.变更间隔秒数(间隔秒数=1)
+            return False
         else:
-            全局缓存.数据记录字典['原始评论'] = 结果
-            print('---------------------------------')
-            全局缓存.数据记录字典['修正评论'] = 修正评论 = tool_env.对豆包回复进行所有的必要处理(结果)
+            全局缓存.数据记录字典 = {}
+            全局缓存.数据记录字典["原始评论"] = 结果
+            print("---------------------------------")
+            全局缓存.数据记录字典["修正评论"] = 修正评论 = (
+                tool_env.对豆包回复进行所有的必要处理(结果)
+            )
             print(修正评论)
-            print('---------------------------------')
-            全局缓存.数据记录字典['合法'] = tool_env.has_valid_result(修正评论)
+            print("---------------------------------")
+            全局缓存.数据记录字典["合法"] = tool_env.has_valid_result(修正评论)
             self.数据.数据记录.enqueue(全局缓存.数据记录字典)
-            if 全局缓存.数据记录字典['合法']:
-                self.status = '开始评论'
+            if 全局缓存.数据记录字典["合法"]:
+                self.status = "开始评论"
+                return True
             else:
-                self.status = '结束本轮'
+                self.status = "结束本轮"
                 self.持久对象.变更间隔秒数(间隔秒数=1)
+                return False
 
-
+    def 根据文字描述以及截图获取回复并组装结果且改变任务状态(self):
+        return self.组装评论数据并变更任务状态(self.根据文字描述以及截图获取回复())
 
 
 class 前置预检查任务(基本任务):
