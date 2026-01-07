@@ -1559,11 +1559,22 @@ class 基本任务(抽象持久序列):
         }
 
     def 推入通用豆包任务队列(self, data: dict):
-        data = self.获得豆包提示词队列数据(data.copy())
-        全局队列.推入Redis("豆包队列", data)
+        d = self.获得豆包提示词队列数据(data)
+        全局队列.推入Redis("豆包队列", d)
+        data.update(d)
         d = 全局队列.拉出Redis(self.返回队列, True, 5 * 60)
         结果 = d.get("结果") if d else None
+        # data.update(d)
         return 结果
+
+    # def 推入通用豆包任务队列(self, data: dict):
+    #     data = self.获得豆包提示词队列数据(data.copy())
+    #     全局队列.推入Redis("豆包队列", data)
+    #     d = 全局队列.拉出Redis(self.返回队列, True, 5 * 60)
+    #     结果 = d.get("结果") if d else None
+    #     return 结果
+
+
 
     def 提取设备屏幕截图信息(self):
         data = {

@@ -6,6 +6,8 @@ Created on 2024年7月24日
 
 import time
 
+import pandas
+
 
 class FixedLengthQueue(list):
     """
@@ -398,6 +400,9 @@ class 模型的便捷属性字典(object):
     def save(self):
         self._model_instance.save()
 
+
+class 模型的定长数据帧(object):
+    pass
 
 if __name__ == "__main__":
     import doctest
