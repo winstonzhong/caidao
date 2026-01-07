@@ -6,7 +6,9 @@ Created on 2024年7月24日
 
 import time
 
-import pandas
+import pandas as pd
+
+import io
 
 
 class FixedLengthQueue(list):
@@ -396,13 +398,73 @@ class 模型的便捷属性字典(object):
         if need_save:
             self.save()
         return rtn
+    
+    def get(self, key, default=None):
+        return self._model_instance.数据.get(key, default)
 
     def save(self):
         self._model_instance.save()
 
 
-class 模型的定长数据帧(object):
-    pass
+    def __getitem__(self, key):
+        """重载 obj[key] 获取值的逻辑
+        >>> dm = DummyModel()
+        >>> pd = 模型的便捷属性字典(dm)
+        >>> pd.aaa == pd['aaa']
+        True
+        """
+        return self._model_instance.数据.get(key)
+
+    def __setitem__(self, key, value):
+        """重载 obj[key] = value 设置值的逻辑
+        >>> dm = DummyModel()
+        >>> pd = 模型的便捷属性字典(dm)
+        >>> pd.aaa
+        1
+        >>> pd['aaa'] = 2
+        >>> pd.aaa
+        2
+        >>> dm.数据.get('aaa')
+        2
+        """
+        self._model_instance.数据[key] = value
+
+    def get_session_df(self, name):
+        return 模型的定长数据帧(self, name)
+
+
+class 模型的定长数据帧(pd.DataFrame):
+    # 定义元数据列表，保存自定义属性名，确保pandas操作后属性不丢失
+    _metadata = ['_mdict', '_key_name']
+
+    def __init__(self, mdict, name):
+        # 步骤1：处理数据——从mdict读取JSON并转为DataFrame
+        self._key_name = f'df__{name}'  # 先定义key（无冲突，可提前）
+        try:
+            # json_str = mdict[self._key_name]
+            # json_str = mdict.setdefault(self._key_name, '{}')
+            json_str = mdict.get(self._key_name)
+            # 将JSON字符串转为DataFrame
+            df_data = pd.read_json(io.StringIO(json_str)) if json_str else pd.DataFrame()
+        except KeyError as e:
+            raise KeyError(f"mdict中未找到key: {self._key_name}") from e
+        except Exception as e:
+            raise ValueError(f"JSON数据解析失败: {e}") from e
+
+        # 步骤2：调用父类构造器，将处理后的DataFrame数据传入
+        # 直接将df_data的数据传给父类，完成实例初始化
+        super().__init__(data=df_data)
+
+        # 步骤3：设置自定义属性（父类初始化后再赋值）
+        self._mdict = mdict
+
+    # 可选：重写__finalize__方法，确保属性继承（pandas子类化规范）
+    def __finalize__(self, other, method=None, **kwargs):
+        """确保自定义属性在pandas操作（如切片）后传递给新对象"""
+        for name in self._metadata:
+            setattr(self, name, getattr(other, name, None))
+        return super().__finalize__(other, method=method, **kwargs)
+
 
 if __name__ == "__main__":
     import doctest
