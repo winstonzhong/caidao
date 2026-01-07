@@ -995,6 +995,7 @@ class 解析器(object):
         dl = filter(lambda x: x.是否合法容器(忽略顶部探头=忽略顶部探头), self.elements)
         dl = map(lambda x: x.容器字典, dl)
         df = pandas.DataFrame(data=dl)
+        df['容器key'] = get_hash_df(df)
         return df
 
     def 是否包含顶部探头容器(self):

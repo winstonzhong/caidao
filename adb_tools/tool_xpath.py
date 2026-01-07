@@ -1175,7 +1175,7 @@ class 基本任务(抽象持久序列):
         self.status = "完成"
 
     def 点击(self, el, offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
-        if isinstance(el, tuple):
+        if isinstance(el, tuple) or isinstance(el, list):
             self.device.click(*el)
         else:
             self.device.click_element(el, offset_x, offset_y, abs_x, abs_y)
@@ -1717,38 +1717,38 @@ class 基本任务(抽象持久序列):
     #             self.持久对象.变更间隔秒数(间隔秒数=1)
     #             return False
 
-
     def 根据文字描述以及截图获取回复并组装结果且改变任务状态(self):
         return self.组装评论数据并变更任务状态(self.根据文字描述以及截图获取回复())
-        # 全局缓存.数据记录字典 = {}
-        # 全局缓存.数据记录字典["原始评论"] = 结果
-        # print("---------------------------------")
-        # 全局缓存.数据记录字典["修正评论"] = 修正评论 = (
-        #     tool_env.对豆包回复进行所有的必要处理(结果)
-        # )
-        # print(修正评论)
-        # print("---------------------------------")
-        # 全局缓存.数据记录字典["合法"] = tool_env.has_valid_result(修正评论)
-
-        # self.数据.数据记录.enqueue(全局缓存.数据记录字典)
-
 
     def 根据字典数据获取回复并组装结果且改变任务状态(self, d: dict):
         结果 = self.推入通用豆包任务队列(d)
-        d['原始'] = 结果
-        d['修正'] = 结果 = tool_env.对豆包回复进行所有的必要处理(结果)
-        d['合法'] = tool_env.has_valid_result(结果)
+        d["原始"] = 结果
+        d["修正"] = 结果 = tool_env.对豆包回复进行所有的必要处理(结果)
+        d["合法"] = tool_env.has_valid_result(结果)
         self.数据.数据记录.enqueue(d)
-        return 结果 if d['合法'] else None
-        # if d.get('合法'):
-        #     e.click()
-        #     time.sleep(1)
-        #     job.输入(结果)
-        #     job.status = "点击回复发送"
-        # else:
-        #     job.status = '回退至互动页'
-        
+        return 结果 if d["合法"] else None
 
+    @property
+    def 微信会话df(self):
+        name = self.device.微信会话名称
+        m = self.数据.get_session_df_manager(name)
+        m.append(self.device.df_wx)
+        return m.df
+    
+    @property
+    def 微信会话df_未处理(self):
+        df = self.微信会话df
+        return df[~df.已处理]
+
+    @property
+    def 微信会话df_未处理_图片(self):
+        df = self.微信会话df_未处理
+        return df[df.类型 == "图片"]
+    
+    @property
+    def 微信会话df_未处理_图片_第一张(self):
+        df = self.微信会话df_未处理_图片
+        return df.iloc[0] if len(df) > 0 else None
 
 class 前置预检查任务(基本任务):
     pass
