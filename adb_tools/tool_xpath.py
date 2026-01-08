@@ -1525,12 +1525,14 @@ class 基本任务(抽象持久序列):
         content, 直接使用 = tool_moban_configs.获得豆包提示词(d)
         if not 直接使用:
             url = self.上传文件(content)
-            return f"""请严格根据链接中的提示词执行:\n{url}"""
+            content = f"""请严格根据链接中的提示词执行:\n{url}"""
+        print(f"输出的提示词:\n{content}\n")
         return content
 
     def 获得豆包提示词队列数据(self, d):
         return {
             "提示词": self.获得豆包提示词(d),
+            "timestamp": time.time(),
             **self.传输队列字典,
         }
 
@@ -1558,28 +1560,50 @@ class 基本任务(抽象持久序列):
             "返回队列": self.返回队列,
         }
 
+    def 从返回队列中获取结果(self, 阻塞, 超时秒数=5 * 60):
+        return 全局队列.拉出Redis(self.返回队列, 阻塞, 超时秒数)
+
     def 推入通用豆包任务队列(self, data: dict):
         d = self.获得豆包提示词队列数据(data)
         全局队列.推入Redis("豆包队列", d)
         data.update(d)
-        d = 全局队列.拉出Redis(self.返回队列, True, 5 * 60)
+        return d.get('timestamp')
+
+    def 推入豆包图片识别队列(self, url: str):
+        return self.推入通用豆包任务队列(
+            {
+                "类型": "提取图片信息_直接_详细",
+                "url": url,
+            }
+        )
+
+    def 推入通用豆包任务队列并阻塞获取结果(self, data: dict):
+        # d = self.获得豆包提示词队列数据(data)
+        # 全局队列.推入Redis("豆包队列", d)
+        # data.update(d)
+        self.推入通用豆包任务队列(data)
+
+        d = self.从返回队列中获取结果(True, 5 * 60)
         结果 = d.get("结果") if d else None
         # data.update(d)
         return 结果
 
-    def 提取设备屏幕截图信息(self):
+    def 识别图片信息(self, url):
         data = {
             "类型": "提取图片信息_直接",
-            "url": self.获取设备屏幕截图url(),
+            "url": url,
         }
-        return self.推入通用豆包任务队列(data)
+        return self.推入通用豆包任务队列并阻塞获取结果(data)
+
+    def 提取设备屏幕截图信息(self):
+        return self.识别图片信息(self.获取设备屏幕截图url())
 
     def 根据模版提取设备屏幕截图信息(self):
         data = {
             "类型": "提取图片信息_模版",
             "视频截图": self.获取设备屏幕截图url(),
         }
-        return self.推入通用豆包任务队列(data)
+        return self.推入通用豆包任务队列并阻塞获取结果(data)
 
     def 根据文字描述以及截图获取回复(self):
         c = self.device.find_xpath_first(
@@ -1587,14 +1611,6 @@ class 基本任务(抽象持久序列):
         )
         封面文字描述 = self.device.element2text(c)
 
-        # x1, x2 = tool_dy_utils.提取点赞与评论数(封面文字描述)
-
-        # print(f"点赞:{x1}, 评论数: {x2}")
-
-        # if numpy.any(numpy.array([x1, x2]) > 2000):
-        #     return None
-
-        # 截图描述 = self.根据模版提取设备屏幕截图信息()
         截图描述 = self.提取设备屏幕截图信息()
 
         文字描述 = "\n".join([封面文字描述, 截图描述])
@@ -1607,7 +1623,9 @@ class 基本任务(抽象持久序列):
 
         self.数据.数据记录.enqueue(data)
 
-        return self.推入通用豆包任务队列(data) if data.get("合法") else None
+        return (
+            self.推入通用豆包任务队列并阻塞获取结果(data) if data.get("合法") else None
+        )
 
     def 从截图获取回复(self, 模版名="主动评价模版_图文"):
         c = self.device.find_xpath_first(
@@ -1721,7 +1739,7 @@ class 基本任务(抽象持久序列):
         return self.组装评论数据并变更任务状态(self.根据文字描述以及截图获取回复())
 
     def 根据字典数据获取回复并组装结果且改变任务状态(self, d: dict):
-        结果 = self.推入通用豆包任务队列(d)
+        结果 = self.推入通用豆包任务队列并阻塞获取结果(d)
         d["原始"] = 结果
         d["修正"] = 结果 = tool_env.对豆包回复进行所有的必要处理(结果)
         d["合法"] = tool_env.has_valid_result(结果)
@@ -1729,26 +1747,139 @@ class 基本任务(抽象持久序列):
         return 结果 if d["合法"] else None
 
     @property
-    def 微信会话df(self):
+    def 微信会话管理器(self):
         name = self.device.微信会话名称
         m = self.数据.get_session_df_manager(name)
         m.append(self.device.df_wx)
-        return m.df
-    
-    @property
-    def 微信会话df_未处理(self):
-        df = self.微信会话df
-        return df[~df.已处理]
+        return m
+
+    def 清除当前会话历史(self):
+        m = self.微信会话管理器
+        m.df = pandas.DataFrame()
+        m.save()
 
     @property
-    def 微信会话df_未处理_图片(self):
-        df = self.微信会话df_未处理
-        return df[df.类型 == "图片"]
-    
+    def 微信会话df(self):
+        return self.微信会话管理器.df
+
+    # @property
+    # def 微信会话df_未处理(self):
+    #     df = self.微信会话df
+    #     return df[~df.已处理]
+
+    # @property
+    # def 微信会话df_未处理_图片(self):
+    #     df = self.微信会话df_未处理
+    #     return df[(df.类型 == "图片") & (~df.自己)]
+
     @property
     def 微信会话df_未处理_图片_第一张(self):
-        df = self.微信会话df_未处理_图片
+        # df = self.微信会话df_未处理_图片
+        df = self.微信会话df
+        df = df[(df.类型 == "图片") & (~df.自己) & (~df.已处理)]
         return df.iloc[0] if len(df) > 0 else None
+
+    def 处理微信会话第一张未处理图片(self):
+        第一张未处理图片 = self.微信会话df_未处理_图片_第一张
+        if 第一张未处理图片 is not None:
+            全局缓存.处理图片 = {"index": 第一张未处理图片.name}
+            self.点击(第一张未处理图片.xy)
+            return True
+
+    @property
+    def 微信会话df_未识别_图片_第一张(self):
+        df = self.微信会话df
+        df = df[(df.类型 == "图片") & (~df.自己) & (pandas.isna(df.内容))]
+        return df.iloc[0] if len(df) > 0 else None
+
+    def 识别微信会话所有图片(self):
+        # 第一张未识别图片 = self.微信会话df_未识别_图片_第一张
+        m = self.微信会话管理器
+        df = m.df
+
+        df = df[(df.类型 == "图片") & (~df.自己) & (pandas.isna(df.内容))]
+
+        全局缓存.setdefault("识别图片表", {})
+
+        df = df[~df.图片key.isin(全局缓存.识别图片表.keys())]
+
+        for i in range(len(df)):
+            ts = self.推入豆包图片识别队列(df.iloc[i].链接)
+            全局缓存.识别图片表[df.iloc[i].图片key] = ts
+
+
+        for i in range(len(全局缓存.识别图片表)):
+            d = self.从返回队列中获取结果(阻塞=False)
+            if d is not None:
+                print('识别结果:', d)
+                ts = d.get('timestamp')
+                图片key = {v:k for k,v in 全局缓存.识别图片表.items()}.get(ts)
+                if 图片key is not None:
+                    print('图片key:', 图片key)
+                    tmp = m.df
+                    index = tmp[tmp.图片key == 图片key].index
+
+                    if m.df["内容"].dtype != object:
+                        m.df["内容"] = m.df["内容"].astype(object)
+
+                    m.df.loc[index, ["内容"]] = d.get('结果')
+                    m.save()
+                    全局缓存.识别图片表.pop(图片key)
+            time.sleep(1)
+        return len(全局缓存.识别图片表)
+
+        # 第一张未识别图片 = df.iloc[0] if len(df) > 0 else None
+
+        # if 第一张未识别图片 is not None:
+        #     全局缓存.setdefault('识别图片列表', []).append(
+        #         {'index':第一张未识别图片.name,
+        #          'time': time.time(),
+        #          }
+        #         )
+        #     m.df.loc[第一张未识别图片.name, ["内容"]] = ''
+        #     m.save()
+        # self.点击(第一张未识别图片.xy)
+        # return True
+
+    # def 处理并保存图片(self):
+    #     url, img_key = self.下载微信图片并返回链接和唯一码()
+    #     # df = 全局缓存.临时历史页
+    #     # df = self.得到当前缓存页()
+    #     df = 全局缓存.缓存页
+    #     # df = 全局缓存.临时历史页
+    #     图片index, 容器key = 全局缓存.最后图片信息
+    #     assert (
+    #         图片index is not None and df.loc[图片index].容器key == 容器key
+    #     ), "图片处理错误, 容器不一致"
+    #     df.loc[图片index, ["链接", "图片key", "已处理"]] = (url, img_key, True)
+
+    def 存储图片缓存到本地数据库(self):
+        if 全局缓存.处理图片 and 全局缓存.处理图片.get("链接"):
+            m = self.微信会话管理器
+            loc = 全局缓存.处理图片["index"]
+            s = m.df.loc[loc]
+            print(s, s.to_dict())
+            assert (
+                not s.已处理
+                and s.类型 == "图片"
+                and pandas.isna(s.链接)
+                and pandas.isna(s.图片key)
+            ), s
+            m.df.loc[loc, ["链接", "图片key", "已处理"]] = (
+                全局缓存.处理图片["链接"],
+                全局缓存.处理图片["图片key"],
+                True,
+            )
+            m.save()
+            全局缓存.pop("处理图片")
+
+    def 点击保存图片_上传_并缓存链接和唯一码(self, e):
+        self.device.clear_remote_wx_images()
+        e.click()
+        time.sleep(1)
+        url, img_key = self.下载微信图片并返回链接和唯一码()
+        全局缓存.处理图片.update(链接=url, 图片key=img_key)
+
 
 class 前置预检查任务(基本任务):
     pass

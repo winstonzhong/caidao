@@ -45,12 +45,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent / "db"
 
 UT_DIR = Path(__file__).parent.resolve() / "ut"
 
+LOG_DIR = BASE_DIR / "log"
+
 if not BASE_DIR.exists():
     BASE_DIR.mkdir(exist_ok=True)
 
 if not UT_DIR.exists():
     UT_DIR.mkdir(exist_ok=True)
 
+if not LOG_DIR.exists():
+    LOG_DIR.mkdir(exist_ok=True)
 
 def 得到文件(fname, 子文件夹=None, 当前目录=False):
     root = CUR_DIR if 当前目录 else BASE_DIR

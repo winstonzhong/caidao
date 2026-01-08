@@ -661,7 +661,8 @@ class 单条容器(list):
             "已处理": self.是否已处理(),
             "链接": None,
             "图片key": None,
-            "重试次数": 0,
+            # "重试次数": 0,
+            "内容":None,
         }
 
     @property

@@ -13,6 +13,7 @@ import io
 import tool_wx_df5
 
 
+
 class FixedLengthQueue(list):
     """
     从list继承的定长先入先出（FIFO）队列类。
