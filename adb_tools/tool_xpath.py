@@ -1744,7 +1744,7 @@ class 基本任务(抽象持久序列):
         d["修正"] = 结果 = tool_env.对豆包回复进行所有的必要处理(结果)
         d["合法"] = tool_env.has_valid_result(结果)
         self.数据.数据记录.enqueue(d)
-        return 结果 if d["合法"] else None
+        return d["原始"] if d["合法"] else None
 
     @property
     def 微信会话管理器(self):
