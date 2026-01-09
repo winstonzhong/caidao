@@ -1913,6 +1913,9 @@ class 基本任务列表(抽象持久序列):
                     num_executed += job.执行任务(单步=False)
             except 任务预检查不通过异常:
                 pass
+            except Exception as e:
+                main_job.关闭应用()
+                print(e)
             return num_executed > 0
 
 
