@@ -1914,8 +1914,10 @@ class 基本任务列表(抽象持久序列):
             except 任务预检查不通过异常:
                 pass
             except Exception as e:
-                main_job.关闭应用()
                 print(e)
+                main_job.关闭应用()
+                raise e
+
             return num_executed > 0
 
 
