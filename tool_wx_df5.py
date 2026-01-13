@@ -9,11 +9,6 @@ import tool_file
 import json
 
 
-
-
-
-
-
 def 记录日志(
     上一页: pandas.DataFrame,
     当前页: pandas.DataFrame,
@@ -30,6 +25,7 @@ def 记录日志(
         结果页: pd.DataFrame - 要记录的结果页数据
     """
     from datetime import datetime
+
     try:
         # 1. 确保基础目录存在，不存在则创建
 
@@ -71,6 +67,7 @@ def 加载日志(filepath: str):
         捕获文件不存在、JSON解析错误、DataFrame还原失败等异常并提示
     """
     import io
+
     try:
         # 1. 读取JSON文件内容
         with open(filepath, "r", encoding="utf-8") as f:
@@ -84,12 +81,18 @@ def 加载日志(filepath: str):
 
         # 3. 将JSON字符串还原为DataFrame
         result_dict = {
-            "上一页": pandas.read_json(io.StringIO(log_data["上一页"]), orient="records"),
-            "当前页": pandas.read_json(io.StringIO(log_data["当前页"]), orient="records"),
-            "结果页": pandas.read_json(io.StringIO(log_data["结果页"]), orient="records"),
+            "上一页": pandas.read_json(
+                io.StringIO(log_data["上一页"]), orient="records"
+            ),
+            "当前页": pandas.read_json(
+                io.StringIO(log_data["当前页"]), orient="records"
+            ),
+            "结果页": pandas.read_json(
+                io.StringIO(log_data["结果页"]), orient="records"
+            ),
         }
 
-        print(f"日志文件 {filepath} 加载成功")
+        # print(f"日志文件 {filepath} 加载成功")
         return result_dict
 
     except FileNotFoundError:
@@ -115,9 +118,21 @@ def 是否匹配(上一页, 当前页):
     """
     if len(上一页) != len(当前页):
         return False
-    return (
+
+    v = (
         上一页.唯一值.reset_index(drop=True) == 当前页.唯一值.reset_index(drop=True)
     ).all()
+
+    if "上下文" in 上一页.columns:
+        v = (
+            v
+            or (
+                上一页.上下文.reset_index(drop=True)
+                == 当前页.上下文.reset_index(drop=True)
+            ).all()
+        )
+
+    return v
 
 
 def 串行后拆分(上一页, 当前页):
@@ -127,7 +142,7 @@ def 串行后拆分(上一页, 当前页):
     return df.iloc[:i], df.iloc[i:], df
 
 
-def 寻找交叉范围(上一页, 当前页):
+def 寻找交叉范围(上一页, 当前页, debug=False):
     """
     >>> 当前页 = load_ut_df(0)
     >>> 上一页 = load_ut_df(1)
@@ -158,6 +173,10 @@ def 寻找交叉范围(上一页, 当前页):
     >>> 寻找交叉范围(pandas.DataFrame(), pandas.DataFrame())
     >>> 寻找交叉范围(pandas.DataFrame(), None)
     >>> 寻找交叉范围(None, None)
+    >>> 寻找交叉范围(d_test.get('上一页'), d_test.get('当前页'), debug=False).to_dict('records')
+    [{'start': 3, 'end': 16, 'delta': 13, 'equals': True}]
+    >>> 寻找交叉范围(d_test2.get('上一页'), d_test2.get('当前页'), debug=False).to_dict('records')
+    [{'end': 14}]
     """
     # num = len(上一页)
     if 当前页 is None or 当前页.empty:
@@ -166,16 +185,30 @@ def 寻找交叉范围(上一页, 当前页):
     if 上一页 is None or 上一页.empty:
         return
 
-    上一页, 当前页, _ = 串行后拆分(上一页, 当前页)
+    上一页, 当前页, whole = 串行后拆分(上一页, 当前页)
 
     ends = 当前页[当前页.唯一值 == 上一页.iloc[-1].唯一值].index.tolist()
+
     starts = 上一页[上一页.唯一值 == 当前页.iloc[0].唯一值].index.tolist()
 
     df = pandas.DataFrame(
         list(itertools.product(starts, ends)), columns=["start", "end"]
     )
 
+    if not ends:
+        return
+
     df["delta"] = df.end - df.start
+
+    if debug:
+        print("ends:", ends)
+        print("starts:", starts)
+        print("=======================上一页")
+        print(上一页[["上下文", "唯一值", "时间"]])
+        print("=======================当前页")
+        print(当前页[["上下文", "唯一值", "时间"]])
+        print("=======================df")
+        print(df)
 
     df = df[df.delta > 0].copy()
 
@@ -190,6 +223,8 @@ def 寻找交叉范围(上一页, 当前页):
         df = tmp.sort_values(by="delta", ascending=False)
         return df
 
+    return pandas.DataFrame([{"end": ends[-1]}])
+
 
 def 是否重合(上一页, 当前页):
     df = 寻找交叉范围(上一页, 当前页)
@@ -197,21 +232,25 @@ def 是否重合(上一页, 当前页):
 
 
 def 得到新增部分df(df_history, df_current):
+    """
+    得到新增部分df 的 Docstring
+
+    :param df_history: 说明
+    :param df_current: 说明
+    >>> 得到新增部分df(d_test.get('上一页'), d_test.get('当前页')).empty
+    True
+    """
     df = 寻找交叉范围(df_history, df_current)
     if df is not None and not df.empty:
-        _, _, whole = 串行后拆分(df_history, df_current)
-        end = df.iloc[0].end
-        return whole.loc[end + 1 :]
-    return df_current
+        当前页截断位置 = df.iloc[0].end - len(df_history)
+        新页 = df_current.iloc[当前页截断位置 + 1 :]
+    else:
+        新页 = df_current
+    return 新页
 
 
 def 合并上下两个df(上一页, 当前页):
-    df = 寻找交叉范围(上一页, 当前页)
-    if df is not None and not df.empty:
-        当前页截断位置 = df.iloc[0].end - len(上一页)
-        新页 = 当前页.iloc[当前页截断位置 + 1 :]
-    else:
-        新页 = 当前页
+    新页 = 得到新增部分df(上一页, 当前页)
 
     changed = not 新页.empty
 
@@ -244,4 +283,11 @@ if __name__ == "__main__":
     def save_ut_df_phone(phone, name=None):
         return save_ut_df(phone.微信_获取当前页df(), name)
 
+    d_test = 加载日志(UT_DIR / "20260110_070421.json")
+    # 20260110_123226.json
+    d_test2 = 加载日志(UT_DIR / "20260110_123733.json")
+
     print(doctest.testmod(verbose=False, report=False))
+    # print(d_test.keys())
+    # print(d_test2.get('上一页'))
+    # print(d_test2.get('当前页'))

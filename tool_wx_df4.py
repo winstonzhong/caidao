@@ -12,13 +12,17 @@ def 转历史(df, 是否群聊=False):
     >>> sum([x.get('role') == 'user' for x in l])
     5
     >>> l[0]
-    {'content': '[2025-12-23 08:11:00][分享了一个文件, 文件大小:25.4 MB]周二健康资讯每日听.mp3', 'role': 'user'}
+    {'content': '[分享了一个文件, 文件大小:25.4 MB]周二健康资讯每日听.mp3', 'role': 'user'}
     >>> l = 转历史(df1, True)
     >>> l[0]
     {'content': '群公告[文件]111027.txt[文件]远程诊疗系统对接方案.doc了解更多', 'role': 'assistant'}
     >>> l[-1]
-    {'content': '[2025-12-16 22:02:00]Winston:[分享了一张图片<405x226>]', 'role': 'user'}
+    {'content': 'Winston:[分享了一张图片<405x226>]', 'role': 'user'}
     """
+    if "内容" not in df.columns:
+        df["内容"] = None
+
+    df.内容 = df.内容.where(df.内容.notna(), numpy.nan).fillna("").astype(str)
 
     s = df.上下文.str.split(":", n=1).str[-1] if not 是否群聊 else df.上下文
 
@@ -31,9 +35,10 @@ def 转历史(df, 是否群聊=False):
         df.上下文.str.split(":", n=1).str[-1],  # 满足条件：分割取最后一部分
         df.上下文,  # 不满足条件：保留原始上下文
     )
-    st = df.时间.fillna("").apply(lambda x: f"[{x}]" if x else "")
+    # st = df.时间.fillna("").apply(lambda x: f"[{x}]" if x else "")
 
-    s = st + 处理后的上下文
+    # s = st + 处理后的上下文 + df.内容
+    s = 处理后的上下文 + df.内容
 
     s.name = "content"
 
@@ -52,3 +57,4 @@ if __name__ == "__main__":
     df1 = tool_file.加载utdf("1766931091.6697454.json")
     df1.时间 = df1.时间.replace({None: numpy.nan})
     print(doctest.testmod(verbose=False, report=False))
+    # print(df0)

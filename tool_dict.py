@@ -495,13 +495,16 @@ class 模型的会话管理器(object):
         self.mdict.save()
 
     def append(self, df):
+        # print('----'* 5)
         容器key = df.容器key.iloc[0] if df.empty else None
         df, changed = tool_wx_df5.合并上下两个df(self.df, df)
         if changed:
             self.df = df
 
+        # print(changed, 容器key)
+
         if 容器key is not None:
-            tmp = df[(df.容器key != 容器key) & (~df.已处理)]
+            tmp = df[((df.容器key != 容器key) | (~pd.isna(df.链接))) & (~df.已处理)]
             if not tmp.empty:
                 df.loc[tmp.index, "已处理"] = True
                 self.df = df
