@@ -1596,16 +1596,16 @@ class 基本任务(抽象持久序列):
         self, data: dict, 阻塞秒数=5 * 60, is_json=False
     ):
         ts = self.推入通用豆包任务队列(data)
-        print('-' * 66)
+        print("-" * 66)
         print("推入数据:", data)
         print("ts:", ts)
         结果 = None
         while 1:
             d = self.从返回队列中获取结果(True, 阻塞秒数)
-            print('-' * 66)
-            print('获取结果:')
+            print("-" * 66)
+            print("获取结果:")
             print(d)
-            
+
             if not d:
                 break
             if d.get("timestamp") != ts:
@@ -1650,8 +1650,8 @@ class 基本任务(抽象持久序列):
         封面文字描述 = self.device.element2text(c)
 
         截图描述 = self.提取设备屏幕截图信息()
-        
-        print('完成截图, 等待1秒------------------------')
+
+        print("完成截图, 等待1秒------------------------")
         time.sleep(1)
 
         文字描述 = "\n".join([封面文字描述, 截图描述])
@@ -1661,16 +1661,15 @@ class 基本任务(抽象持久序列):
         #     "封面文字描述": 文字描述,
         #     "合法": tool_dy_utils.has_interaction_keywords(文字描述),
         # }
-        name = '抖音_数据爬虫'
+        name = "抖音_数据爬虫"
         obj = self.持久对象.获取其他记录(name)
         data = {
             "类型": "主动评价模版_纯文字_串门_带数据",
             "content": 文字描述,
             "name": tool_dy_utils.从文本中提取用户名称(文字描述),
-            "account_data": obj.数据.get('创作数据'),
+            "account_data": obj.数据.get("创作数据"),
             "合法": tool_dy_utils.has_interaction_keywords(文字描述),
         }
-
 
         self.数据.数据记录.enqueue(data)
 
