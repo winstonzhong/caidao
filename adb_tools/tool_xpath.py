@@ -1596,9 +1596,16 @@ class 基本任务(抽象持久序列):
         self, data: dict, 阻塞秒数=5 * 60, is_json=False
     ):
         ts = self.推入通用豆包任务队列(data)
+        print('-' * 66)
+        print("推入数据:", data)
+        print("ts:", ts)
         结果 = None
         while 1:
             d = self.从返回队列中获取结果(True, 阻塞秒数)
+            print('-' * 66)
+            print('获取结果:')
+            print(d)
+            
             if not d:
                 break
             if d.get("timestamp") != ts:
@@ -1622,7 +1629,9 @@ class 基本任务(抽象持久序列):
             "类型": "提取图片信息_直接",
             "url": url,
         }
-        return self.推入通用豆包任务队列并阻塞获取结果(data)
+        result = self.推入通用豆包任务队列并阻塞获取结果(data)
+        # print('图片')
+        return result
 
     def 提取设备屏幕截图信息(self):
         return self.识别图片信息(self.获取设备屏幕截图url())
