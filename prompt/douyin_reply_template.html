@@ -1,0 +1,1341 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>短视频评论生成提示词模板</title>
+    <style>
+        /* 保留原有所有样式，仅新增/修改数据组合相关样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
+            line-height: 1.8;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: #fff;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .header .subtitle {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            border: 1px solid #e1e1e8;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: #f8f9fa;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e1e1e8;
+        }
+
+        .section-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-body {
+            padding: 24px;
+        }
+
+        .section-number {
+            background: #2c3e50;
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* 角色定位样式 */
+        .role-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .role-card h3 {
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .role-card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .role-card li {
+            padding: 8px 0;
+            padding-left: 20px;
+            position: relative;
+            color: #454545;
+        }
+
+        .role-card li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        /* 新增：强制提取模块样式 */
+        .element-card {
+            border: 1px solid #e1e1e8;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .element-header {
+            background: #f8f9fa;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e1e1e8;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .element-body {
+            padding: 16px;
+        }
+
+        .element-body strong {
+            color: #e74c3c;
+            font-size: 16px;
+        }
+
+        /* 历史回复样式 */
+        .history-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .history-section h3 {
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 12px;
+        }
+
+        .history-content {
+            background: #fff;
+            border: 1px solid #e1e1e8;
+            border-radius: 6px;
+            padding: 16px;
+            font-family: monospace;
+            font-size: 14px;
+            color: #666;
+            min-height: 60px;
+        }
+
+        /* 账户信息样式 */
+        .account-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .info-item label {
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .info-item .value {
+            font-size: 15px;
+            color: #2c3e50;
+            font-weight: 600;
+            background: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #e1e1e8;
+        }
+
+        /* 钩子强度选择器 */
+        .strength-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .strength-option {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e1e1e8;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .strength-option:hover {
+            border-color: #b3d9ff;
+            background: #f8f9fa;
+        }
+
+        .strength-option.active {
+            border-color: #007bff;
+            background: #e8f4fd;
+        }
+
+        .strength-option h4 {
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: #2c3e50;
+        }
+
+        .strength-option p {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .strength-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+
+        .strength-low {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .strength-mid {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .strength-high {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* 钩子类型卡片 */
+        .hook-type-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid;
+            border-left-color: #007bff;
+        }
+
+        .hook-type-card.recommended {
+            border-left-color: #28a745;
+            background: #f0f8f2;
+        }
+
+        .hook-type-card.high-risk {
+            border-left-color: #dc3545;
+            background: #fdf3f4;
+        }
+
+        .hook-type-card h4 {
+            font-size: 15px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hook-type-card .formula {
+            background: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            margin: 8px 0;
+            border: 1px solid #e1e1e8;
+        }
+
+        .hook-type-card .example {
+            font-style: italic;
+            color: #454545;
+            font-size: 14px;
+            padding-left: 8px;
+            border-left: 2px solid;
+            margin-top: 8px;
+        }
+
+        .hook-type-card.good .example, .hook-type-card.recommended .example {
+            border-left-color: #28a745;
+        }
+
+        .hook-type-card.neutral .example {
+            border-left-color: #ffc107;
+        }
+
+        .hook-type-card.high-risk .example {
+            border-left-color: #dc3545;
+        }
+
+        /* 警告框 */
+        .alert {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+
+        /* 提示框 */
+        .tip-box {
+            background: #e8f4fd;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .tip-box .tip-title {
+            color: #0066cc;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tip-box p {
+            color: #333;
+            margin: 0;
+        }
+
+        /* 禁止列表 */
+        .ban-list {
+            background: #f8d7da;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .ban-list h4 {
+            color: #721c24;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ban-list ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .ban-list li {
+            padding: 6px 0;
+            padding-left: 20px;
+            position: relative;
+            color: #721c24;
+        }
+
+        .ban-list li::before {
+            content: "✗";
+            position: absolute;
+            left: 0;
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        /* 推荐列表 */
+        .recommend-list {
+            background: #d4edda;
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        .recommend-list h4 {
+            color: #155724;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .recommend-list ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .recommend-list li {
+            padding: 6px 0;
+            padding-left: 20px;
+            position: relative;
+            color: #155724;
+        }
+
+        .recommend-list li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        /* 输出规范 */
+        .output-spec {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .output-spec ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .output-spec li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e1e1e8;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .output-spec li:last-child {
+            border-bottom: none;
+        }
+
+        .output-spec .spec-number {
+            background: #2c3e50;
+            color: #fff;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        /* 示例列表 */
+        .example-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .example-item {
+            padding: 12px 16px;
+            background: #fff;
+            border: 1px solid #e1e1e8;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #1d1d1f;
+            font-style: italic;
+        }
+
+        /* 强调文本 */
+        strong {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        em {
+            color: #e74c3c;
+            font-style: normal;
+            font-weight: 600;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .account-info,
+            .strength-selector {
+                grid-template-columns: 1fr;
+            }
+
+            .content {
+                padding: 20px;
+            }
+        }
+        /* 给展示JSON的div添加样式，增强可读性 */
+        .json-display {
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            padding: 16px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            white-space: pre-wrap; /* 保留换行和空格，自动换行 */
+            word-wrap: break-word;
+        }
+        /* 新增：数据模糊化示例样式 */
+        .data-blur-example {
+            background: #f0f8f2;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 12px 0;
+        }
+        .data-blur-example .title {
+            font-weight: 600;
+            color: #155724;
+            margin-bottom: 8px;
+        }
+        .data-blur-example table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .data-blur-example td {
+            padding: 6px 8px;
+            border: 1px solid #c3e6cb;
+        }
+        .data-blur-example .original {
+            color: #6c757d;
+        }
+        .data-blur-example .blur {
+            color: #28a745;
+            font-weight: 500;
+        }
+
+        /* 新增：数据组合禁用清单样式（优化后） */
+        .disable-list {
+            background: #f8f9fa;
+            border: 1px solid #e1e1e8;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .disable-list .title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .disable-list table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .disable-list th, .disable-list td {
+            padding: 8px 12px;
+            border: 1px solid #e1e1e8;
+            text-align: left;
+        }
+        .disable-list th {
+            background: #f0f8f2;
+            color: #155724;
+            font-size: 13px;
+        }
+        .disable-list td {
+            font-size: 14px;
+        }
+        /* 新增：全量数据组合池样式 */
+        .combo-pool {
+            background: #f5fafe;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .combo-pool .title {
+            font-weight: 600;
+            color: #0066cc;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .combo-pool .combo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .combo-pool .combo-item {
+            padding: 8px 12px;
+            background: #fff;
+            border-radius: 4px;
+            border: 1px solid #e1e1e8;
+            font-size: 14px;
+        }
+
+        /* 新增：关联度自检步骤样式 */
+        .check-step {
+            background: #e8f4fd;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .check-step .step-title {
+            font-weight: 600;
+            color: #0066cc;
+            margin-bottom: 12px;
+        }
+        .check-step ol {
+            padding-left: 24px;
+        }
+        .check-step li {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+
+        /* 新增：主题分类示例样式 */
+        .theme-example {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .theme-example .theme-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 12px;
+        }
+        .theme-example .theme-item {
+            margin-bottom: 12px;
+        }
+        .theme-example .theme-name {
+            font-weight: 500;
+            color: #007bff;
+            margin-bottom: 4px;
+        }
+
+        /* 新增：热度分级标准样式 */
+        .heat-standard {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .heat-standard .standard-title {
+            font-weight: 600;
+            color: #856404;
+            margin-bottom: 12px;
+        }
+        .heat-standard table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .heat-standard th, .heat-standard td {
+            padding: 8px 12px;
+            border: 1px solid #ffeeba;
+            text-align: left;
+        }
+        .heat-standard th {
+            background: #fff8e1;
+            color: #856404;
+        }
+
+        /* 新增：强度手动切换样式 */
+        .manual-switch {
+            background: #d1ecf1;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .manual-switch .switch-title {
+            font-weight: 600;
+            color: #0c5460;
+            margin-bottom: 12px;
+        }
+        .manual-switch .switch-item {
+            margin-bottom: 8px;
+            padding-left: 8px;
+            border-left: 3px solid #17a2b8;
+        }
+
+        /* 新增：合规自检清单样式 */
+        .checklist {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 16px 0;
+        }
+        .checklist .checklist-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 16px;
+            text-align: center;
+            font-size: 16px;
+        }
+        .checklist .check-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .checklist .check-box {
+            width: 18px;
+            height: 18px;
+            border: 1px solid #e1e1e8;
+            border-radius: 4px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        /* 新增：身份暴露边界样式 */
+        .identity-boundary {
+            background: #fdf3f4;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .identity-boundary .boundary-title {
+            font-weight: 600;
+            color: #721c24;
+            margin-bottom: 12px;
+        }
+        .identity-boundary .boundary-group {
+            margin-bottom: 12px;
+        }
+        .identity-boundary .group-title {
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        .identity-boundary .forbid-list {
+            color: #dc3545;
+            padding-left: 16px;
+        }
+        .identity-boundary .allow-list {
+            color: #28a745;
+            padding-left: 16px;
+        }
+
+        /* 新增：打字感示例样式 */
+        .type-feel-example {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            border-left: 3px solid #007bff;
+        }
+        .type-feel-example.valid {
+            border-left-color: #28a745;
+        }
+        .type-feel-example.invalid {
+            border-left-color: #dc3545;
+        }
+        .type-feel-example .example-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+
+        /* 新增：评论模板样式 */
+        .comment-template-section {
+            margin-top: 20px;
+        }
+        .template-category {
+            margin-bottom: 16px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .template-category h4 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        .template-list {
+            padding-left: 20px;
+        }
+        .template-list li {
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #454545;
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>短视频评论生成提示词模板</h1>
+            <div class="subtitle">无痕营销版 - 互助类内容专用（强制约束增强版 V6.0）</div>
+        </div>
+
+        <div class="content">
+            <!-- 第一部分：核心人设 + 语言规范（合并角色定位与语言风格） -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><span class="section-number">1</span>核心人设 + 语言规范</h2>
+                </div>
+                <div class="section-body">
+                    <div class="role-card">
+                        <h3>核心人设：真实用户"小雅"</h3>
+                        <ul>
+                            <li>你是一个刷短视频的普通用户，看到感兴趣的内容会随手评论</li>
+                            <li>像和朋友聊天一样，想到什么说什么，<strong>不需要刻意组织语言</strong></li>
+                            <li><strong>隐含身份</strong>：同为短视频创作者，但从不主动暴露身份，只通过"说漏嘴"自然带出</li>
+                            <li><strong>核心钩子逻辑</strong>：将账号数据转化为"个人成长故事"，用"信息缺口"激发用户主动探索欲望</li>
+                            <li><strong>新增规则</strong>：数据表述优先使用模糊化口语，避免精准数字，降低营销感，增强真实感</li>
+                        </ul>
+                    </div>
+
+                    <div class="role-card">
+                        <h3>语言规范要求</h3>
+                        <ul>
+                            <li><strong>打字感</strong>：允许适度的语序调整，但避免明显错别字，保持专业感的同时保留自然输入的状态</li>
+                            <li><strong>数据自然化</strong>：账号数据要像"说漏嘴"一样不经意带出，结合2个不同维度数据点形成专业维度的成长佐证，<strong>绝不刻意堆砌、绝不使用精准数字</strong></li>
+                            <li><strong>字数限制</strong>：最终生成的评论内容字数严格控制在80字以内，确保简洁自然，不堆砌信息</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第二部分：视频信息提取与主题锁定 -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><span class="section-number">2</span>视频信息提取与主题锁定</h2>
+                </div>
+                <div class="section-body">
+                    <div class="alert alert-danger" style="margin-bottom: 20px;">
+                        <strong>🚨 强制提取三要素（后续评论生成基石）：</strong>
+                    </div>
+
+                    <div class="element-card">
+                        <div class="element-header">要素1：视频发布用户名</div>
+                    </div>
+
+                    <div class="element-card">
+                        <div class="element-header">要素2：视频核心主题（必须100%贴合）</div>
+                        <div class="element-body">
+                            <div class="tip-box">
+                                <div class="tip-title">主题内容来源： 基于短视频截屏内容归纳视频主题</div>
+                            </div>
+                            <div class="alert alert-warning">
+                                <strong>贴合度红线：</strong>评论内容必须围绕短视频核心主题，禁止泛化为空泛话题。
+                            </div>
+                            <!-- 新增：关联度自检3步 -->
+                            <div class="check-step">
+                                <div class="step-title">🔍 主题-钩子关联度自检3步（强制执行）</div>
+                                <ol>
+                                    <li><strong>提取核心关键词</strong>：从视频内容中提取3-5个核心关键词</li>
+                                    <li><strong>锚定运营场景</strong>：钩子数据必须围绕关键词对应的运营场景，而非孤立提数据</li>
+                                    <li><strong>添加衔接词</strong>：用"因为/后来/之前拍这类内容/做这类账号"等衔接词串联主题与钩子，避免硬植入</li>
+                                </ol>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="element-card">
+                        <div class="element-header">要素3：钩子植入锚点（必须与主题强关联）</div>
+                        <div class="element-body">
+                            <div class="ban-list" style="margin-top: 16px;">
+                                <h4><span class="ban-icon">🚫</span> 钩子生硬植入示范（必须避免）</h4>
+                                <ul>
+                                    <li>视频谈不婚，评论却只说"我一周涨800粉"（<strong>零关联=纯广告</strong>）</li>
+                                    <li>钩子前后语境断裂（<strong>硬转折=营销号</strong>）</li>
+                                    <li>使用精准数字表述数据（如"完播率21.37%"），营销感过重</li>
+                                    <li>生成评论字数超过80字，信息堆砌导致冗余不自然</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第三部分：无痕钩子安全红线（前置强化风险意识） -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><span class="section-number">3</span>无痕钩子安全红线</h2>
+                </div>
+                <div class="section-body">
+                    <div class="ban-list">
+                        <h4><span class="ban-icon">🚫</span> 禁止词汇扩展（含同义替换）</h4>
+                        <ul>
+                            <li><strong>引导类</strong>：关注我、看我主页、戳我作品、私信我、视频里有、主页有方法</li>
+                            <li><strong>互动类</strong>：你们觉得呢？有人想听吗？求指教、谁懂啊（乞讨感表述）</li>
+                            <li><strong>对比类</strong>：你这条播放低、比你数据好、你不如试试（攻击感表述）</li>
+                        </ul>
+                    </div>
+                    <div class="alert alert-danger">
+                        <strong>⚠️ 核心红线：</strong>任何形式的直接引流、生硬对比、乞讨式互动均会触发平台限流机制，必须严格规避！
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第四部分：视频信息获取 -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><span class="section-number">4</span>视频信息获取（供参考）</h2>
+                </div>
+                <div class="section-body">
+                    <!-- 新增：用户名称 -->
+                    <div class="history-section" style="margin-top: 16px;">
+                        <h3>用户名称</h3>
+                        <div class="history-content">{{ name }}</div>
+                    </div>
+
+                    <div class="history-section">
+                        <h3>短视频截屏内容</h3>
+                        <div class="history-content">
+                        {{ content }}
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第五部分：用户账户相关信息 -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><span class="section-number">5</span>用户账户相关信息（钩子素材库）</h2>
+                </div>
+                <div class="section-body">
+                    <div class="json-display" id="json-div"></div>
+
+                    <!-- 新增：全量数据两两组合池（核心优化） -->
+                    <div class="combo-pool">
+                        <div class="title">基于核心数据模块中的数据维度：{{ hook_dimensions }}</div>
+                        <div class="tip-box" style="margin-top:12px; padding:10px;">
+                            <ul style="font-size:12px; margin:0; padding-left:16px;">
+                                <li>数据表述必须模糊化：精准数字（如播放量18000、完播率21.37%）需改为口语化表述（如“播放量涨了三倍多”“完播率比之前高了不少”）。</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- 新增：数据模糊化示例（扩充变体，补充同比数据） -->
+                    <div class="data-blur-example">
+                        <div class="title">📌 数据模糊化表述规范（必须严格遵守）- 新增多变体</div>
+                        <div class="table-container"></div>
+
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="comment-template-section">
+                <div class="template-category">
+                    <h4 style="color: #2c3e50; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <span class="section-number" style="width: 24px; height: 24px; font-size: 12px;">!</span>
+                        核心模板（动态输入+强制遵循，优先级最高）
+                    </h4>
+                    <!-- 新增：动态模板输入框 -->
+                    <div class="template-input-wrap" style="margin-bottom: 16px;">
+                        <input
+                            type="text"
+                            id="custom-template"
+                            value="{{ comment_template }}"
+                            style="width: 100%; padding: 12px 16px; border: 2px solid #e1e1e8; border-radius: 8px; font-size: 14px; font-family: inherit; color: #2c3e50;"
+                        >
+                        <p style="margin-top: 8px; font-size: 12px; color: #dc3545;">
+                            ⚠️ 模板修改后，所有生成结果必须严格沿用此句式结构，仅替换 [] 内的占位符内容！
+                        </p>
+                    </div>
+
+                    <div class="alert alert-danger" style="margin-bottom: 16px;">
+                        <strong>强制规则（绑定当前自定义模板）：</strong>
+                        <ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">
+                            <li>生成评论必须 100% 保留模板的核心句式、标点、表情符号（如🙌），不得修改/替换/删除</li>
+                            <li>仅允许替换 [用户名称]、[具体主题]、[钩子植入锚点] 三个占位符的内容，占位符位置不可移动</li>
+                            <li>禁止修改模板中的固定表述（如“你对”“的看法我举双手赞成”等）</li>
+                        </ul>
+                    </div>
+
+                    <!-- 保留原模板结构展示，但关联动态输入框 -->
+                    <div class="tip-box" style="margin-bottom: 16px;">
+                        <div class="tip-title">当前生效模板结构（不可修改框架）</div>
+                        <p id="active-template-display" style="font-family: monospace; font-size: 15px; margin-top: 8px; padding: 8px; background: #fff; border-radius: 4px; border: 1px solid #e1e1e8;">
+                            {{ comment_template }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- 新增 模板执行优先级说明（追加到输出规范区域） -->
+            <div class="output-spec" style="margin-top: 20px;">
+                <ul>
+                    <li style="padding: 8px 0; border-bottom: 1px solid #e1e1e8; display: flex; align-items: flex-start; gap: 12px;">
+                        <div class="spec-number">1</div>
+                        <div>
+                            <strong>模板格式优先级</strong>：所有生成规则（自然口语化、情感真实、数据模糊化等）均不得突破模板核心句式约束，仅可在占位符内容中体现口语化/真实感，模板框架不可修改。
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ==================== 1. 原始JSON数据（测试用：投稿数改为7） ====================
+        const jsonData =  {{ account_data }}
+
+
+        // ==================== 2. 维度配置 ====================
+        const dimensionMap = {
+            "投稿数": ["核心数据模块", "投稿数"],
+            "投稿数同比": ["核心数据模块", "投稿数同比"],
+            "播放量": ["核心数据模块", "播放量"],
+            "播放量同比": ["核心数据模块", "播放量同比"],
+            "点赞量": ["核心数据模块", "点赞量"],
+            "点赞量同比": ["核心数据模块", "点赞量同比"],
+            "完播率": ["核心数据模块", "完播率"],
+            "完播率同比": ["核心数据模块", "完播率同比"],
+            "互动指数": ["核心数据模块", "互动指数"],
+            "作品搜索量": ["核心数据模块", "作品搜索量"],
+            "作品搜索量同比": ["核心数据模块", "作品搜索量同比"],
+            "粉丝净增": ["核心数据模块", "粉丝净增"],
+            "播放量超越比例": ["同类作者对比", "播放量超越比例"]
+        };
+        const coreDataKeys = Object.keys(dimensionMap);
+
+
+        // 核心：使用JSON.stringify格式化，第三个参数是缩进空格数（2或4）
+        const formattedJson = JSON.stringify(jsonData, null, 2);
+        // 放入div
+        document.getElementById('json-div').textContent = formattedJson;
+
+
+
+
+        // ==================== 3. 工具函数 ====================
+        function getDimensionValue(data, path) {
+            let value = data;
+            for (const key of path) {
+                if (!value || typeof value !== 'object') return null;
+                value = value[key];
+            }
+            return value;
+        }
+
+        function cleanNumberValue(value) {
+            if (value === null || value === undefined) return null;
+            let strValue = String(value).trim();
+            const isNegative = strValue.includes('-');
+            strValue = strValue.replace(/[%+−-]/g, '');
+            const num = Number(strValue);
+            return isNaN(num) ? null : (isNegative ? -num : num);
+        }
+
+        function isDataValid(value) {
+            const cleaned = cleanNumberValue(value);
+            return cleaned !== null && !isNaN(cleaned);
+        }
+
+        // ==================== 4. 修复版：纯中文数字转换 ====================
+        /**
+         * 控制是否返回量词，解决重复量词问题
+         * @param {number} num - 清洗后的数字
+         * @param {string} type - 数据类型
+         * @param {boolean} noQuantifier - 是否不返回量词
+         * @returns {string} 纯中文表述
+         */
+        function getChineseNumText(num, type = '', noQuantifier = false) {
+            let integerPart = Math.floor(Math.abs(num));
+            const numMap = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+            const unitMap = ['', '十', '百', '千', '万'];
+            // 量词映射
+            const quantifierMap = {
+                "投稿数": "个",
+                "点赞量": "个",
+                "粉丝净增": "个",
+                "播放量": "个",
+                "作品搜索量": "个"
+            };
+            const quantifier = noQuantifier ? "" : (quantifierMap[type] || "");
+
+            let chineseText = '';
+            if (integerPart < 10) {
+                chineseText = `${numMap[integerPart]}${quantifier}`;
+            } else if (integerPart < 100) {
+                chineseText = numMap[Math.floor(integerPart / 10)] + unitMap[1];
+            } else if (integerPart < 1000) {
+                chineseText = numMap[Math.floor(integerPart / 100)] + unitMap[2];
+            } else if (integerPart < 10000) {
+                chineseText = numMap[Math.floor(integerPart / 1000)] + unitMap[3];
+            } else {
+                chineseText = numMap[Math.floor(integerPart / 10000)] + unitMap[4];
+            }
+
+            chineseText = chineseText.replace('零千', '九').replace('零万', '九千');
+            return num < 0 ? `负${chineseText}` : chineseText;
+        }
+
+        // 1位数百分比适配
+        function getChinesePercentText(num) {
+            const cheng = Math.floor(Math.abs(num) / 10);
+            const chengMap = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+            let result = '';
+
+            if (cheng === 0 && Math.abs(num) > 0) {
+                result = num < 0 ? "负不到一成" : "不到一成";
+            } else {
+                result = `${chengMap[cheng]}成`;
+                result += (Math.abs(num) % 10 > 0) ? '出头' : '上下';
+                result = num < 0 ? `负${result}` : result;
+            }
+            return result;
+        }
+
+        // ==================== 5. 生成变体（修复点赞量重复量词） ====================
+        function generateBlurVariants(key, rawValue) {
+            const num = cleanNumberValue(rawValue);
+            if (num === null) return [];
+
+            const variants = [];
+            const isSingleDigit = Math.floor(Math.abs(num)) < 10;
+            const suffix = isSingleDigit ? '' : '多';
+
+            // 基础整数类
+            if (["投稿数", "播放量", "点赞量", "作品搜索量", "粉丝净增"].includes(key)) {
+                const numText = getChineseNumText(num, key);
+                switch (key) {
+                    case "投稿数":
+                        variants.push(
+                            `${key}${numText}`,
+                            `一周更了${numText}作品`,
+                            `发了${numText}条视频`
+                        );
+                        break;
+                    case "播放量":
+                        variants.push(
+                            `${key}${numText}左右`,
+                            `近${numText}${key}`,
+                            `小${numText}${key}`
+                        );
+                        break;
+                    case "点赞量":
+                        // 核心修复：去掉重复的"个"，numText已包含"个"（如七个），只需拼接"赞"
+                        variants.push(
+                            `${key}${numText}`,
+                            `小${numText}赞`, // 修复：七个赞（而非七个个赞）
+                            `收了${numText}赞` // 修复：收了七个赞（而非收了七个个赞）
+                        );
+                        break;
+                    case "作品搜索量":
+                        variants.push(
+                            `${key}${numText}`,
+                            `${numText}${key}`,
+                            `快${numText}的${key}`
+                        );
+                        break;
+                    case "粉丝净增":
+                        variants.push(
+                            `涨了${numText}粉`,
+                            `净增${numText}粉丝`,
+                            `涨粉${numText}`
+                        );
+                        break;
+                }
+            }
+
+            // 百分比类
+            else if (["完播率", "互动指数", "播放量超越比例"].includes(key)) {
+                const percentText = getChinesePercentText(num);
+                switch (key) {
+                    case "完播率":
+                        variants.push(
+                            `${key}${percentText}`,
+                            `大概${percentText}`,
+                            `完播率约${percentText}`
+                        );
+                        break;
+                    case "互动指数":
+                        variants.push(
+                            `互动指数${percentText}`,
+                            `互动率${percentText}`,
+                            `互动值${percentText}`
+                        );
+                        break;
+                    case "播放量超越比例":
+                        variants.push(
+                            `播放量超越了${percentText}的同行`,
+                            `超越比例${percentText}`,
+                            `播放量超了${percentText}`
+                        );
+                        break;
+                }
+            }
+
+            // 同比类
+            else if (key.includes("同比")) {
+                const baseKey = key.replace("同比", "");
+                const changeDesc = num > 0 ? "涨了" : "降了";
+                const approxChinese = getChineseNumText(Math.abs(num), baseKey, true);
+                const ratioDesc = Math.abs(num) >= 100 ? "一倍多" :
+                                  Math.abs(num) >= 50 ? "五成多" :
+                                  Math.abs(num) > 0 ? `不到${approxChinese}个百分点` : "一点点";
+
+                variants.push(
+                    `${baseKey}比之前${changeDesc}${approxChinese}个百分点`,
+                    `${key}${num > 0 ? "提升明显" : "略有下降"}`,
+                    `比之前${changeDesc}${ratioDesc}`
+                );
+            }
+
+            // 兜底
+            if (variants.length === 0) {
+                const numText = getChineseNumText(num, key);
+                variants.push(
+                    `${key}${numText}`,
+                    `大概${numText}${key}`,
+                    `接近${numText}${key}`
+                );
+            }
+
+            return variants;
+        }
+
+        // ==================== 6. 渲染表格 ====================
+        function renderBlurTable(rawData) {
+            const container = document.querySelector('.table-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const validData = [];
+            for (const [key, path] of Object.entries(dimensionMap)) {
+                const value = getDimensionValue(rawData, path);
+                if (isDataValid(value)) {
+                    validData.push({
+                        key, rawValue: value, isCore: coreDataKeys.includes(key),
+                        variants: generateBlurVariants(key, value)
+                    });
+                }
+            }
+
+            if (validData.length === 0) {
+                container.innerHTML = '<div class="empty-tip">暂无有用数据可展示</div>';
+                return;
+            }
+
+            const title = document.createElement('div');
+            title.className = 'table-title';
+            title.innerText = '核心数据模糊化表述规范（1位数适配最终版）';
+            container.appendChild(title);
+
+            const table = document.createElement('table');
+            table.className = 'blur-table';
+            table.innerHTML = `
+                <thead><tr><th>数据维度（精准值）</th><th>模糊化口语表述（纯中文+1位数适配）</th></tr></thead>
+                <tbody></tbody>
+            `;
+
+            const tbody = table.querySelector('tbody');
+            validData.forEach(item => {
+                const tr = document.createElement('tr');
+                if (item.isCore) tr.className = 'core-row';
+                const displayRealData = `${item.key} ${item.rawValue}`;
+                tr.innerHTML = `
+                    <td>${displayRealData}</td>
+                    <td>${item.variants.join(' / ')}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            container.appendChild(table);
+        }
+
+
+        // 监听模板输入框变化，实时同步到展示区
+        const customTemplateInput = document.getElementById('custom-template');
+        const activeTemplateDisplay = document.getElementById('active-template-display');
+
+        customTemplateInput.addEventListener('input', function() {
+            // 校验占位符完整性（基础校验，可扩展）
+            const placeholderList = ['[用户名称]', '[具体主题]', '[钩子植入锚点]'];
+            let inputValue = this.value.trim();
+            let errorTip = '';
+
+            placeholderList.forEach(placeholder => {
+                if (!inputValue.includes(placeholder)) {
+                    errorTip += `⚠️ 缺少必要占位符：${placeholder}<br>`;
+                }
+            });
+
+            // 更新展示区
+            activeTemplateDisplay.textContent = inputValue || '请输入有效的模板（包含所有必要占位符）';
+
+            // 显示错误提示
+            const errorElement = document.querySelector('.template-input-wrap p');
+            if (errorTip) {
+                errorElement.innerHTML = errorTip;
+                errorElement.style.color = '#dc3545';
+            } else {
+                errorElement.innerHTML = '⚠️ 模板修改后，所有生成结果必须严格沿用此句式结构，仅替换 [] 内的占位符内容！';
+                errorElement.style.color = '#dc3545';
+            }
+        });
+
+
+
+
+        window.onload = () => renderBlurTable(jsonData);
+    </script>
+</body>
+</html>
