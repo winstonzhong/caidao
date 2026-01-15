@@ -96,6 +96,8 @@ from douyin.tool_dy_score import (
 
 from douyin import tool_dy_utils
 
+from douyin import tool_dy_df
+
 from helper_task_redis2 import GLOBAL_REDIS
 
 import helper_task_redis2
@@ -1973,6 +1975,22 @@ class 基本任务(抽象持久序列):
         全局缓存.处理图片.update(链接=url, 图片key=img_key, 已处理=True)
         self.更新微信会话(全局缓存.处理图片)
         全局缓存.pop("处理图片", None)
+
+    # @property
+    # def 抖音会话页面矩形(self):
+    #     elements = self.device.find_xpath_all('//androidx.recyclerview.widget.RecyclerView')
+    #     rects = [bounds_to_rect(e.bounds) for e in elements]
+    #     return max(rects, key=lambda x: x.height)
+
+    @property
+    def 抖音页面(self):
+        elements = self.device.find_xpath_all('//androidx.recyclerview.widget.RecyclerView')
+        e = max(elements, key=lambda x: bounds_to_rect(x.bounds).height)
+        return tool_dy_df.页面(e)
+
+
+    def 获取抖音页面df(self, results):
+        return tool_dy_df.页面(results).messages
 
 
 class 前置预检查任务(基本任务):
