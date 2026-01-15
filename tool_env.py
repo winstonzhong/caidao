@@ -842,20 +842,38 @@ def 查找并截断(
     '这就是命，你躲都躲不掉”这句话特别有梗，带着点小俏皮的调侃感，像朋友间的轻松互动，让人看了忍不住会心一笑，很有日常打发时间的欢乐氛围～'
 
     >>> 查找并截断("从视频里能感受到大家对“串门”是否有用的关注特别真实～其实像之前提到的，不管是粉少的创作者互相支持，还是带着真诚去互动，慢慢都能积累起友好的氛围，对账号初期经营还挺有帮助的。你是在纠结自己做账号要不要尝试串门，还是想知道怎么让串门效果更好呀")
-    '从视频里能感受到大家对“串门”是否有用的关注特别真实～'
+    '从视频里能感受到大家对“串门”是否有用的关注特别真实～其实像之前提到的，不管是粉少的创作者互相支持，还是带着真诚去互动，慢慢都能积累起友好的氛围，对账号初期经营还挺有帮助的。'
+    >>> 查找并截断("Hi～ 刚看到你的问候呀！互相关注就是缘分，今天有没有什么有趣的事儿想分享呀")
+    'Hi～ 刚看到你的问候呀！'
     """
 
     # is_question_search_mode = '?' in target_puncts
-    last_punct_idx = -1
+    # last_punct_idx = -1
+    
+    # for punct in target_puncts:
+    #     current_idx = text.rfind(punct)
+    #     if current_idx > last_punct_idx:
+    #         last_punct_idx = current_idx
+    #         break
+
+    # # return text[: last_punct_idx + 1] if last_punct_idx != -1 else text
+    # if last_punct_idx == -1:
+    #     return text
+
+    
+    all_i = []
+    
     for punct in target_puncts:
         current_idx = text.rfind(punct)
-        if current_idx > last_punct_idx:
-            last_punct_idx = current_idx
-            break
+        if current_idx > 0:
+            all_i.append(current_idx)
 
-    # return text[: last_punct_idx + 1] if last_punct_idx != -1 else text
-    if last_punct_idx == -1:
+    if not all_i:
         return text
+    
+    last_punct_idx = max(all_i)
+    
+
 
     if len(text) * 0.5 < last_punct_idx or not is_question_search_mode:
         return text[: last_punct_idx + 1]
@@ -899,6 +917,8 @@ def truncate_at_last_punct_if_question(text: str) -> str:
 
     >>> truncate_at_last_punct_if_question("晚上好呀～ 每天收到你的问候都超开心！比心回赠，愿你也被温柔和好运包围，元气满满一整天呀～")
     '晚上好呀～ 每天收到你的问候都超开心！比心回赠，愿你也被温柔和好运包围，元气满满一整天呀～'
+    >>> truncate_at_last_punct_if_question("Hi～ 刚看到你的问候呀！互相关注就是缘分，今天有没有什么有趣的事儿想分享呀？")
+    'Hi～ 刚看到你的问候呀！'
     """
     while is_contains_question(text):
         text = 查找并截断(text, "？?", is_question_search_mode=True)[:-1]

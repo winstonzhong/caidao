@@ -22,7 +22,7 @@ GLOBAL_POOL = redis.ConnectionPool(
     socket_connect_timeout=5,
     socket_timeout=None,
     max_connections=20,
-    **config
+    **config,
 )
 
 
@@ -49,7 +49,6 @@ class RedisTaskHandler:
                 if retries < self.max_retries:
                     time.sleep(1)
         raise Exception(f"经过{self.max_retries}次重试后，仍无法与Redis建立有效连接")
-
 
     def 删除任务队列(self, task_key: str) -> int:
         return self._get_conn().delete(task_key)
@@ -78,7 +77,9 @@ class RedisTaskHandler:
         else:
             task_data = self._get_conn().lpop(任务队列名称)
         if task_data is not None:
-            return json.loads(bz2.decompress(task_data)) if task_data is not None else None
+            return (
+                json.loads(bz2.decompress(task_data)) if task_data is not None else None
+            )
 
     def 设置Redis(self, task_key: str, d: dict, expire_seconds=1800):
         data = json.dumps(d)
@@ -91,7 +92,9 @@ class RedisTaskHandler:
     def 获取Redis(self, 任务队列名称):
         task_data = self._get_conn().get(任务队列名称)
         if task_data is not None:
-            return json.loads(bz2.decompress(task_data)) if task_data is not None else None
+            return (
+                json.loads(bz2.decompress(task_data)) if task_data is not None else None
+            )
 
     def 获取锁(self, lock_key, expire_seconds=30):
         # 尝试设置锁，nx=True表示仅当key不存在时成功，ex设置过期时间防死锁
@@ -100,5 +103,31 @@ class RedisTaskHandler:
     def 释放锁(self, lock_key):
         self._get_conn().delete(lock_key)
 
-GLOBAL_REDIS = RedisTaskHandler(pool=GLOBAL_POOL)
+    # question=None,
+    # sys_prompt=SYS_COMMON,
+    # partial_content=None,
+    # history=None,
 
+    def 提交数据并阻塞等待结果(
+        self,
+        key_back,
+        sys_prompt=None,
+        question=None,
+        history=None,
+        partial_content=None,
+        timeout=300,
+    ):
+        task_key = "global_task_queue"
+        d = {
+            "sys_prompt": sys_prompt,
+            "question": question,
+            "history": history,
+            "partial_content": partial_content,
+            "key_back": key_back,
+        }
+        self.推入Redis(task_key, d)
+
+        return self.拉出Redis(key_back, True, timeout)
+
+
+GLOBAL_REDIS = RedisTaskHandler(pool=GLOBAL_POOL)

@@ -6,6 +6,13 @@ Created on 2024年7月24日
 
 import time
 
+import pandas as pd
+
+import io
+
+import tool_wx_df5
+
+
 
 class FixedLengthQueue(list):
     """
@@ -323,7 +330,7 @@ class 模型的定长先入先出队列(object):
 
     def __len__(self):
         return len(self.list)
-    
+
     @property
     def last(self):
         """
@@ -395,8 +402,117 @@ class 模型的便捷属性字典(object):
             self.save()
         return rtn
 
+    def get(self, key, default=None):
+        return self._model_instance.数据.get(key, default)
+
     def save(self):
         self._model_instance.save()
+
+    def __getitem__(self, key):
+        """重载 obj[key] 获取值的逻辑
+        >>> dm = DummyModel()
+        >>> pd = 模型的便捷属性字典(dm)
+        >>> pd.aaa == pd['aaa']
+        True
+        """
+        return self._model_instance.数据.get(key)
+
+    def __setitem__(self, key, value):
+        """重载 obj[key] = value 设置值的逻辑
+        >>> dm = DummyModel()
+        >>> pd = 模型的便捷属性字典(dm)
+        >>> pd.aaa
+        1
+        >>> pd['aaa'] = 2
+        >>> pd.aaa
+        2
+        >>> dm.数据.get('aaa')
+        2
+        """
+        self._model_instance.数据[key] = value
+
+    def get_session_df_manager(self, name):
+        return 模型的会话管理器(self, name)
+
+
+# class 模型的定长数据帧(pd.DataFrame):
+#     # 定义元数据列表，保存自定义属性名，确保pandas操作后属性不丢失
+#     _metadata = ["_mdict", "_key_name"]
+
+#     def __init__(self, mdict, name):
+#         self._name = name
+#         try:
+#             json_str = mdict.get(self._key_name)
+#             df_data = (
+#                 pd.read_json(io.StringIO(json_str)) if json_str else pd.DataFrame()
+#             )
+#         except KeyError as e:
+#             raise KeyError(f"mdict中未找到key: {self._key_name}") from e
+#         except Exception as e:
+#             raise ValueError(f"JSON数据解析失败: {e}") from e
+#         super().__init__(data=df_data)
+#         self._mdict = mdict
+
+#     @property
+#     def _key_name(self):
+#         return f"df__{self._name}"
+
+#     # 可选：重写__finalize__方法，确保属性继承（pandas子类化规范）
+#     def __finalize__(self, other, method=None, **kwargs):
+#         """确保自定义属性在pandas操作（如切片）后传递给新对象"""
+#         for name in self._metadata:
+#             setattr(self, name, getattr(other, name, None))
+#         return super().__finalize__(other, method=method, **kwargs)
+
+#     def save(self):
+#         self._mdict[self._key_name] = self.to_json()
+#         self._mdict.save()
+
+#     def 追加(self, df):
+#         tool_wx_df5.合并上下两个df(self, df)
+
+
+class 模型的会话管理器(object):
+    def __init__(self, mdict, name):
+        self.name = name
+        try:
+            json_str = mdict.get(self.key_name)
+            self.df = (
+                pd.read_json(io.StringIO(json_str)) if json_str else pd.DataFrame()
+            )
+        except KeyError as e:
+            raise KeyError(f"mdict中未找到key: {self.key_name}") from e
+        except Exception as e:
+            raise ValueError(f"JSON数据解析失败: {e}") from e
+        self.mdict = mdict
+
+    @property
+    def key_name(self):
+        return f"df__{self.name}"
+
+    def save(self):
+        self.mdict[self.key_name] = self.df.to_json()
+        self.mdict.save()
+
+    def append(self, df):
+        # print('----'* 5)
+        容器key = df.容器key.iloc[0] if df.empty else None
+        df, changed = tool_wx_df5.合并上下两个df(self.df, df)
+        if changed:
+            self.df = df
+
+        # print(changed, 容器key)
+
+        if 容器key is not None:
+            tmp = df[((df.容器key != 容器key) | (~pd.isna(df.链接))) & (~df.已处理)]
+            if not tmp.empty:
+                df.loc[tmp.index, "已处理"] = True
+                self.df = df
+                changed = True
+
+        if changed:
+            # print('changed!!!!!!!!!!!!!!!')
+            self.save()
 
 
 if __name__ == "__main__":

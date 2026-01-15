@@ -210,7 +210,7 @@ def 合并上下两个df(上一页, 当前页, safe=False):
         rtn = pandas.concat([others, tmp], axis=0)
         rtn.pop("行id")
         if "已处理" in rtn.columns:
-            rtn.已处理.fillna(False, inplace=True)
+            rtn.已处理.fillna(False)
 
         return rtn.sort_index()
     elif safe:
