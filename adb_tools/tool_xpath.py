@@ -1831,8 +1831,9 @@ class 基本任务(抽象持久序列):
     def 根据字典数据获取回复并组装结果且改变任务状态(self, d: dict):
         结果 = self.推入通用豆包任务队列并阻塞获取结果(d)
         d["原始"] = 结果
-        d["修正"] = 结果 = tool_env.对豆包回复进行所有的必要处理(结果)
         d["合法"] = tool_env.has_valid_result(结果)
+        d["修正"] = 结果 = tool_env.对豆包回复进行所有的必要处理(结果)
+
         self.数据.数据记录.enqueue(d)
         return d["原始"] if d["合法"] else None
 

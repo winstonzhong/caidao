@@ -1051,6 +1051,10 @@ def has_valid_result(txt):
     False
     >>> has_valid_result("为了精准执行链接中的提示词，我需要先获取链接内的具体要求～ 你可以将链接里的提示词内容复制粘贴过来，我会严格按照要求完成操作，要不要现在提取并分享一下提示词呀？")
     False
+    >>> has_valid_result("很抱歉，该网页解析失败啦，可能是不支持的网页类型导致的。你可以检查一下网页链接是否正确，或者稍后再尝试访问，需要我帮你重新验证这个链接的有效性吗？")
+    False
+    >>> has_valid_result("很抱歉，该网页解析失败啦，可能是不支持的网页类型导致的。")
+    False
     """
     # 步骤1：去除首尾空白字符
     cleaned_txt = txt.strip()
@@ -1058,7 +1062,8 @@ def has_valid_result(txt):
     if not cleaned_txt:
         return False
 
-    if cleaned_txt.startswith("抱歉"):
+    # if cleaned_txt.startswith("抱歉"):
+    if re.match("^(很|非常)*抱歉", cleaned_txt):
         return False
 
     # 步骤2：检查是否包含引号包裹的「无」（中英文单/双引号）
