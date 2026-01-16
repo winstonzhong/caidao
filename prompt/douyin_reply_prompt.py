@@ -269,8 +269,6 @@ def gen_prompt_url(account_json_data, video_user_name, video_content):
 
 def clear_reply_content(content):
     """
-    >>>
-    '这种的创作态度很值得学习，{{ name }}！'
     >>> clear_reply_content("每次看[具体主题]类的视频都很解压，{{ name }}！[钩子植入锚点]")
     '每次看类的视频都很解压，{{ name }}！'
     >>> clear_reply_content("每次看类的视频都很解压，{{ name }}！[钩子植入锚点]")
@@ -342,5 +340,5 @@ if __name__ == '__main__':
         需要我帮你尝试访问该链接确认图片实际内容，或整理成更清晰的表格形式吗？
     '''
     # gen_prompt_html(account_json_data, video_user_name, video_content)
-    url = gen_prompt_url(account_json_data, video_user_name, video_content)
+    #url = gen_prompt_url(account_json_data, video_user_name, video_content)
     # print(f'请严格根据链接中的提示词执行:\n{url}')
