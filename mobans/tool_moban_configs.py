@@ -43,12 +43,9 @@ CFG = {
     "主动评价模版_纯文字_串门": {
         "模版文件": "主动评价模版_纯文字_串门.html",
     },
-    
     "主动评价模版_纯文字_串门_带数据": {
         "模版文件": "主动评价模版_纯文字_串门_带数据.html",
     },
-    
-    
     "主动评价模版_图文_串门": {
         "模版文件": "主动评价模版_图文_串门.html",
     },
@@ -206,11 +203,14 @@ def 获得豆包提示词(d: dict):
     :param d: 说明
     :type d: dict
     """
+    if d.get("直接提示词"):
+        return d.pop("直接提示词"), False
+
     print("输入提示词生成参数:", d)
-    
-    if '文件名' in d:
+
+    if "文件名" in d:
         return 得到系统提示词(d.pop("文件名"), **d), False
-    
+
     类型 = d.get("类型")
 
     cfg = CFG.get(类型).copy()
@@ -231,8 +231,9 @@ def 获得豆包提示词(d: dict):
 
     return 渲染模版(fname, cfg), False
 
+
 def 得到系统提示词(文件名, **kwargs):
-    fname = f'{文件名}.txt' if '.' not in 文件名 else 文件名
+    fname = f"{文件名}.txt" if "." not in 文件名 else 文件名
     return 渲染模版(fname, kwargs)
 
 

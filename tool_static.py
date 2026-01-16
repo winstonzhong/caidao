@@ -55,17 +55,15 @@ def upload_file(content, token, fname, project_name="default", keep_fname=False)
         "token": token,
         "url": url,
     }
-    print('service_url:', service_url)
+    print("service_url:", service_url)
     try:
-        # 先获取完整的响应对象，而不是直接链式调用.json()
         response = requests.post(service_url, data=data, files=form_data)
-        
-        # 打印响应的基础信息，方便排查
-        print(f"响应状态码: {response.status_code}")
-        print(f"响应头部: {response.headers}")
-        
+
+        # print(f"响应状态码: {response.status_code}")
+        # print(f"响应头部: {response.headers}")
+
         # 尝试解析 JSON
-        data = response.json()        
+        data = response.json()
         # data = requests.post(service_url, data=data, files=form_data).json()
         result_url = data["data"].get("url")
         return f"""https://file.j1.sale{result_url}""" if result_url else data
@@ -80,12 +78,12 @@ def upload_file(content, token, fname, project_name="default", keep_fname=False)
         return {
             "error": "JSON 解析失败",
             "status_code": response.status_code,
-            "raw_response": response.text
+            "raw_response": response.text,
         }
     except Exception as e:
         # 捕获其他可能的异常（如网络错误、KeyError 等）
         print(f"其他错误发生: {str(e)}")
-        raise  # 也可以根据需求返回自定义错误信息    
+        raise  # 也可以根据需求返回自定义错误信息
 
 
 def upload_file_by_path(fpath, token, project_name="default", keep_fname=False):
@@ -182,11 +180,13 @@ def 存储文件(content, suffix=None, 返回路径=False, base_dir=BASE_DIR_56T
     print("保存文件:", fpath)
     with open(fpath, "wb") as fp:
         fp.write(content)
-    print('保存完毕===========================')
+    print("保存完毕===========================")
     return 路径到链接(fpath, base_dir=base_dir) if not 返回路径 else fpath
+
 
 def 存储图片到文件(img, suffix, 返回路径=False, base_dir=BASE_DIR_56T):
     return 存储文件(to_buffer(img, suffix), suffix, 返回路径, base_dir=base_dir)
+
 
 def 存储字典到文件(d, suffix, 返回路径=False, base_dir=BASE_DIR_56T):
     return 存储文件(json.dumps(d).encode("utf8"), suffix, 返回路径, base_dir=base_dir)
@@ -231,7 +231,7 @@ def 链接到路径(url, base_dir=BASE_DIR_56T, safe=True):
     >>> 链接到路径('https://file.j1.sale/api/file/2024-11-26/1732629182.2386892.amr') == f'{BASE_DIR_56T}/2024-11-26/1732629182.2386892.amr'
     True
     """
-    url = url.split('?', maxsplit=1)[0]
+    url = url.split("?", maxsplit=1)[0]
     if is_inner():
         if url.startswith(BASE_URL_56T):
             return url.replace(BASE_URL_56T, base_dir)
@@ -240,8 +240,6 @@ def 链接到路径(url, base_dir=BASE_DIR_56T, safe=True):
     else:
         print("downloading:", url)
         return 存储链接到文件(url, 得到后缀(url), 返回路径=True)
-
-
 
 
 def 链接到相对路径(url, base_dir=BASE_DIR_56T):

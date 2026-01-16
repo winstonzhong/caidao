@@ -96,11 +96,15 @@ from douyin.tool_dy_score import (
 
 from douyin import tool_dy_utils
 
+from douyin import tool_dy_df
+
 from helper_task_redis2 import GLOBAL_REDIS
 
 import helper_task_redis2
 
 from mobans import tool_moban_configs
+
+from prompt.douyin_reply_prompt import gen_prompt_html
 
 global_redis = GLOBAL_REDIS
 
@@ -1677,6 +1681,45 @@ class 基本任务(抽象持久序列):
             self.推入通用豆包任务队列并阻塞获取结果(data) if data.get("合法") else None
         )
 
+    def 根据文字描述以及截图获取主动串门儿评论(self):
+
+        c = self.device.find_xpath_first(
+            '//androidx.viewpager.widget.ViewPager[@text=""][@content-desc="视频"]'
+        )
+        封面文字描述 = self.device.element2text(c)
+
+        截图描述 = self.提取设备屏幕截图信息()
+
+        print("完成截图, 等待1秒------------------------")
+        time.sleep(1)
+
+        文字描述 = "\n".join([封面文字描述, 截图描述])
+
+        name = "抖音_数据爬虫"
+        obj = self.持久对象.获取其他记录(name)
+
+        prompt_html = gen_prompt_html(
+            obj.数据.get("创作数据"),
+            tool_dy_utils.从文本中提取用户名称(文字描述),
+            截图描述,
+        )
+
+        data = {
+            "类型": "主动评价模版_纯文字_串门_带数据_随机模版",
+            "content": 文字描述,
+            "name": tool_dy_utils.从文本中提取用户名称(文字描述),
+            "account_data": obj.数据.get("创作数据"),
+            "合法": tool_dy_utils.has_interaction_keywords(文字描述),
+        }
+
+        self.数据.数据记录.enqueue(data)
+
+        return (
+            self.推入通用豆包任务队列并阻塞获取结果({"直接提示词": prompt_html})
+            if data.get("合法")
+            else None
+        )
+
     def 从截图获取回复(self, 模版名="主动评价模版_图文"):
         c = self.device.find_xpath_first(
             '//androidx.viewpager.widget.ViewPager[@text=""][@content-desc="视频"]'
@@ -1782,13 +1825,15 @@ class 基本任务(抽象持久序列):
     #             return False
 
     def 根据文字描述以及截图获取回复并组装结果且改变任务状态(self):
-        return self.组装评论数据并变更任务状态(self.根据文字描述以及截图获取回复())
+        # return self.组装评论数据并变更任务状态(self.根据文字描述以及截图获取回复())
+        return self.组装评论数据并变更任务状态(self.根据文字描述以及截图获取主动串门儿评论())
 
     def 根据字典数据获取回复并组装结果且改变任务状态(self, d: dict):
         结果 = self.推入通用豆包任务队列并阻塞获取结果(d)
         d["原始"] = 结果
-        d["修正"] = 结果 = tool_env.对豆包回复进行所有的必要处理(结果)
         d["合法"] = tool_env.has_valid_result(结果)
+        d["修正"] = 结果 = tool_env.对豆包回复进行所有的必要处理(结果)
+
         self.数据.数据记录.enqueue(d)
         return d["原始"] if d["合法"] else None
 
@@ -1973,6 +2018,23 @@ class 基本任务(抽象持久序列):
         全局缓存.处理图片.update(链接=url, 图片key=img_key, 已处理=True)
         self.更新微信会话(全局缓存.处理图片)
         全局缓存.pop("处理图片", None)
+
+    # @property
+    # def 抖音会话页面矩形(self):
+    #     elements = self.device.find_xpath_all('//androidx.recyclerview.widget.RecyclerView')
+    #     rects = [bounds_to_rect(e.bounds) for e in elements]
+    #     return max(rects, key=lambda x: x.height)
+
+    @property
+    def 抖音页面(self):
+        elements = self.device.find_xpath_all(
+            "//androidx.recyclerview.widget.RecyclerView"
+        )
+        e = max(elements, key=lambda x: bounds_to_rect(x.bounds).height)
+        return tool_dy_df.页面(e)
+
+    def 获取抖音页面df(self, results):
+        return tool_dy_df.页面(results).messages
 
 
 class 前置预检查任务(基本任务):
