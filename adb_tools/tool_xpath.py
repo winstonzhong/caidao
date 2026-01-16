@@ -351,7 +351,7 @@ class SnapShotDevice(DummyDevice):
 
 
 class SteadyDevice(DummyDevice):
-    def __init__(self, adb, old_key=None, need_screen=False, need_xml=True):
+    def __init__(self, adb, old_key=None, need_screen=False, need_xml=True, refresh_init=True):
         self.adb = adb
         self.settings = {"xpath_debug": False}
         self.watcher = DummyWatcher()
@@ -362,7 +362,9 @@ class SteadyDevice(DummyDevice):
         self.img = None
         self.source = None
         # self.容器列表 = []
-        self.refresh()
+        if refresh_init:
+            self.refresh()
+        # self.refresh()
 
     def parse_element(self, e):
         rtn = []
@@ -405,16 +407,17 @@ class SteadyDevice(DummyDevice):
             )
 
     def snapshot(self, wait_steady=False):
+        print("snapshot...")
         if self.need_screen:
             self.img = self.adb.screenshot()
         self.refresh(wait_steady=wait_steady)
 
     @classmethod
-    def from_ip_port(cls, ip_port=None):
+    def from_ip_port(cls, ip_port=None, refresh_init=True, need_screen=False, need_xml=True):
         from adb_tools.helper_adb import BaseAdb
 
         adb = BaseAdb.first_adb() if ip_port is None else BaseAdb.from_ip_port(ip_port)
-        return cls(adb)
+        return cls(adb, refresh_init=refresh_init, need_screen=need_screen, need_xml=need_xml)
 
     def 拷贝环境(self, other):
         self.key = other.key
@@ -434,6 +437,8 @@ class SteadyDevice(DummyDevice):
         return key
 
     def refresh(self, debug=True, wait_steady=False):
+        # print('11111111111111111111-----------------------------------------------', debug, wait_steady)
+        # raise ValueError
         if self.need_xml:
             old_key = None
             max_try = 6
@@ -943,7 +948,11 @@ class 基本任务(抽象持久序列):
         if device_pointed.get("is_windows"):
             return Windows窗口设备(device_pointed)
         else:
-            return SteadyDevice.from_ip_port(device_pointed.get("ip_port"))
+            return SteadyDevice.from_ip_port(device_pointed.get("ip_port"),
+                                             refresh_init=False,
+                                             need_screen=False, 
+                                             need_xml=True
+                                             )
 
     @property
     def serialno(self):
@@ -1025,6 +1034,7 @@ class 基本任务(抽象持久序列):
                 execute_lines(self, block.lines)
 
     def match(self, block_id=None, ignore_status=False):
+        # print("1111111111111111111=================", self.wait_steady)
         self.device.snapshot(wait_steady=self.wait_steady)
         for block in self.blocks:
             if block_id is None or block.id == block_id:
@@ -2039,6 +2049,7 @@ class 基本任务(抽象持久序列):
             "//androidx.recyclerview.widget.RecyclerView"
         )
         e = max(elements, key=lambda x: bounds_to_rect(x.bounds).height)
+        print(e.attrib)
         return tool_dy_df.页面(e)
 
     def 获取抖音页面df(self, results):

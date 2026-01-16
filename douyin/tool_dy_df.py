@@ -1,6 +1,7 @@
 from functools import cached_property
 import re
 import tool_env
+import pandas as pd
 
 
 def 字典类型判断(d: dict) -> str:
@@ -158,7 +159,18 @@ class 消息体(object):
 
     @cached_property
     def 正文(self):
-        return f"{self.头像.内容}: {self.主体元素.内容}"
+        # return f"{self.头像.内容}: {self.主体元素.内容}"
+        return self.主体元素.内容
+    
+    @cached_property
+    def 字典(self):
+        return {
+            "发言者": self.发言者,
+            "正文": self.主体元素.内容,
+            "rect": self.主体元素.rect,
+            "类型": self.类型,
+            "自己": self.是否自己(),
+        }
 
     @cached_property
     def 类型列表(self):
@@ -170,7 +182,7 @@ class 消息体(object):
 
         :param self: 说明
         >>> 消息体([{'tag': 'android.widget.ImageView', 'text': '', 'content-desc': '视频', 'bounds': '[676,257][912,557]'}]).是否有效()
-        False
+        True
         >>> 消息体([]).是否有效()
         False
         >>> 消息体([{'tag': 'android.widget.Button', 'text': '', 'content-desc': '开心姐姐的头像', 'bounds': '[36,605][144,713]'}, {'tag': 'android.widget.ImageView', 'text': '', 'content-desc': '视频', 'bounds': '[168,617][404,1037]'}]).是否有效()
@@ -180,7 +192,11 @@ class 消息体(object):
         >>> 消息体([{'tag': 'android.widget.TextView', 'text': '再连续互聊 2 天 可点亮火花，和对方合养精灵', 'content-desc': '', 'bounds': '[148,1472][931,1533]'}]).是否有效()
         False
         """
-        return len(self.container) > 0 and "头像" in self.类型列表 and self.类型 is not None
+        return (
+            len(self.container) > 0
+            # and "头像" in self.类型列表
+            and self.类型 is not None
+        )
 
     @cached_property
     def 头像(self):
@@ -190,10 +206,10 @@ class 消息体(object):
 
     @property
     def 发言者(self):
-        return self.头像.内容
+        return self.头像.内容 if self.头像 else None
 
     def 是否自己(self):
-        return not self.头像.是否头像靠左()
+        return not self.头像.是否头像靠左() if self.头像 else None
 
     @property
     def 类型(self):
@@ -226,12 +242,13 @@ class 消息体(object):
 
 class 页面(object):
     def __init__(self, element_recycle):
-        self.elements = element_recycle.elem.xpath("//androidx.recyclerview.widget.RecyclerView/*")
+        x = "//androidx.recyclerview.widget.RecyclerView/*"
+        x = "./*"
+        self.elements = element_recycle.elem.xpath(x)
         # self.elements = element_recycle.elem.xpath(".//*")
         self.rect = tool_env.bounds_to_rect(element_recycle.bounds)
 
-
-    def get_data(self, debug=False):
+    def get_data(self, debug=True):
         rtn = []
         for x in self.elements:
             tmp = []
@@ -259,6 +276,10 @@ class 页面(object):
         return list(
             filter(lambda y: y.是否有效(), map(lambda x: 消息体(x), self.get_data()))
         )
+
+    @cached_property
+    def df(self):
+        return pd.DataFrame(data=[x.字典 for x in self.messages])
 
 
 # 执行单元测试
