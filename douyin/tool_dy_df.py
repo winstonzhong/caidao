@@ -43,6 +43,8 @@ def 字典类型判断(d: dict) -> str:
     '系统文本'
     >>> 字典类型判断({'tag': 'com.bytedance.ies.dmt.ui.widget.DmtTextView', 'text': '', 'content-desc': '早上好 表情包', 'bounds': '[0,1625][1080,2040]'})
     '表情包'
+    >>> 字典类型判断({'tag': 'android.widget.TextView', 'text': '关注', 'content-desc': '', 'bounds': '[690,1061][870,1145]'})
+    '关注按钮'
     """
     # 提取核心字段，默认空字符串避免键不存在报错
     content_desc = d.get("content-desc", "")
@@ -66,6 +68,8 @@ def 字典类型判断(d: dict) -> str:
         if content_desc.endswith(" 表情包") and len(content_desc) < 10:
             return "表情包"
         return "文本"
+    elif tag.endswith("android.widget.TextView") and text == "关注":
+        return "关注按钮"
     else:
         return "系统文本"
 
@@ -115,6 +119,14 @@ class 元素(object):
         return f"{self.rect.width}x{self.rect.height}"
 
     @property
+    def 文本(self):
+        return self.data.get("text")
+    
+    @property
+    def 内容描述(self):
+        return self.data.get("content-desc")
+    
+    @property
     def 内容(self):
         if self.类型 == "文本":
             return self.data.get("content-desc")
@@ -131,6 +143,9 @@ class 元素(object):
 
         if self.类型 == "头像":
             return self.data.get("content-desc")[:-3]
+        
+        if self.类型 == "关注按钮":
+            return self.data.get("text")
 
         raise ValueError(f"未知类型: {self.类型}")
 
@@ -166,8 +181,8 @@ class 消息体(object):
     def 字典(self):
         return {
             "发言者": self.发言者,
-            "正文": self.主体元素.内容,
-            "rect": self.主体元素.rect,
+            "正文": self.主体元素.内容 if self.主体元素 else "",
+            "rect": self.主体元素.rect if self.主体元素 else None,
             "类型": self.类型,
             "自己": self.是否自己(),
         }
@@ -191,6 +206,8 @@ class 消息体(object):
         False
         >>> 消息体([{'tag': 'android.widget.TextView', 'text': '再连续互聊 2 天 可点亮火花，和对方合养精灵', 'content-desc': '', 'bounds': '[148,1472][931,1533]'}]).是否有效()
         False
+        >>> 消息体([{'tag': 'android.widget.TextView', 'text': '23:19', 'content-desc': '23:19', 'bounds': '[469,831][610,892]'}, {'tag': 'android.widget.Button', 'text': '', 'content-desc': '@徐二妹《普欣》的头像', 'bounds': '[36,934][144,1042]'}, {'tag': 'android.widget.TextView', 'text': '@徐二妹《普欣》', 'content-desc': '', 'bounds': '[168,934][455,983]'}, {'tag': 'android.widget.TextView', 'text': '@徐二妹《普欣》', 'content-desc': '', 'bounds': '[372,1072][666,1133]'}, {'tag': 'android.widget.TextView', 'text': '关注', 'content-desc': '', 'bounds': '[690,1061][870,1145]'}]).类型
+        '关注按钮'
         """
         return (
             len(self.container) > 0
@@ -211,6 +228,9 @@ class 消息体(object):
     def 是否自己(self):
         return not self.头像.是否头像靠左() if self.头像 else None
 
+    def 是否包含文本(self, text):
+        return any([x.文本 == text for x in self.container])
+
     @property
     def 类型(self):
         """
@@ -229,6 +249,8 @@ class 消息体(object):
         '文本'
         >>> 消息体([{'tag': 'android.widget.TextView', 'text': '刚刚', 'content-desc': '刚刚', 'bounds': '[480,1625][600,1686]'}, {'tag': 'android.widget.Button', 'text': '', 'content-desc': '数字人生的头像', 'bounds': '[936,1728][1044,1836]'}, {'tag': 'com.bytedance.ies.dmt.ui.widget.DmtTextView', 'text': '', 'content-desc': '早上好 表情包', 'bounds': '[0,1625][1080,2040]'}]).类型
         '表情包'
+        >>> 消息体([{'tag': 'android.widget.Button', 'text': '', 'content-desc': '再次见到你的头像', 'bounds': '[36,501][144,609]'}, {'tag': 'android.widget.TextView', 'text': '再次见到你', 'content-desc': '', 'bounds': '[168,501][348,550]'}, {'tag': 'android.widget.TextView', 'text': '再次见到你', 'content-desc': '', 'bounds': '[372,639][597,700]'}]).类型
+        '已关注名片'
         """
         if "视频" in self.类型列表:
             return "视频"
@@ -238,6 +260,12 @@ class 消息体(object):
             return "文本"
         if "表情包" in self.类型列表:
             return "表情包"
+        if "关注按钮" in self.类型列表:
+            return "关注按钮"
+
+        if self.头像 and self.是否包含文本(self.发言者):
+            return "已关注名片"
+
 
 
 class 页面(object):
