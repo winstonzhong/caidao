@@ -104,7 +104,7 @@ import helper_task_redis2
 
 from mobans import tool_moban_configs
 
-from prompt.douyin_reply_prompt import gen_prompt_html
+from prompt.douyin_reply_prompt import gen_prompt_html, clear_reply_content
 
 global_redis = GLOBAL_REDIS
 
@@ -1784,9 +1784,15 @@ class 基本任务(抽象持久序列):
             全局缓存.数据记录字典 = {}
             全局缓存.数据记录字典["原始评论"] = 结果
             print("---------------------------------")
-            全局缓存.数据记录字典["修正评论"] = 修正评论 = (
-                tool_env.对豆包回复进行所有的必要处理(结果)
-            )
+
+            修正评论 = clear_reply_content(tool_env.对豆包回复进行所有的必要处理(结果))
+
+            # 全局缓存.数据记录字典["修正评论"] = 修正评论 = (
+            #     tool_env.对豆包回复进行所有的必要处理(结果)
+            # )
+
+            全局缓存.数据记录字典["修正评论"] = 修正评论
+
             print(修正评论)
             print("---------------------------------")
             全局缓存.数据记录字典["合法"] = tool_env.has_valid_result(修正评论)
@@ -1826,7 +1832,9 @@ class 基本任务(抽象持久序列):
 
     def 根据文字描述以及截图获取回复并组装结果且改变任务状态(self):
         # return self.组装评论数据并变更任务状态(self.根据文字描述以及截图获取回复())
-        return self.组装评论数据并变更任务状态(self.根据文字描述以及截图获取主动串门儿评论())
+        return self.组装评论数据并变更任务状态(
+            self.根据文字描述以及截图获取主动串门儿评论()
+        )
 
     def 根据字典数据获取回复并组装结果且改变任务状态(self, d: dict):
         结果 = self.推入通用豆包任务队列并阻塞获取结果(d)
