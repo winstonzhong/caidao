@@ -407,7 +407,7 @@ class SteadyDevice(DummyDevice):
             )
 
     def snapshot(self, wait_steady=False):
-        print("snapshot...")
+        # print("snapshot...")
         if self.need_screen:
             self.img = self.adb.screenshot()
         self.refresh(wait_steady=wait_steady)
