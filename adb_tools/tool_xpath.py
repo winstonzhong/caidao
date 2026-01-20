@@ -306,16 +306,25 @@ class DummyDevice(object):
 
     def click(self, *a, **k):
         return self.adb.ua2.click(*a, **k)
-
-    def click_element(self, element, offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
-        rect = bounds_to_rect(element.attrib["bounds"])
+    
+    def click_bounds(self, bounds, offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
+        rect = bounds_to_rect(bounds)
         if rect is not None:
             x, y = rect.offset(offset_x, offset_y)
             x += abs_x
             y += abs_y
-            # print("clicking:", x, y)
             self.click(x, y)
-        # self.click(*bounds_to_rect(element.attrib["bounds"]).center)
+
+    def click_element(self, element, offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
+        self.click_bounds(element.attrib["bounds"], offset_x, offset_y, abs_x, abs_y)
+        # rect = bounds_to_rect(element.attrib["bounds"])
+        # if rect is not None:
+        #     x, y = rect.offset(offset_x, offset_y)
+        #     x += abs_x
+        #     y += abs_y
+        #     # print("clicking:", x, y)
+        #     self.click(x, y)
+        # # self.click(*bounds_to_rect(element.attrib["bounds"]).center)
 
     def swipe(self, fromx, fromy, tox, toy):
         return self.adb.swipe((fromx, fromy), (tox, toy))
@@ -1231,6 +1240,8 @@ class 基本任务(抽象持久序列):
     def 点击(self, el, offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
         if isinstance(el, tuple) or isinstance(el, list):
             self.device.click(*el)
+        elif isinstance(el, str):
+            self.device.click_bounds(el)
         else:
             self.device.click_element(el, offset_x, offset_y, abs_x, abs_y)
 
@@ -1957,8 +1968,13 @@ class 基本任务(抽象持久序列):
 
     def 获取抖音会话回复数据(self):
         history = self.抖音会话history
+        # print(history)
         if not history:
             return {}
+
+        if history[-1].get("role") == "assistant":
+            return {}
+
         name, 是否群聊 = self.device.抖音会话对
         tpl_name = "体验客服_系统提示词" if not 是否群聊 else "体验客服_系统提示词_群聊"
         if 是否群聊:

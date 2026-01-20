@@ -386,7 +386,7 @@ class 页面(object):
             rtn.append(tmp)
         return rtn
 
-    @cached_property
+    @property
     def messages(self):
         return list(
             filter(
@@ -395,8 +395,8 @@ class 页面(object):
             )
         )
 
-    @cached_property
-    def df(self):
+    @property
+    def df_full(self):
         df = pd.DataFrame(data=[x.字典 for x in self.messages])
         # print(df)
         if df.empty:
@@ -409,7 +409,25 @@ class 页面(object):
             return
         df["唯一值"] = df.发言者 + ":" + df.正文
         # df.drop(columns=['冒头', '触底', 'bounds', '类型', '发言者', '正文'], inplace=True)
-        return df[["唯一值", "自己"]]
+        return df[["唯一值", "自己", "bounds", "类型", "发言者", "正文"]]
+
+
+    @cached_property
+    def df(self):
+        return self.df_full[["唯一值", "自己"]]
+        # df = pd.DataFrame(data=[x.字典 for x in self.messages])
+        # # print(df)
+        # if df.empty:
+        #     return
+        # df["发言者"] = df["发言者"].ffill()
+        # df["自己"] = df["自己"].ffill()
+        # df = df[(~df.冒头) & (~df.触底) & (~pd.isna(df.发言者))]
+        # # print(df)
+        # if df.empty:
+        #     return
+        # df["唯一值"] = df.发言者 + ":" + df.正文
+        # # df.drop(columns=['冒头', '触底', 'bounds', '类型', '发言者', '正文'], inplace=True)
+        # return df[["唯一值", "自己", "bounds"]]
 
 
 # 执行单元测试
