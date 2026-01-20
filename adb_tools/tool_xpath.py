@@ -1979,6 +1979,7 @@ class 基本任务(抽象持久序列):
             ),
         )
         result.update(history=history)
+        result.update(result=tool_dy_utils.remove_action_markers(result.get('result')))
         return result
 
     # @property

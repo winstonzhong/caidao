@@ -442,7 +442,11 @@ def remove_action_markers(text: str) -> str:
     # 开头标记含特殊字符，正常移除
     >>> remove_action_markers("[发了😀表情包]文本[比心❤️]内容")
     '文本[比心❤️]内容'
+    >>> remove_action_markers(None)
+    >>> remove_action_markers('')
     """
+    if text is None or not text.strip():
+        return
     # 正则表达式：^ 匹配文本开头，\[.*?\] 匹配方括号包裹的标记
     # count=1 确保只替换一次（即使开头有多个连续标记，也能通过一次匹配覆盖）
     pattern = r"^\[.*?\]"
