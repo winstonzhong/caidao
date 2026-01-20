@@ -431,8 +431,8 @@ class 模型的便捷属性字典(object):
         """
         self._model_instance.数据[key] = value
 
-    def get_session_df_manager(self, name):
-        return 模型的会话管理器(self, name)
+    def get_session_df_manager(self, name, is_groupchat=False):
+        return 模型的会话管理器(self, name, is_groupchat)
 
 
 # class 模型的定长数据帧(pd.DataFrame):
@@ -473,7 +473,7 @@ class 模型的便捷属性字典(object):
 
 
 class 模型的会话管理器(object):
-    def __init__(self, mdict, name):
+    def __init__(self, mdict, name, is_groupchat=False):
         self.name = name
         try:
             json_str = mdict.get(self.key_name)
@@ -485,6 +485,7 @@ class 模型的会话管理器(object):
         except Exception as e:
             raise ValueError(f"JSON数据解析失败: {e}") from e
         self.mdict = mdict
+        self.is_groupchat = is_groupchat
 
     @property
     def key_name(self):
@@ -495,7 +496,8 @@ class 模型的会话管理器(object):
         self.mdict.save()
 
     def append(self, df):
-        # print('----'* 5)
+        if df is None or df.empty:
+            return
         容器key = df.容器key.iloc[0] if df.empty else None
         df, changed = tool_wx_df5.合并上下两个df(self.df, df)
         if changed:

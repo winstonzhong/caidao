@@ -351,7 +351,9 @@ class SnapShotDevice(DummyDevice):
 
 
 class SteadyDevice(DummyDevice):
-    def __init__(self, adb, old_key=None, need_screen=False, need_xml=True, refresh_init=True):
+    def __init__(
+        self, adb, old_key=None, need_screen=False, need_xml=True, refresh_init=True
+    ):
         self.adb = adb
         self.settings = {"xpath_debug": False}
         self.watcher = DummyWatcher()
@@ -413,11 +415,15 @@ class SteadyDevice(DummyDevice):
         self.refresh(wait_steady=wait_steady)
 
     @classmethod
-    def from_ip_port(cls, ip_port=None, refresh_init=True, need_screen=False, need_xml=True):
+    def from_ip_port(
+        cls, ip_port=None, refresh_init=True, need_screen=False, need_xml=True
+    ):
         from adb_tools.helper_adb import BaseAdb
 
         adb = BaseAdb.first_adb() if ip_port is None else BaseAdb.from_ip_port(ip_port)
-        return cls(adb, refresh_init=refresh_init, need_screen=need_screen, need_xml=need_xml)
+        return cls(
+            adb, refresh_init=refresh_init, need_screen=need_screen, need_xml=need_xml
+        )
 
     def 拷贝环境(self, other):
         self.key = other.key
@@ -514,6 +520,19 @@ class SteadyDevice(DummyDevice):
     @property
     def df_wx(self):
         return self.container_wx.上下文df
+
+    @property
+    def page_dy(self):
+        elements = self.find_xpath_all("//androidx.recyclerview.widget.RecyclerView")
+        e = max(elements, key=lambda x: bounds_to_rect(x.bounds).height)
+        return tool_dy_df.页面(e)
+
+    @property
+    def df_dy(self):
+        return self.page_dy.df
+        # elements = self.find_xpath_all("//androidx.recyclerview.widget.RecyclerView")
+        # e = max(elements, key=lambda x: bounds_to_rect(x.bounds).height)
+        # return tool_dy_df.页面(e).df
 
     def merge_wx_df(self, upper_page, lower_page):
         rtn = tool_wx_df.合并上下两个df(上一页=upper_page, 当前页=lower_page, safe=True)
@@ -639,6 +658,24 @@ class SteadyDevice(DummyDevice):
     @property
     def 干净的微信会话名称(self):
         return tool_wx.clean_session_name(self.微信会话名称)
+
+    @property
+    def 抖音会话对(self):
+        x = '//android.widget.FrameLayout/android.widget.Button[@text=""][@content-desc="更多"]/../../../..//android.view.ViewGroup/android.widget.TextView'
+        elements = self.find_xpath_all(x)
+        name = elements[0].text if elements else None
+        是否群聊 = len(elements) > 1
+        return name, 是否群聊
+
+    @property
+    def 抖音会话名称(self):
+        # elements = self.抖音会话对
+        # return elements[0].text if elements else None
+        return self.抖音会话对[0]
+
+    def 是否抖音群聊(self):
+        return self.抖音会话对[1]
+        # return len(self.抖音会话对) > 1
 
 
 class 基本输入字段对象(object):
@@ -948,11 +985,12 @@ class 基本任务(抽象持久序列):
         if device_pointed.get("is_windows"):
             return Windows窗口设备(device_pointed)
         else:
-            return SteadyDevice.from_ip_port(device_pointed.get("ip_port"),
-                                             refresh_init=False,
-                                             need_screen=False, 
-                                             need_xml=True
-                                             )
+            return SteadyDevice.from_ip_port(
+                device_pointed.get("ip_port"),
+                refresh_init=False,
+                need_screen=False,
+                need_xml=True,
+            )
 
     @property
     def serialno(self):
@@ -1700,6 +1738,10 @@ class 基本任务(抽象持久序列):
 
         截图描述 = self.提取设备屏幕截图信息()
 
+        if not tool_env.has_valid_result(截图描述):
+            self.数据.数据记录.enqueue({"封面文字描述": 封面文字描述 + "\n" + 截图描述})
+            return None
+
         print("完成截图, 等待1秒------------------------")
         time.sleep(1)
 
@@ -1873,10 +1915,16 @@ class 基本任务(抽象持久序列):
     @property
     def 微信会话管理器(self):
         return self.获取微信会话管理器(self.device.微信会话名称, update=True)
-        # name = self.device.微信会话名称
-        # m = self.数据.get_session_df_manager(name)
-        # m.append(self.device.df_wx)
-        # return m
+
+    def 获取抖音会话管理器(self, name, 是否群聊, update=True):
+        m = self.数据.get_session_df_manager(name, 是否群聊)
+        if update:
+            m.append(self.device.df_dy)
+        return m
+
+    @property
+    def 抖音会话管理器(self):
+        return self.获取抖音会话管理器(*self.device.抖音会话对, update=True)
 
     def 清除当前会话历史(self):
         m = self.微信会话管理器
@@ -1888,8 +1936,16 @@ class 基本任务(抽象持久序列):
         return self.微信会话管理器.df
 
     @property
+    def 抖音会话df(self):
+        return self.抖音会话管理器.df
+
+    @property
     def 微信会话history(self):
         return tool_wx_df4.转历史(self.微信会话管理器.df)
+
+    @property
+    def 抖音会话history(self):
+        return tool_dy_df.转历史(self.抖音会话df, self.device.是否抖音群聊())
 
     # 提交数据并阻塞等待结果
     def 获取微信会话回复数据(self):
@@ -1898,6 +1954,32 @@ class 基本任务(抽象持久序列):
             history=self.微信会话history,
             sys_prompt=tool_moban_configs.得到系统提示词("起号运营人设_系统提示词"),
         )
+
+    def 获取抖音会话回复数据(self):
+        history = self.抖音会话history
+        if not history:
+            return {}
+        name, 是否群聊 = self.device.抖音会话对
+        tpl_name = "体验客服_系统提示词" if not 是否群聊 else "体验客服_系统提示词_群聊"
+        if 是否群聊:
+            tpl_name = "体验客服_系统提示词_群聊"
+            group_name = name
+        else:
+            tpl_name = "体验客服_系统提示词"
+            group_name = None
+
+        result = 全局队列.提交数据并阻塞等待结果(
+            self.返回队列_数据,
+            history=history,
+            sys_prompt=tool_moban_configs.得到系统提示词(
+                tpl_name,
+                user_name=name,
+                my_nicknam="月亮充电中",
+                group_name=group_name,
+            ),
+        )
+        result.update(history=history)
+        return result
 
     # @property
     # def 微信会话df_未处理(self):
@@ -2043,17 +2125,18 @@ class 基本任务(抽象持久序列):
     #     rects = [bounds_to_rect(e.bounds) for e in elements]
     #     return max(rects, key=lambda x: x.height)
 
-    @property
-    def 抖音页面(self):
-        elements = self.device.find_xpath_all(
-            "//androidx.recyclerview.widget.RecyclerView"
-        )
-        e = max(elements, key=lambda x: bounds_to_rect(x.bounds).height)
-        print(e.attrib)
-        return tool_dy_df.页面(e)
+    # @property
+    # def 抖音页面(self):
+    #     pass
+    #     # elements = self.device.find_xpath_all(
+    #     #     "//androidx.recyclerview.widget.RecyclerView"
+    #     # )
+    #     # e = max(elements, key=lambda x: bounds_to_rect(x.bounds).height)
+    #     # # print(e.attrib)
+    #     # return tool_dy_df.页面(e)
 
-    def 获取抖音页面df(self, results):
-        return tool_dy_df.页面(results).messages
+    # def 获取抖音页面df(self, results):
+    #     return tool_dy_df.页面(results).messages
 
 
 class 前置预检查任务(基本任务):

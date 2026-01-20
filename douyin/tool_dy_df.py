@@ -2,6 +2,63 @@ from functools import cached_property
 import re
 import tool_env
 import pandas as pd
+import numpy as np
+
+
+pd.set_option("future.no_silent_downcasting", True)
+
+
+def 转历史(df, 是否群聊=False):
+    """
+    转历史 的 Docstring
+
+    :param df: 说明
+
+    >>> l = 转历史(df_single1)
+    >>> l[0]
+    {'content': '##this is the command and req', 'role': 'assistant'}
+    >>> l[1]
+    {'content': '这是我的信息', 'role': 'user'}
+    >>> l = 转历史(df_single1, True)
+    >>> l[0]
+    {'content': '##this is the command and req', 'role': 'assistant'}
+    >>> l[1]
+    {'content': '数字人生:这是我的信息', 'role': 'user'}
+    """
+    if df is None or df.empty:
+        return []
+    
+    if "内容" not in df.columns:
+        df["内容"] = None
+
+    if "上下文" not in df.columns and "唯一值" in df.columns:
+        df = df.rename(columns={"唯一值": "上下文"})
+
+    assert "上下文" in df.columns and "自己" in df.columns, "必须有上下文列和自己列"
+
+    df.内容 = df.内容.where(df.内容.notna(), np.nan).fillna("").astype(str)
+
+    群聊标识数组 = np.full((len(df),), 是否群聊, dtype=bool)
+
+    分割条件 = (~群聊标识数组) | (df.自己)
+
+    处理后的上下文 = np.where(
+        分割条件,  # 判断条件
+        df.上下文.str.split(":", n=1).str[-1],  # 满足条件：分割取最后一部分
+        df.上下文,  # 不满足条件：保留原始上下文
+    )
+
+    s = 处理后的上下文 + df.内容
+
+    s.name = "content"
+
+    role = df.自己.map({False: "user", True: "assistant"})
+
+    role.name = "role"
+
+    data_list = pd.concat([s, role], axis=1).to_dict("records")
+
+    return [x for x in data_list if x["content"]]
 
 
 def 字典类型判断(d: dict) -> str:
@@ -121,11 +178,11 @@ class 元素(object):
     @property
     def 文本(self):
         return self.data.get("text")
-    
+
     @property
     def 内容描述(self):
         return self.data.get("content-desc")
-    
+
     @property
     def 内容(self):
         if self.类型 == "文本":
@@ -143,11 +200,15 @@ class 元素(object):
 
         if self.类型 == "头像":
             return self.data.get("content-desc")[:-3]
-        
-        if self.类型 == "关注按钮":
-            return self.data.get("text")
 
-        raise ValueError(f"未知类型: {self.类型}")
+        if self.类型 == "关注按钮":
+            return "[发了一张求关注的名片]"
+
+        # if self.类型 == "已关注名片":
+        #     return "[发了一张名片, 你已关注]"
+
+        # raise ValueError(f"未知类型: {self.类型}")
+        return " ".join(filter(lambda x: x, (self.文本, self.内容描述)))
 
     def 是否头像靠左(self):
         assert self.类型 == "头像", "类型不是头像"
@@ -155,16 +216,17 @@ class 元素(object):
 
 
 class 消息体(object):
-    def __init__(self, data: list[dict]):
+    def __init__(self, data: list[dict], rect=None):
         self.container = list(
             filter(lambda x: x is not None, map(元素.from_dict, data))
         )
+        self.big_rect = rect
 
     def __str__(self):
         return self.正文
 
     def __repr__(self):
-        return f"{self.正文}|{self.类型}|{self.主体元素.rect}"
+        return f"{self.正文}|{self.类型}|{self.rect}"
 
     @cached_property
     def 主体元素(self):
@@ -174,17 +236,39 @@ class 消息体(object):
 
     @cached_property
     def 正文(self):
-        # return f"{self.头像.内容}: {self.主体元素.内容}"
-        return self.主体元素.内容
-    
+        if self.主体元素:
+            return self.主体元素.内容
+        # data_list = filter(lambda x:x.类型 != '头像', self.container)
+        # return ' '.join(map(lambda x:x.内容, data_list))
+
+    @cached_property
+    def rect(self):
+        if self.主体元素:
+            return self.主体元素.rect
+        rect = None
+        for x in self.container:
+            if rect is None:
+                rect = x.rect
+            elif x.rect.contains(rect):
+                rect = x.rect
+        return rect
+
+    def 是否冒头(self):
+        return self.big_rect is None or self.rect.top <= self.big_rect.top
+
+    def 是否触底(self):
+        return self.big_rect is None or self.rect.bottom >= self.big_rect.bottom
+
     @cached_property
     def 字典(self):
         return {
             "发言者": self.发言者,
-            "正文": self.主体元素.内容 if self.主体元素 else "",
-            "rect": self.主体元素.rect if self.主体元素 else None,
+            "正文": self.正文,
+            "bounds": str(self.rect.to_bounds()),
             "类型": self.类型,
             "自己": self.是否自己(),
+            "冒头": self.是否冒头(),
+            "触底": self.是否触底(),
         }
 
     @cached_property
@@ -213,6 +297,7 @@ class 消息体(object):
             len(self.container) > 0
             # and "头像" in self.类型列表
             and self.类型 is not None
+            # and (self.big_rect is None or (self.rect.top > self.big_rect.top and self.rect.bottom < self.big_rect.bottom))
         )
 
     @cached_property
@@ -223,10 +308,10 @@ class 消息体(object):
 
     @property
     def 发言者(self):
-        return self.头像.内容 if self.头像 else None
+        return self.头像.内容 if self.头像 else np.nan
 
     def 是否自己(self):
-        return not self.头像.是否头像靠左() if self.头像 else None
+        return not self.头像.是否头像靠左() if self.头像 else np.nan
 
     def 是否包含文本(self, text):
         return any([x.文本 == text for x in self.container])
@@ -249,8 +334,9 @@ class 消息体(object):
         '文本'
         >>> 消息体([{'tag': 'android.widget.TextView', 'text': '刚刚', 'content-desc': '刚刚', 'bounds': '[480,1625][600,1686]'}, {'tag': 'android.widget.Button', 'text': '', 'content-desc': '数字人生的头像', 'bounds': '[936,1728][1044,1836]'}, {'tag': 'com.bytedance.ies.dmt.ui.widget.DmtTextView', 'text': '', 'content-desc': '早上好 表情包', 'bounds': '[0,1625][1080,2040]'}]).类型
         '表情包'
-        >>> 消息体([{'tag': 'android.widget.Button', 'text': '', 'content-desc': '再次见到你的头像', 'bounds': '[36,501][144,609]'}, {'tag': 'android.widget.TextView', 'text': '再次见到你', 'content-desc': '', 'bounds': '[168,501][348,550]'}, {'tag': 'android.widget.TextView', 'text': '再次见到你', 'content-desc': '', 'bounds': '[372,639][597,700]'}]).类型
-        '已关注名片'
+
+        #>>> 消息体([{'tag': 'android.widget.Button', 'text': '', 'content-desc': '再次见到你的头像', 'bounds': '[36,501][144,609]'}, {'tag': 'android.widget.TextView', 'text': '再次见到你', 'content-desc': '', 'bounds': '[168,501][348,550]'}, {'tag': 'android.widget.TextView', 'text': '再次见到你', 'content-desc': '', 'bounds': '[372,639][597,700]'}]).类型
+        #'已关注名片'
         """
         if "视频" in self.类型列表:
             return "视频"
@@ -263,9 +349,8 @@ class 消息体(object):
         if "关注按钮" in self.类型列表:
             return "关注按钮"
 
-        if self.头像 and self.是否包含文本(self.发言者):
-            return "已关注名片"
-
+        # if self.头像 and self.是否包含文本(self.发言者):
+        #     return "已关注名片"
 
 
 class 页面(object):
@@ -276,7 +361,9 @@ class 页面(object):
         # self.elements = element_recycle.elem.xpath(".//*")
         self.rect = tool_env.bounds_to_rect(element_recycle.bounds)
 
-    def get_data(self, debug=True):
+        print("rect of recycle:", self.rect)
+
+    def get_data(self, debug=False):
         rtn = []
         for x in self.elements:
             tmp = []
@@ -302,16 +389,42 @@ class 页面(object):
     @cached_property
     def messages(self):
         return list(
-            filter(lambda y: y.是否有效(), map(lambda x: 消息体(x), self.get_data()))
+            filter(
+                lambda y: y.是否有效(),
+                map(lambda x: 消息体(x, self.rect), self.get_data()),
+            )
         )
 
     @cached_property
     def df(self):
-        return pd.DataFrame(data=[x.字典 for x in self.messages])
+        df = pd.DataFrame(data=[x.字典 for x in self.messages])
+        # print(df)
+        if df.empty:
+            return
+        df["发言者"] = df["发言者"].ffill()
+        df["自己"] = df["自己"].ffill()
+        df = df[(~df.冒头) & (~df.触底) & (~pd.isna(df.发言者))]
+        # print(df)
+        if df.empty:
+            return
+        df["唯一值"] = df.发言者 + ":" + df.正文
+        # df.drop(columns=['冒头', '触底', 'bounds', '类型', '发言者', '正文'], inplace=True)
+        return df[["唯一值", "自己"]]
 
 
 # 执行单元测试
 if __name__ == "__main__":
     import doctest
 
+    df_single1 = pd.DataFrame(
+        [
+            {"唯一值": "开心姐姐:##this is the command and req", "自己": True},
+            {"唯一值": "数字人生:这是我的信息", "自己": False},
+            {"唯一值": "数字人生:[发了一个表情包]早上好", "自己": False},
+            {"唯一值": "数字人生:12345", "自己": False},
+            {"唯一值": "数字人生:56789", "自己": False},
+            {"唯一值": "数字人生:发反反复复", "自己": False},
+            {"唯一值": "数字人生:[发了一个表情包]比心", "自己": False},
+        ]
+    )
     print(doctest.testmod(verbose=False, report=False))
