@@ -473,7 +473,7 @@ class 模型的便捷属性字典(object):
 
 
 class 模型的会话管理器(object):
-    def __init__(self, mdict, name, is_groupchat=False):
+    def __init__(self, mdict, name, is_groupchat=False, max_turns=30):
         self.name = name
         try:
             json_str = mdict.get(self.key_name)
@@ -486,6 +486,7 @@ class 模型的会话管理器(object):
             raise ValueError(f"JSON数据解析失败: {e}") from e
         self.mdict = mdict
         self.is_groupchat = is_groupchat
+        self.max_turns = max_turns
 
     @property
     def key_name(self):
@@ -514,6 +515,7 @@ class 模型的会话管理器(object):
 
         if changed:
             # print('changed!!!!!!!!!!!!!!!')
+            self.df = self.df.iloc[-self.max_turns:]
             self.save()
 
 

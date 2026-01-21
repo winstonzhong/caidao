@@ -118,16 +118,35 @@ class RedisTaskHandler:
         timeout=300,
     ):
         task_key = "global_task_queue"
+        
+        ts = str(time.time())
         d = {
             "sys_prompt": sys_prompt,
             "question": question,
             "history": history,
             "partial_content": partial_content,
             "key_back": key_back,
+            "timestamp": ts,
         }
         self.推入Redis(task_key, d)
 
-        return self.拉出Redis(key_back, True, timeout)
+        
+        # return self.拉出Redis(key_back, True, timeout)
+        while 1:
+            d = self.拉出Redis(key_back, True, timeout)
+            print("-" * 66)
+            print("获取结果:")
+            print(d)
+
+            if not d:
+                break
+            if d.get("timestamp") != ts:
+                print("丢弃前期废弃结果:", d)
+                continue
+            break
+        return d
+
+
 
 
 GLOBAL_REDIS = RedisTaskHandler(pool=GLOBAL_POOL)

@@ -1930,7 +1930,10 @@ class 基本任务(抽象持久序列):
     def 获取抖音会话管理器(self, name, 是否群聊, update=True):
         m = self.数据.get_session_df_manager(name, 是否群聊)
         if update:
-            m.append(self.device.df_dy)
+            df = self.device.df_dy
+            print('&^^^^^^^^^^^^^^^^^^^^^^')
+            print(df)
+            m.append(df)
         return m
 
     @property

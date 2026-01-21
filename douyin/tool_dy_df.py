@@ -363,7 +363,7 @@ class 页面(object):
 
         print("rect of recycle:", self.rect)
 
-    def get_data(self, debug=False):
+    def get_data(self, debug=True):
         rtn = []
         for x in self.elements:
             tmp = []
@@ -414,7 +414,8 @@ class 页面(object):
 
     @cached_property
     def df(self):
-        return self.df_full[["唯一值", "自己"]]
+        df = self.df_full
+        return self.df_full[["唯一值", "自己"]] if df is not None else df
         # df = pd.DataFrame(data=[x.字典 for x in self.messages])
         # # print(df)
         # if df.empty:
