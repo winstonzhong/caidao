@@ -1059,7 +1059,7 @@ def has_valid_result(txt):
     False
     """
     # 步骤1：去除首尾空白字符
-    cleaned_txt = txt.strip()
+    cleaned_txt = txt.strip() if txt else txt
 
     if not cleaned_txt:
         return False
