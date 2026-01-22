@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天截图内容提取提示词模板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
+            line-height: 1.8;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: #fff;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .header .subtitle {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            border: 1px solid #e1e1e8;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .section-header {
+            background: #f8f9fa;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e1e1e8;
+        }
+        
+        .section-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-body {
+            padding: 24px;
+        }
+        
+        .section-number {
+            background: #2c3e50;
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        /* 角色定位样式 */
+        .role-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        
+        .role-card h3 {
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .role-card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .role-card li {
+            padding: 8px 0;
+            padding-left: 20px;
+            position: relative;
+            color: #454545;
+        }
+        
+        .role-card li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #3498db;
+            font-weight: bold;
+        }
+        
+        /* 语言风格要求 */
+        .style-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        
+        .style-item {
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        
+        .style-item.good {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+        
+        .style-item.bad {
+            background: #f8d7da;
+            border-color: #dc3545;
+        }
+        
+        .style-item.neutral {
+            background: #fff3cd;
+            border-color: #ffc107;
+        }
+        
+        .style-item h4 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .style-item.good h4 { color: #155724; }
+        .style-item.bad h4 { color: #721c24; }
+        .style-item.neutral h4 { color: #856404; }
+        
+        .style-item p {
+            font-size: 14px;
+            color: #454545;
+        }
+        
+        /* 禁止标记 */
+        .ban-icon {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .check-icon {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        /* 示例对比 */
+        .example-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .example-box {
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .example-box.wrong {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .example-box.correct {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .example-box .label {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .example-box.wrong .label { color: #721c24; }
+        .example-box.correct .label { color: #155724; }
+        
+        .example-box .text {
+            color: #1d1d1f;
+            font-style: italic;
+        }
+        
+        /* 警告框 */
+        .alert {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+        
+        /* 标签 */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .badge-danger {
+            background: #dc3545;
+            color: #fff;
+        }
+        
+        .badge-success {
+            background: #28a745;
+            color: #fff;
+        }
+        
+        /* 输出规范 */
+        .output-spec {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .output-spec ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .output-spec li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e1e1e8;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        
+        .output-spec li:last-child {
+            border-bottom: none;
+        }
+        
+        .output-spec .spec-number {
+            background: #2c3e50;
+            color: #fff;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        
+        /* 历史回复样式 */
+        .history-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .history-section h3 {
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 12px;
+        }
+        
+        .history-content {
+            background: #fff;
+            border: 1px solid #e1e1e8;
+            border-radius: 6px;
+            padding: 16px;
+            font-family: monospace;
+            font-size: 14px;
+            color: #666;
+            min-height: 60px;
+        }
+        
+        /* 示例集 */
+        .example-category {
+            margin-bottom: 20px;
+        }
+        
+        .example-category h4 {
+            font-size: 14px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .example-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .example-item {
+            padding: 12px 16px;
+            background: #fff;
+            border: 1px solid #e1e1e8;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #1d1d1f;
+            font-style: italic;
+        }
+        
+        /* 过滤规则 */
+        .filter-rules {
+            background: #fff3cd;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .filter-rules h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .filter-rules .keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .filter-rules .keyword {
+            background: #fff;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        /* 禁止列表 */
+        .ban-list {
+            background: #f8d7da;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .ban-list h4 {
+            color: #721c24;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .ban-list ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .ban-list li {
+            padding: 6px 0;
+            padding-left: 20px;
+            position: relative;
+            color: #721c24;
+        }
+        
+        .ban-list li::before {
+            content: "✗";
+            position: absolute;
+            left: 0;
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        /* 推荐列表 */
+        .recommend-list {
+            background: #d4edda;
+            padding: 16px;
+            border-radius: 8px;
+        }
+        
+        .recommend-list h4 {
+            color: #155724;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .recommend-list ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .recommend-list li {
+            padding: 6px 0;
+            padding-left: 20px;
+            position: relative;
+            color: #155724;
+        }
+        
+        .recommend-list li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        /* 结尾 */
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            border-top: 1px solid #e1e1e8;
+        }
+        
+        /* 强调文本 */
+        strong {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        em {
+            color: #e74c3c;
+            font-style: normal;
+            font-weight: 600;
+        }
+        
+        /* 提示框 */
+        .tip-box {
+            background: #e8f4fd;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .tip-box .tip-title {
+            color: #0066cc;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tip-box p {
+            color: #333;
+            margin: 0;
+        }
+        
+        /* 要素卡片 */
+        .element-card {
+            border: 1px solid #e1e1e8;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        
+        .element-header {
+            background: #f8f9fa;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e1e1e8;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .element-body {
+            padding: 16px;
+        }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .style-grid,
+            .example-compare {
+                grid-template-columns: 1fr;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>聊天截图内容提取提示词模板</h1>
+            <div class="subtitle">JSON格式专用版 - 底部按钮排除强化版</div>
+        </div>
+        
+        <div class="content">
+            <!-- 第一部分：角色定位 -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><span class="section-number">1</span>角色定位：四级过滤精确提取机器人</h2>
+                </div>
+                <div class="section-body">
+                    <div class="role-card">
+                        <h3>核心任务</h3>
+                        <ul>
+                            <li>你是一个执行<strong>四级过滤规则</strong>的聊天截图提取机器人</li>
+                            <li><strong>过滤1</strong>：识别并排除系统消息（灰色/中性背景，居中显示）</li>
+                            <li><strong>过滤2</strong>：识别并排除底部按钮区（水平排列的表情图标）</li>
+                            <li><strong>过滤3</strong>：识别表情包/图片（强制user）</li>
+                            <li><strong>过滤4</strong>：识别颜色（蓝色=assistant，其他=user）</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="role-card">
+                        <h3>输出原则</h3>
+                        <ul>
+                            <li><strong>底部按钮零容忍</strong>：截图底部水平排列的表情图标<strong>绝对禁止</strong>提取</li>
+                            <li><strong>系统消息零容忍</strong>：所有灰色背景、居中的系统提示<strong>绝对禁止</strong>提取</li>
+                            <li><strong>仅提取真实对话</strong>：只有带气泡的真实用户消息才计入会话历史</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 第二部分：截图信息输入 -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><span class="section-number">2</span>截图信息输入</h2>
+                </div>
+                <div class="section-body">
+                    <div class="history-section">
+                        <h3>待提取聊天截图</h3>
+                        <div style="text-align:center;margin:16px 0">
+                            <img src="{{url}}" style="max-width:100%;border-radius:8px;border:1px solid #e0e4ea;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+                        </div>
+                        <p style="margin-top: 10px; font-size: 13px; color: #666;">
+                            <strong>提取目标：</strong>仅提取真实对话消息，排除系统通知和底部按钮区
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 第三部分：四级过滤规则（核心更新） -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><span class="section-number">3</span>四级过滤规则（核心更新）</h2>
+                </div>
+                <div class="section-body">
+                    <!-- 过滤1：系统消息排除 -->
+                    <div class="element-card">
+                        <div class="element-header" style="background: #f8d7da; color: #721c24;">
+                            ⚠️ 过滤1：系统消息排除（优先级1）
+                        </div>
+                        <div class="element-body">
+                            <div class="ban-list">
+                                <h4><span class="ban-icon">🚫</span> 不提取的系统消息类型</h4>
+                                <ul>
+                                    <li>互相关注提示："你们已互相关注对方"、"我们已互相关注，可以开始聊天了"</li>
+                                    <li>服务评价请求："您对本次服务还满意吗？☆☆☆☆☆"</li>
+                                    <li>免责声明："你已进入咨询会话，为保障服务质量和你的合法权益..."</li>
+                                    <li>温馨提示："「温馨提示」你已进入企业号咨询会话..."</li>
+                                    <li><strong>识别特征</strong>：灰色背景、中性色、居中显示、带图标、无对话气泡、无明确role归属</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 过滤2：底部按钮区排除（新增强化） -->
+                    <div class="element-card">
+                        <div class="element-header" style="background: #f8d7da; color: #721c24;">
+                            ⚠️ 过滤2：底部按钮区排除（优先级2）- 新增强化规则
+                        </div>
+                        <div class="element-body">
+                            <div class="ban-list">
+                                <h4><span class="ban-icon">🚫</span> 绝对禁止提取的底部按钮区</h4>
+                                <ul>
+                                    <li><strong>位置特征</strong>：截图最底部，靠近屏幕边缘，通常在输入框上方</li>
+                                    <li><strong>排列特征</strong>：水平排列，3-6个图标，等间距</li>
+                                    <li><strong>内容特征</strong>："比心"、"赞"、"捂脸"、"加油"、"握手"、"发财"等快捷表情</li>
+                                    <li><strong>视觉特征</strong>：无消息气泡、无发送时间、无已读状态、无背景色</li>
+                                    <li><strong>识别要点</strong>：这些按钮是UI界面的一部分，不是实际发送的聊天记录</li>
+                                    <li><strong>致命错误</strong>：将底部按钮识别为聊天记录属于严重错误</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="alert alert-danger" style="margin-top: 12px;">
+                                <strong>⚡ 红线规则：</strong>底部水平排列的快捷表情图标<strong>100%不提取</strong>，无论其内容是什么
+                            </div>
+                            
+                            <div class="recommend-list" style="margin-top: 12px;">
+                                <h4><span class="check-icon">✅</span> 如何区分真实表情和按钮</h4>
+                                <ul>
+                                    <li>真实表情：有消息气泡、有发送时间、在聊天记录流中</li>
+                                    <li>底部按钮：无气泡、水平排列、在截图最底部、是固定UI元素</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 过滤3：表情包识别 -->
+                    <div class="element-card">
+                        <div class="element-header" style="background: #fff3cd; color: #856404;">
+                            ⚠️ 过滤3：表情包强制user
+                        </div>
+                        <div class="element-body">
+                            <div class="recommend-list">
+                                <h4><span class="check-icon">🎯</span> 真实表情包/图片消息</h4>
+                                <ul>
+                                    <li><strong>判定条件</strong>：在聊天记录流中，有气泡背景的非文字内容</li>
+                                    <li><strong>执行方式</strong>：强制 <code>role: "user"</code></li>
+                                    <li><strong>微表情必检</strong>：消息间隙的小图标，如"嗯嗯"、"OK"、"握手"</li>
+                                    <li><strong>格式要求</strong>：描述为「[描述内容]」格式</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 过滤4：颜色识别 -->
+                    <div class="element-card">
+                        <div class="element-header" style="background: #d4edda; color: #155724;">
+                            ✅ 过滤4：颜色识别
+                        </div>
+                        <div class="element-body">
+                            <div class="recommend-list">
+                                <h4><span class="check-icon">🎯</span> 蓝色背景文字 = assistant</h4>
+                                <ul>
+                                    <li><strong>判定条件</strong>：消息气泡背景为蓝色系</li>
+                                    <li><strong>执行方式</strong>：识别为蓝色 → <code>"role": "assistant"</code></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 执行顺序 -->
+                    <div class="element-card">
+                        <div class="element-header">
+                            执行顺序（必须严格遵守）
+                        </div>
+                        <div class="element-body">
+                            <div class="tip-box">
+                                <div class="tip-title">💡 四级过滤流程</div>
+                                <ol style="margin-left: 20px;">
+                                    <li><strong>第一步</strong>：扫描全图，识别并排除所有灰色系统消息（居中、无气泡）</li>
+                                    <li><strong>第二步</strong>：识别截图最底部的水平按钮区（3-6个表情图标）→ 100%排除</li>
+                                    <li><strong>第三步</strong>：在剩余内容中，识别真实表情包/图片 → 强制user</li>
+                                    <li><strong>第四步</strong>：在剩余文字消息中，识别背景色 → 蓝色=assistant，其他=user</li>
+                                    <li><strong>第五步</strong>：生成JSON，只包含真实对话内容</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 第四部分：输出规范 -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><span class="section-number">4</span>输出规范（JSON专用）</h2>
+                </div>
+                <div class="section-body">
+                    <div class="output-spec">
+                        <ul>
+                            <li>
+                                <span class="spec-number">1</span>
+                                <div><strong>纯JSON输出</strong>：仅输出JSON字符串，无任何多余文字</div>
+                            </li>
+                            <li>
+                                <span class="spec-number">2</span>
+                                <div><strong>系统消息排除</strong>：会话历史中不包含任何灰色背景的系统通知</div>
+                            </li>
+                            <li>
+                                <span class="spec-number">3</span>
+                                <div><strong>底部按钮排除</strong>：会话历史中不包含任何底部水平排列的快捷表情按钮</div>
+                            </li>
+                            <li>
+                                <span class="spec-number">4</span>
+                                <div><strong>完整性强制检查</strong>：输出前必须执行5遍检查：
+                                    <ul style="margin-top: 4px; margin-left: 16px;">
+                                        <li>检查1：灰色系统消息是否全部排除</li>
+                                        <li>检查2：底部按钮区是否全部排除</li>
+                                        <li>检查3：真实对话数量是否匹配</li>
+                                        <li>检查4：表情包是否强制user</li>
+                                        <li>检查5：颜色判定是否准确</li>
+                                    </ul>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 第五部分：示例对比 -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><span class="section-number">5</span>示例对比（错误输出 vs 正确输出）</h2>
+                </div>
+                <div class="section-body">
+                    <!-- 案例1：底部按钮排除 -->
+                    <div style="margin-bottom: 24px;">
+                        <h4 style="margin-bottom: 12px; color: #2c3e50; font-size: 15px;">
+                            <span class="badge badge-danger" style="margin-right: 8px;">案例1：底部按钮排除（重点）</span>
+                        </h4>
+                        <div class="example-compare">
+                            <div class="example-box wrong">
+                                <div class="label">❌ 错误输出（提取底部按钮）</div>
+                                <div class="text" style="font-family: monospace; font-size: 12px;">
+                                    {<br>
+                                    &nbsp;&nbsp;"会话历史": [<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;{<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"content": "真实对话1",<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"role": "assistant"<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;},<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;{<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"content": "「[比心表情]」",<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"role": "user" <em>// 致命错误：这是底部按钮！</em><br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;},<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;{<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"content": "「[赞表情]」",<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"role": "user" <em>// 致命错误：这是底部按钮！</em><br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;},<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;{<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"content": "「[捂脸表情]」",<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"role": "user" <em>// 致命错误：这是底部按钮！</em><br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                                    &nbsp;&nbsp;]<br>
+                                    }
+                                </div>
+                            </div>
+                            <div class="example-box correct">
+                                <div class="label">✅ 正确输出（排除底部按钮）</div>
+                                <div class="text" style="font-family: monospace; font-size: 12px;">
+                                    {<br>
+                                    &nbsp;&nbsp;"会话历史": [<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;{<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"content": "真实对话1",<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"role": "assistant"<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;<em>// 底部"比心、赞、捂脸"按钮已被排除</em><br>
+                                    &nbsp;&nbsp;]<br>
+                                    }<br>
+                                    <br>
+                                    <strong>识别要点：</strong><br>
+                                    1. 底部按钮在截图最底部<br>
+                                    2. 水平排列，3-6个图标<br>
+                                    3. 无气泡、无时间戳<br>
+                                    4. 是UI元素，不是聊天记录
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 案例2：系统消息排除 -->
+                    <div style="margin-bottom: 24px;">
+                        <h4 style="margin-bottom: 12px; color: #2c3e50; font-size: 15px;">
+                            <span class="badge badge-danger" style="margin-right: 8px;">案例2：系统消息排除</span>
+                        </h4>
+                        <div class="example-compare">
+                            <div class="example-box wrong">
+                                <div class="label">❌ 错误输出（提取系统消息）</div>
+                                <div class="text" style="font-family: monospace; font-size: 12px;">
+                                    {<br>
+                                    &nbsp;&nbsp;"会话历史": [<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;{<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"content": "您对本次服务还满意吗？☆☆☆☆☆",<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"role": "assistant"<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                                    &nbsp;&nbsp;]<br>
+                                    } <em>// 错误：这是服务评价，不是对话</em>
+                                </div>
+                            </div>
+                            <div class="example-box correct">
+                                <div class="label">✅ 正确输出（排除系统消息）</div>
+                                <div class="text">
+                                    <em>// 系统消息不提取，会话历史只包含真实对话</em><br>
+                                    如果没有真实对话，会话历史为空数组 []
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 第六部分：强制性规则 -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><span class="section-number">6</span>强制性规则（重点）</h2>
+                </div>
+                <div class="section-body">
+                    <div class="alert alert-danger" style="margin-bottom: 20px;">
+                        <strong>以下行为绝对禁止（违者视为提取失败）：</strong>
+                    </div>
+                    
+                    <div class="ban-list">
+                        <h4>🚫 禁止行为列表</h4>
+                        <ul>
+                            <li>输出非JSON格式内容</li>
+                            <li><strong>提取系统消息</strong>：将灰色背景的提示、通知识别为对话</li>
+                            <li><strong>提取底部按钮</strong>：将截图底部水平排列的快捷表情识别为聊天记录</li>
+                            <li>违反规则：将表情包/图片错误标记为assistant</li>
+                            <li>违反规则：将蓝色背景消息错误标记为user</li>
+                            <li>遗漏微表情（真实对话中的小表情）</li>
+                            <li>将聊天记录按倒序排列</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-danger" style="margin-top: 16px;">
+                        <strong>⚡ 红线警告：</strong>提取底部按钮属于<strong>灾难性错误</strong>，必须100%避免
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 第七部分：标准输出格式模板 -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><span class="section-number">7</span>标准输出格式模板</h2>
+                </div>
+                <div class="section-body">
+                    <div class="example-item" style="font-style:normal; background:#f8f9fa; border:1px solid #e1e1e8; font-family: monospace; font-size: 13px;">
+                        {<br>
+                        &nbsp;&nbsp;"会话类型": "单聊",<br>
+                        &nbsp;&nbsp;"会话名称": "鑫磊作...",<br>
+                        &nbsp;&nbsp;"会话历史": [<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;{<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"content": "鑫磊作類似於盤奇...",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"role": "user"<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;},<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;{<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"content": "嗯嗯,早点休息,养足精神。新号起步阶段确实不容易,有啥想法随时聊,互相学习~",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"role": "assistant"<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;},<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;{<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"content": "拼多多热榜被罚款10万元...",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"role": "user"<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;},<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;{<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"content": "晚上好",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"role": "user"<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<em>// 底部"比心、赞、捂脸"按钮已排除</em><br>
+                        &nbsp;&nbsp;]<br>
+                        }
+                    </div>
+                    <p style="margin-top: 12px; font-size: 13px; color: #666;">
+                        注：仅包含真实对话，系统消息和底部按钮已全部排除
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>底部按钮排除强化版 - 2025-12-24</p>
+            <p>核心：四级过滤 + 底部按钮零容忍</p>
+        </div>
+    </div>
+</body>
+</html>

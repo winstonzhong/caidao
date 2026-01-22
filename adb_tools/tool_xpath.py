@@ -306,7 +306,7 @@ class DummyDevice(object):
 
     def click(self, *a, **k):
         return self.adb.ua2.click(*a, **k)
-    
+
     def click_bounds(self, bounds, offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
         rect = bounds_to_rect(bounds)
         if rect is not None:
@@ -1696,6 +1696,31 @@ class 基本任务(抽象持久序列):
         # print('图片')
         return result
 
+    def 截图模板提取JSON(self, 模版文件名, **kwargs):
+        data = {
+            "文件名": 模版文件名,
+            "url": self.获取设备屏幕截图url(),
+            # "模版名称": 模版名称,
+        }
+        data.update(**kwargs)
+        return self.推入通用豆包任务队列并阻塞获取结果(data)
+    
+    def 通用详细描述截图(self, **kwargs):
+        data = {
+            "直接执行提示词": f"请详细描述链接中的图片:\n{self.获取设备屏幕截图url()}",
+        }
+        data.update(**kwargs)
+        return self.推入通用豆包任务队列并阻塞获取结果(data)
+    
+    def 抖音截图提取文本(self):
+        data = {
+            "文件名": '提取图片信息_抖音会话2.html',
+            "url": self.获取设备屏幕截图url(),
+        }
+        # data.update(**kwargs)
+        return self.推入通用豆包任务队列并阻塞获取结果(data)
+
+
     def 提取设备屏幕截图信息(self):
         return self.识别图片信息(self.获取设备屏幕截图url())
 
@@ -1931,7 +1956,7 @@ class 基本任务(抽象持久序列):
         m = self.数据.get_session_df_manager(name, 是否群聊)
         if update:
             df = self.device.df_dy
-            print('&^^^^^^^^^^^^^^^^^^^^^^')
+            print("&^^^^^^^^^^^^^^^^^^^^^^")
             print(df)
             m.append(df)
         return m
@@ -1998,7 +2023,7 @@ class 基本任务(抽象持久序列):
             ),
         )
         result.update(history=history)
-        result.update(result=tool_dy_utils.remove_action_markers(result.get('result')))
+        result.update(result=tool_dy_utils.remove_action_markers(result.get("result")))
         return result
 
     # @property
