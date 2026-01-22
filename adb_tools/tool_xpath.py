@@ -510,6 +510,7 @@ class SteadyDevice(DummyDevice):
             根据url的文件名匹配robot temp下的文件
             并且将此文件拷贝至download目录
             """
+            tool_file.删除指定目录下的所有文件和文件夹('/sdcard/Download')
             src = f"/sdcard/Download/{fname or os.path.basename(url)}"
             fpath = tool_static.存储链接到文件(
                 url, suffix=None, 返回路径=True, fpath=src
