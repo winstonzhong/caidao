@@ -206,6 +206,9 @@ def 获得豆包提示词(d: dict):
     if d.get("直接提示词"):
         return d.pop("直接提示词"), False
 
+    if d.get("直接执行提示词"):
+        return d.pop("直接执行提示词"), True
+
     print("输入提示词生成参数:", d)
 
     if "文件名" in d:
@@ -213,7 +216,7 @@ def 获得豆包提示词(d: dict):
 
     类型 = d.get("类型")
 
-    cfg = CFG.get(类型).copy()
+    cfg = CFG.get(类型, {}).copy()
 
     if 类型 == "获取视频内容" or cfg.get("提示词"):
         return cfg.get("提示词").format(**d), True

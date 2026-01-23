@@ -58,7 +58,7 @@ def upload_file(content, token, fname, project_name="default", keep_fname=False)
         "token": token,
         "url": url,
     }
-    print("service_url:", service_url)
+    # print("service_url:", service_url)
     try:
         response = requests.post(service_url, data=data, files=form_data)
 

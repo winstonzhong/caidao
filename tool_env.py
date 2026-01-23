@@ -1055,9 +1055,11 @@ def has_valid_result(txt):
     False
     >>> has_valid_result("很抱歉，该网页解析失败啦，可能是不支持的网页类型导致的。")
     False
+    >>> has_valid_result("很抱歉，当前链接的图片解析失败啦，暂时无法提取到详细信息，可能是该网页类型不被支持。要不要我帮你尝试重新校验这个图片链接的有效性，看看是否能找到可访问的途径？")
+    False
     """
     # 步骤1：去除首尾空白字符
-    cleaned_txt = txt.strip()
+    cleaned_txt = txt.strip() if txt else txt
 
     if not cleaned_txt:
         return False

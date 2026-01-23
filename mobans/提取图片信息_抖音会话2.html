@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抖音会话页截图描述提示词模板（极简版）</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
+            line-height: 1.8;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #fe2c55 0%, #ff0050 100%);
+            color: #fff;
+            padding: 30px;
+            margin: -40px -40px 40px -40px;
+            border-radius: 12px 12px 0 0;
+        }
+        .section {
+            margin-bottom: 32px;
+        }
+        .section h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: #2c3e50;
+        }
+        .format-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #fe2c55;
+            margin: 16px 0;
+        }
+        pre {
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>抖音会话页截图描述提示词模板（极简版）</h1>
+            <div style="opacity:0.8; font-size:14px;">只要求详细描述，无严格限制，基础框架</div>
+        </div>
+
+        <div class="section">
+            <h2>任务说明</h2>
+            <p>请详细描述提供的抖音聊天界面截图，覆盖界面所有可见元素，包括顶部状态栏、聊天内容、底部功能栏和整体氛围。</p>
+        </div>
+
+        <div class="section">
+            <h2>待分析截图</h2>
+            <div style="text-align:center;margin:16px 0">
+                <img src="{{url}}" style="max-width:100%;border-radius:8px;border:1px solid #e0e4ea;">
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>基本框架模板</h2>
+            <div class="format-box">
+                <pre>这是一张抖音好友的手机聊天界面截图，以下是界面详细描述：
+
+一、界面顶部
+- 状态栏信息：时间、电量、信号等
+- 聊天对象信息：昵称、头像、图标等
+- 导航按钮：返回箭头、更多按钮等
+
+二、聊天内容（按时间顺序）
+1. 消息类型（文字/视频/表情/图片）及气泡颜色
+   - 内容详细描述：文字内容、视频封面细节、表情包特征等
+2. 消息类型及气泡颜色
+   - 内容详细描述
+3. 状态提示：已读、发送中等
+
+三、界面底部
+- 快捷表情按钮
+- 输入框及功能按钮
+
+四、整体氛围
+- 对话主题、互动特点、界面风格等
+</pre>
+            </div>
+            <p style="font-size:13px;color:#666;">注：框架仅供参考，可根据实际截图灵活调整描述顺序和详略程度，核心要求是"详细"和"完整"。</p>
+        </div>
+
+    </div>
+</body>
+</html>

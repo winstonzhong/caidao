@@ -307,15 +307,24 @@ class DummyDevice(object):
     def click(self, *a, **k):
         return self.adb.ua2.click(*a, **k)
 
-    def click_element(self, element, offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
-        rect = bounds_to_rect(element.attrib["bounds"])
+    def click_bounds(self, bounds, offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
+        rect = bounds_to_rect(bounds)
         if rect is not None:
             x, y = rect.offset(offset_x, offset_y)
             x += abs_x
             y += abs_y
-            # print("clicking:", x, y)
             self.click(x, y)
-        # self.click(*bounds_to_rect(element.attrib["bounds"]).center)
+
+    def click_element(self, element, offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
+        self.click_bounds(element.attrib["bounds"], offset_x, offset_y, abs_x, abs_y)
+        # rect = bounds_to_rect(element.attrib["bounds"])
+        # if rect is not None:
+        #     x, y = rect.offset(offset_x, offset_y)
+        #     x += abs_x
+        #     y += abs_y
+        #     # print("clicking:", x, y)
+        #     self.click(x, y)
+        # # self.click(*bounds_to_rect(element.attrib["bounds"]).center)
 
     def swipe(self, fromx, fromy, tox, toy):
         return self.adb.swipe((fromx, fromy), (tox, toy))
@@ -351,7 +360,9 @@ class SnapShotDevice(DummyDevice):
 
 
 class SteadyDevice(DummyDevice):
-    def __init__(self, adb, old_key=None, need_screen=False, need_xml=True):
+    def __init__(
+        self, adb, old_key=None, need_screen=False, need_xml=True, refresh_init=True
+    ):
         self.adb = adb
         self.settings = {"xpath_debug": False}
         self.watcher = DummyWatcher()
@@ -362,7 +373,9 @@ class SteadyDevice(DummyDevice):
         self.img = None
         self.source = None
         # self.容器列表 = []
-        self.refresh()
+        if refresh_init:
+            self.refresh()
+        # self.refresh()
 
     def parse_element(self, e):
         rtn = []
@@ -405,16 +418,21 @@ class SteadyDevice(DummyDevice):
             )
 
     def snapshot(self, wait_steady=False):
+        # print("snapshot...")
         if self.need_screen:
             self.img = self.adb.screenshot()
         self.refresh(wait_steady=wait_steady)
 
     @classmethod
-    def from_ip_port(cls, ip_port=None):
+    def from_ip_port(
+        cls, ip_port=None, refresh_init=True, need_screen=False, need_xml=True
+    ):
         from adb_tools.helper_adb import BaseAdb
 
         adb = BaseAdb.first_adb() if ip_port is None else BaseAdb.from_ip_port(ip_port)
-        return cls(adb)
+        return cls(
+            adb, refresh_init=refresh_init, need_screen=need_screen, need_xml=need_xml
+        )
 
     def 拷贝环境(self, other):
         self.key = other.key
@@ -434,6 +452,8 @@ class SteadyDevice(DummyDevice):
         return key
 
     def refresh(self, debug=True, wait_steady=False):
+        # print('11111111111111111111-----------------------------------------------', debug, wait_steady)
+        # raise ValueError
         if self.need_xml:
             old_key = None
             max_try = 6
@@ -490,6 +510,7 @@ class SteadyDevice(DummyDevice):
             根据url的文件名匹配robot temp下的文件
             并且将此文件拷贝至download目录
             """
+            tool_file.删除指定目录下的所有文件和文件夹("/sdcard/Download")
             src = f"/sdcard/Download/{fname or os.path.basename(url)}"
             fpath = tool_static.存储链接到文件(
                 url, suffix=None, 返回路径=True, fpath=src
@@ -509,6 +530,19 @@ class SteadyDevice(DummyDevice):
     @property
     def df_wx(self):
         return self.container_wx.上下文df
+
+    @property
+    def page_dy(self):
+        elements = self.find_xpath_all("//androidx.recyclerview.widget.RecyclerView")
+        e = max(elements, key=lambda x: bounds_to_rect(x.bounds).height)
+        return tool_dy_df.页面(e)
+
+    @property
+    def df_dy(self):
+        return self.page_dy.df
+        # elements = self.find_xpath_all("//androidx.recyclerview.widget.RecyclerView")
+        # e = max(elements, key=lambda x: bounds_to_rect(x.bounds).height)
+        # return tool_dy_df.页面(e).df
 
     def merge_wx_df(self, upper_page, lower_page):
         rtn = tool_wx_df.合并上下两个df(上一页=upper_page, 当前页=lower_page, safe=True)
@@ -634,6 +668,24 @@ class SteadyDevice(DummyDevice):
     @property
     def 干净的微信会话名称(self):
         return tool_wx.clean_session_name(self.微信会话名称)
+
+    @property
+    def 抖音会话对(self):
+        x = '//android.widget.FrameLayout/android.widget.Button[@text=""][@content-desc="更多"]/../../../..//android.view.ViewGroup/android.widget.TextView'
+        elements = self.find_xpath_all(x)
+        name = elements[0].text if elements else None
+        是否群聊 = len(elements) > 1
+        return name, 是否群聊
+
+    @property
+    def 抖音会话名称(self):
+        # elements = self.抖音会话对
+        # return elements[0].text if elements else None
+        return self.抖音会话对[0]
+
+    def 是否抖音群聊(self):
+        return self.抖音会话对[1]
+        # return len(self.抖音会话对) > 1
 
 
 class 基本输入字段对象(object):
@@ -943,7 +995,12 @@ class 基本任务(抽象持久序列):
         if device_pointed.get("is_windows"):
             return Windows窗口设备(device_pointed)
         else:
-            return SteadyDevice.from_ip_port(device_pointed.get("ip_port"))
+            return SteadyDevice.from_ip_port(
+                device_pointed.get("ip_port"),
+                refresh_init=False,
+                need_screen=False,
+                need_xml=True,
+            )
 
     @property
     def serialno(self):
@@ -1025,6 +1082,7 @@ class 基本任务(抽象持久序列):
                 execute_lines(self, block.lines)
 
     def match(self, block_id=None, ignore_status=False):
+        # print("1111111111111111111=================", self.wait_steady)
         self.device.snapshot(wait_steady=self.wait_steady)
         for block in self.blocks:
             if block_id is None or block.id == block_id:
@@ -1183,11 +1241,16 @@ class 基本任务(抽象持久序列):
     def 点击(self, el, offset_x=0.5, offset_y=0.5, abs_x=0, abs_y=0):
         if isinstance(el, tuple) or isinstance(el, list):
             self.device.click(*el)
+        elif isinstance(el, str):
+            self.device.click_bounds(el)
         else:
             self.device.click_element(el, offset_x, offset_y, abs_x, abs_y)
 
     def 回退(self):
         self.device.adb.go_back()
+
+    def 埃克斯怕死(self, x):
+        return self.device.find_xpath_all(x)
 
     def 向下翻页(self, 模拟人工=False, 是否一半翻=False):
         # print("向下翻页", 模拟人工, 是否一半翻)
@@ -1241,6 +1304,11 @@ class 基本任务(抽象持久序列):
         return tool_static.upload_file(
             content, self.持久对象.TOKEN, suffix, project_name=project_name
         )
+        
+    def 上传文件_指定手机目录(self, base_dir=None):
+        base_dir = base_dir or self.device.adb.DIR_UPLOAD
+        return self.device.将手机文件上传56T(self.持久对象.TOKEN, base_dir)
+
 
     def 创建提示词临时文件链接(self, **kwargs):
         # prompt = self.创建提示词(**kwargs)
@@ -1536,8 +1604,14 @@ class 基本任务(抽象持久序列):
         return content
 
     def 获得豆包提示词队列数据(self, d):
+        if not d.get("附件模式"):
+            return {
+                "提示词": self.获得豆包提示词(d),
+                "timestamp": str(time.time()),
+                **self.传输队列字典,
+            }
         return {
-            "提示词": self.获得豆包提示词(d),
+            **d,
             "timestamp": str(time.time()),
             **self.传输队列字典,
         }
@@ -1576,10 +1650,10 @@ class 基本任务(抽象持久序列):
     def 从返回队列中获取结果(self, 阻塞, 超时秒数=5 * 60):
         return 全局队列.拉出Redis(self.返回队列, 阻塞, 超时秒数)
 
-    def 推入通用豆包任务队列(self, data: dict):
+    def 推入通用豆包任务队列(self, data: dict, db队列名="豆包队列"):
         d = self.获得豆包提示词队列数据(data)
         print("提示词字典:", d)
-        全局队列.推入Redis("豆包队列", d)
+        全局队列.推入Redis(db队列名, d)
         data.update(d)
         return d.get("timestamp")
 
@@ -1597,9 +1671,9 @@ class 基本任务(抽象持久序列):
         return 全局队列.拉出Redis(d.get("返回队列"), True, 5 * 60)
 
     def 推入通用豆包任务队列并阻塞获取结果(
-        self, data: dict, 阻塞秒数=5 * 60, is_json=False
+        self, data: dict, 阻塞秒数=5 * 60, is_json=False, db队列名="豆包队列"
     ):
-        ts = self.推入通用豆包任务队列(data)
+        ts = self.推入通用豆包任务队列(data, db队列名)
         print("-" * 66)
         print("推入数据:", data)
         print("ts:", ts)
@@ -1636,6 +1710,45 @@ class 基本任务(抽象持久序列):
         result = self.推入通用豆包任务队列并阻塞获取结果(data)
         # print('图片')
         return result
+
+    def 截图模板提取JSON(self, 模版文件名, **kwargs):
+        data = {
+            "文件名": 模版文件名,
+            "url": self.获取设备屏幕截图url(),
+            # "模版名称": 模版名称,
+        }
+        data.update(**kwargs)
+        return self.推入通用豆包任务队列并阻塞获取结果(data)
+
+    def 通用详细描述截图(self, **kwargs):
+        """
+        通用详细描述截图 的 Docstring
+        速度较快, 准确度较低
+        :param self: 说明
+        :param kwargs: 说明
+        """
+        data = {
+            "直接执行提示词": f"请详细描述链接中的图片:\n{self.获取设备屏幕截图url()}",
+        }
+        data.update(**kwargs)
+        return self.推入通用豆包任务队列并阻塞获取结果(data)
+
+    def 抖音截图提取文本(self):
+        data = {
+            "文件名": "提取图片信息_抖音会话2.html",
+            "url": self.获取设备屏幕截图url(),
+        }
+        # data.update(**kwargs)
+        return self.推入通用豆包任务队列并阻塞获取结果(data)
+
+    def 通用附件方式截图详细描述(self):
+        data = {
+            "图片url": self.获取设备屏幕截图url(),
+            "提示词": "详细描述这张图片。",
+            "附件模式": 1,
+        }
+        result = self.推入通用豆包任务队列并阻塞获取结果(data, db队列名="豆包队列2")
+        return tool_dy_utils.去掉最后一句问句(result)
 
     def 提取设备屏幕截图信息(self):
         return self.识别图片信息(self.获取设备屏幕截图url())
@@ -1689,6 +1802,10 @@ class 基本任务(抽象持久序列):
         封面文字描述 = self.device.element2text(c)
 
         截图描述 = self.提取设备屏幕截图信息()
+
+        if not tool_env.has_valid_result(截图描述):
+            self.数据.数据记录.enqueue({"封面文字描述": 封面文字描述 + "\n" + 截图描述})
+            return None
 
         print("完成截图, 等待1秒------------------------")
         time.sleep(1)
@@ -1863,10 +1980,19 @@ class 基本任务(抽象持久序列):
     @property
     def 微信会话管理器(self):
         return self.获取微信会话管理器(self.device.微信会话名称, update=True)
-        # name = self.device.微信会话名称
-        # m = self.数据.get_session_df_manager(name)
-        # m.append(self.device.df_wx)
-        # return m
+
+    def 获取抖音会话管理器(self, name, 是否群聊, update=True):
+        m = self.数据.get_session_df_manager(name, 是否群聊)
+        if update:
+            df = self.device.df_dy
+            print("&^^^^^^^^^^^^^^^^^^^^^^")
+            print(df)
+            m.append(df)
+        return m
+
+    @property
+    def 抖音会话管理器(self):
+        return self.获取抖音会话管理器(*self.device.抖音会话对, update=True)
 
     def 清除当前会话历史(self):
         m = self.微信会话管理器
@@ -1878,8 +2004,16 @@ class 基本任务(抽象持久序列):
         return self.微信会话管理器.df
 
     @property
+    def 抖音会话df(self):
+        return self.抖音会话管理器.df
+
+    @property
     def 微信会话history(self):
         return tool_wx_df4.转历史(self.微信会话管理器.df)
+
+    @property
+    def 抖音会话history(self):
+        return tool_dy_df.转历史(self.抖音会话df, self.device.是否抖音群聊())
 
     # 提交数据并阻塞等待结果
     def 获取微信会话回复数据(self):
@@ -1888,6 +2022,50 @@ class 基本任务(抽象持久序列):
             history=self.微信会话history,
             sys_prompt=tool_moban_configs.得到系统提示词("起号运营人设_系统提示词"),
         )
+
+    def 获取抖音会话回复数据(self):
+        history = self.抖音会话history
+        # print(history)
+        if not history:
+            return {}
+
+        if history[-1].get("role") == "assistant":
+            return {}
+
+        name, 是否群聊 = self.device.抖音会话对
+        tpl_name = "体验客服_系统提示词" if not 是否群聊 else "体验客服_系统提示词_群聊"
+        if 是否群聊:
+            tpl_name = "体验客服_系统提示词_群聊"
+            group_name = name
+        else:
+            tpl_name = "体验客服_系统提示词"
+            group_name = None
+
+        result = 全局队列.提交数据并阻塞等待结果(
+            self.返回队列_数据,
+            history=history,
+            sys_prompt=tool_moban_configs.得到系统提示词(
+                tpl_name,
+                user_name=name,
+                my_nicknam="月亮充电中",
+                group_name=group_name,
+            ),
+        )
+        result.update(history=history)
+        result.update(result=tool_dy_utils.remove_action_markers(result.get("result")))
+        return result
+    
+    def 根据系统提示词以及上下文获取回复结果(self, tpl_name, txt, partial_content=None):
+        sys_prompt=tool_moban_configs.得到系统提示词(tpl_name)
+
+        result = 全局队列.提交数据并阻塞等待结果(
+            self.返回队列_数据,
+            question=txt,
+            sys_prompt=sys_prompt,
+            partial_content=partial_content,
+        )
+        return result
+
 
     # @property
     # def 微信会话df_未处理(self):
@@ -2033,16 +2211,18 @@ class 基本任务(抽象持久序列):
     #     rects = [bounds_to_rect(e.bounds) for e in elements]
     #     return max(rects, key=lambda x: x.height)
 
-    @property
-    def 抖音页面(self):
-        elements = self.device.find_xpath_all(
-            "//androidx.recyclerview.widget.RecyclerView"
-        )
-        e = max(elements, key=lambda x: bounds_to_rect(x.bounds).height)
-        return tool_dy_df.页面(e)
+    # @property
+    # def 抖音页面(self):
+    #     pass
+    #     # elements = self.device.find_xpath_all(
+    #     #     "//androidx.recyclerview.widget.RecyclerView"
+    #     # )
+    #     # e = max(elements, key=lambda x: bounds_to_rect(x.bounds).height)
+    #     # # print(e.attrib)
+    #     # return tool_dy_df.页面(e)
 
-    def 获取抖音页面df(self, results):
-        return tool_dy_df.页面(results).messages
+    # def 获取抖音页面df(self, results):
+    #     return tool_dy_df.页面(results).messages
 
 
 class 前置预检查任务(基本任务):
@@ -2079,7 +2259,8 @@ class 基本任务列表(抽象持久序列):
                 pass
             except Exception as e:
                 print(e)
-                main_job.关闭应用()
+                if not global_cache.发生异常不关闭应用:
+                    main_job.关闭应用()
                 raise e
 
             return num_executed > 0
