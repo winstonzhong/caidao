@@ -1304,18 +1304,16 @@ class 基本任务(抽象持久序列):
         return tool_static.upload_file(
             content, self.持久对象.TOKEN, suffix, project_name=project_name
         )
-        
+
     def 上传文件_指定手机目录(self, base_dir=None):
         base_dir = base_dir or self.device.adb.DIR_UPLOAD
         return self.device.将手机文件上传56T(self.持久对象.TOKEN, base_dir)
 
-
     def 创建提示词临时文件链接(self, **kwargs):
-        # prompt = self.创建提示词(**kwargs)
-        # return tool_static.upload_file(
-        #     prompt, self.持久对象.TOKEN, ".html", project_name="tmp"
-        # )
         return self.上传文件(self.创建提示词(**kwargs), ".html", project_name="tmp")
+
+    def 下载文件_url(self, url):
+        return self.device.上传到下载目录(url)
 
     @property
     def 微信容器(self):
@@ -1803,7 +1801,7 @@ class 基本任务(抽象持久序列):
 
         截图描述 = self.提取设备屏幕截图信息()
 
-        if not tool_env.has_valid_result(截图描述):
+        if not tool_env.has_valid_result(截图描述) and 截图描述:
             self.数据.数据记录.enqueue({"封面文字描述": 封面文字描述 + "\n" + 截图描述})
             return None
 
@@ -2054,9 +2052,9 @@ class 基本任务(抽象持久序列):
         result.update(history=history)
         result.update(result=tool_dy_utils.remove_action_markers(result.get("result")))
         return result
-    
+
     def 根据系统提示词以及上下文获取回复结果(self, tpl_name, txt, partial_content=None):
-        sys_prompt=tool_moban_configs.得到系统提示词(tpl_name)
+        sys_prompt = tool_moban_configs.得到系统提示词(tpl_name)
 
         result = 全局队列.提交数据并阻塞等待结果(
             self.返回队列_数据,
@@ -2065,7 +2063,6 @@ class 基本任务(抽象持久序列):
             partial_content=partial_content,
         )
         return result
-
 
     # @property
     # def 微信会话df_未处理(self):
