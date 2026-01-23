@@ -510,7 +510,7 @@ class SteadyDevice(DummyDevice):
             根据url的文件名匹配robot temp下的文件
             并且将此文件拷贝至download目录
             """
-            tool_file.删除指定目录下的所有文件和文件夹('/sdcard/Download')
+            tool_file.删除指定目录下的所有文件和文件夹("/sdcard/Download")
             src = f"/sdcard/Download/{fname or os.path.basename(url)}"
             fpath = tool_static.存储链接到文件(
                 url, suffix=None, 返回路径=True, fpath=src
@@ -1249,6 +1249,9 @@ class 基本任务(抽象持久序列):
     def 回退(self):
         self.device.adb.go_back()
 
+    def 埃克斯怕死(self, x):
+        return self.device.find_xpath_all(x)
+
     def 向下翻页(self, 模拟人工=False, 是否一半翻=False):
         # print("向下翻页", 模拟人工, 是否一半翻)
         self.device.adb.page_down(randomize=模拟人工, half=是否一半翻)
@@ -1301,6 +1304,11 @@ class 基本任务(抽象持久序列):
         return tool_static.upload_file(
             content, self.持久对象.TOKEN, suffix, project_name=project_name
         )
+        
+    def 上传文件_指定手机目录(self, base_dir=None):
+        base_dir = base_dir or self.device.adb.DIR_UPLOAD
+        return self.device.将手机文件上传56T(self.持久对象.TOKEN, base_dir)
+
 
     def 创建提示词临时文件链接(self, **kwargs):
         # prompt = self.创建提示词(**kwargs)
@@ -1596,8 +1604,14 @@ class 基本任务(抽象持久序列):
         return content
 
     def 获得豆包提示词队列数据(self, d):
+        if not d.get("附件模式"):
+            return {
+                "提示词": self.获得豆包提示词(d),
+                "timestamp": str(time.time()),
+                **self.传输队列字典,
+            }
         return {
-            "提示词": self.获得豆包提示词(d),
+            **d,
             "timestamp": str(time.time()),
             **self.传输队列字典,
         }
@@ -1636,10 +1650,10 @@ class 基本任务(抽象持久序列):
     def 从返回队列中获取结果(self, 阻塞, 超时秒数=5 * 60):
         return 全局队列.拉出Redis(self.返回队列, 阻塞, 超时秒数)
 
-    def 推入通用豆包任务队列(self, data: dict):
+    def 推入通用豆包任务队列(self, data: dict, db队列名="豆包队列"):
         d = self.获得豆包提示词队列数据(data)
         print("提示词字典:", d)
-        全局队列.推入Redis("豆包队列", d)
+        全局队列.推入Redis(db队列名, d)
         data.update(d)
         return d.get("timestamp")
 
@@ -1657,9 +1671,9 @@ class 基本任务(抽象持久序列):
         return 全局队列.拉出Redis(d.get("返回队列"), True, 5 * 60)
 
     def 推入通用豆包任务队列并阻塞获取结果(
-        self, data: dict, 阻塞秒数=5 * 60, is_json=False
+        self, data: dict, 阻塞秒数=5 * 60, is_json=False, db队列名="豆包队列"
     ):
-        ts = self.推入通用豆包任务队列(data)
+        ts = self.推入通用豆包任务队列(data, db队列名)
         print("-" * 66)
         print("推入数据:", data)
         print("ts:", ts)
@@ -1705,22 +1719,36 @@ class 基本任务(抽象持久序列):
         }
         data.update(**kwargs)
         return self.推入通用豆包任务队列并阻塞获取结果(data)
-    
+
     def 通用详细描述截图(self, **kwargs):
+        """
+        通用详细描述截图 的 Docstring
+        速度较快, 准确度较低
+        :param self: 说明
+        :param kwargs: 说明
+        """
         data = {
             "直接执行提示词": f"请详细描述链接中的图片:\n{self.获取设备屏幕截图url()}",
         }
         data.update(**kwargs)
         return self.推入通用豆包任务队列并阻塞获取结果(data)
-    
+
     def 抖音截图提取文本(self):
         data = {
-            "文件名": '提取图片信息_抖音会话2.html',
+            "文件名": "提取图片信息_抖音会话2.html",
             "url": self.获取设备屏幕截图url(),
         }
         # data.update(**kwargs)
         return self.推入通用豆包任务队列并阻塞获取结果(data)
 
+    def 通用附件方式截图详细描述(self):
+        data = {
+            "图片url": self.获取设备屏幕截图url(),
+            "提示词": "详细描述这张图片。",
+            "附件模式": 1,
+        }
+        result = self.推入通用豆包任务队列并阻塞获取结果(data, db队列名="豆包队列2")
+        return tool_dy_utils.去掉最后一句问句(result)
 
     def 提取设备屏幕截图信息(self):
         return self.识别图片信息(self.获取设备屏幕截图url())
@@ -2026,6 +2054,18 @@ class 基本任务(抽象持久序列):
         result.update(history=history)
         result.update(result=tool_dy_utils.remove_action_markers(result.get("result")))
         return result
+    
+    def 根据系统提示词以及上下文获取回复结果(self, tpl_name, txt, partial_content=None):
+        sys_prompt=tool_moban_configs.得到系统提示词(tpl_name)
+
+        result = 全局队列.提交数据并阻塞等待结果(
+            self.返回队列_数据,
+            question=txt,
+            sys_prompt=sys_prompt,
+            partial_content=partial_content,
+        )
+        return result
+
 
     # @property
     # def 微信会话df_未处理(self):
@@ -2219,7 +2259,8 @@ class 基本任务列表(抽象持久序列):
                 pass
             except Exception as e:
                 print(e)
-                main_job.关闭应用()
+                if not global_cache.发生异常不关闭应用:
+                    main_job.关闭应用()
                 raise e
 
             return num_executed > 0
