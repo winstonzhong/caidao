@@ -1162,7 +1162,8 @@ def filter_contour_array_by_wh(a, width, height):
 def compute_group_distance(a, gap):
     half = a[..., 2:] // 2
     center = a[..., 0:2] + half
-    i = numpy.product(half, axis=1).argmax()
+    f = numpy.product if hasattr(numpy, "product") else numpy.prod
+    i = f(half, axis=1).argmax()
     delta = numpy.abs(center - center[i]) - half - half[i]
     return a[numpy.all(delta < gap, axis=1)], a[numpy.any(delta >= gap, axis=1)]
 
