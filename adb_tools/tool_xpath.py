@@ -1312,7 +1312,7 @@ class 基本任务(抽象持久序列):
     def 创建提示词临时文件链接(self, **kwargs):
         return self.上传文件(self.创建提示词(**kwargs), ".html", project_name="tmp")
 
-    def 下载文件_url(self, url):
+    def 下载文件(self, url):
         return self.device.上传到下载目录(url)
 
     @property

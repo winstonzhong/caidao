@@ -536,6 +536,9 @@ class BaseAdb(object):
 
     def clear_camera_dir(self):
         self.clear_temp_dir(base_dir=self.CAMERA_DIR)
+    
+    def clear_download_dir(self):
+        self.clear_temp_dir(base_dir=self.DIR_UPLOAD)
 
     def get_latest_camera_file(self):
         return self.get_latest_file(base_dir=self.CAMERA_DIR)
