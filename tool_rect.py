@@ -7,7 +7,8 @@ Created on 2023年6月12日
 import itertools
 import re
 
-from cached_property import cached_property
+# from cached_property import cached_property
+from django.utils.functional import cached_property
 import numpy
 from numpy.lib._iotools import _is_string_like
 import pandas
