@@ -42,6 +42,10 @@ from douyin.tool_dy_score import 计算下一次运行等待秒数
 
 import tool_dict
 
+from django.db import reset_queries
+
+
+
 NEW_RECORD = 0
 DOWNLOADED_RECORD = 1
 PRODUCED_RECORD = 2
@@ -659,9 +663,30 @@ class 抽象定时任务(BaseModel):
     def 心跳上传(cls, **kwargs):
         pass
 
+    # @classmethod
+    # def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
+    #     while 1:
+    #         cls.动态初始化(**kwargs)
+    #         # cls.心跳上传(**kwargs)
+    #
+    #         q = cls.得到所有待执行的任务(**kwargs).order_by("-优先级", "update_time")
+    #
+    #         max_priority = 0
+    #         for obj in q.iterator():
+    #             if obj.优先级 < max_priority:
+    #                 break
+    #             if obj.step() and obj.优先级 > max_priority:
+    #                 max_priority = obj.优先级
+    #
+    #         if 单步:
+    #             break
+    #         time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
+
     @classmethod
     def 执行所有定时任务(cls, 每轮间隔秒数=1, 单步=False, **kwargs):
         while 1:
+            reset_queries()
+
             cls.动态初始化(**kwargs)
             # cls.心跳上传(**kwargs)
 
@@ -669,14 +694,19 @@ class 抽象定时任务(BaseModel):
 
             max_priority = 0
             for obj in q.iterator():
-                if obj.优先级 < max_priority:
-                    break
-                if obj.step() and obj.优先级 > max_priority:
-                    max_priority = obj.优先级
+                try:
+                    if obj.优先级 < max_priority:
+                        break
+                    if obj.step() and obj.优先级 > max_priority:
+                        max_priority = obj.优先级
+                finally:
+                    del obj
 
             if 单步:
                 break
             time.sleep(每轮间隔秒数) if 每轮间隔秒数 else None
+
+
 
     def print_info(self, *a):
         if self.输出调试信息:
