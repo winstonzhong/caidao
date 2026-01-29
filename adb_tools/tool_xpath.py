@@ -106,6 +106,8 @@ from mobans import tool_moban_configs
 
 from prompt.douyin_reply_prompt import gen_prompt_html, clear_reply_content
 
+import tool_prompt
+
 global_redis = GLOBAL_REDIS
 
 global_cache = tool_dict.PropDict()
@@ -1739,14 +1741,29 @@ class 基本任务(抽象持久序列):
         # data.update(**kwargs)
         return self.推入通用豆包任务队列并阻塞获取结果(data)
 
-    def 通用附件方式截图详细描述(self):
+    # def 通用附件方式截图详细描述(self, prompt="请竭尽所能的,最为详细地, 描述这张图片所包含的所有内容。"):
+    #     data = {
+    #         "图片url": self.获取设备屏幕截图url(),
+    #         "提示词": prompt,
+    #         "附件模式": 1,
+    #     }
+    #     result = self.推入通用豆包任务队列并阻塞获取结果(data, db队列名="豆包队列2")
+    #     result = tool_dy_utils.去掉最后一句问句(result)
+    #     data.update(result=result)
+    #     return data
+
+    def 通用附件方式截图详细描述(self, 结果: str='json'):
+        prompt = tool_prompt.获取提示词("截图解析", 方式='附件', 结果=结果)
         data = {
             "图片url": self.获取设备屏幕截图url(),
-            "提示词": "详细描述这张图片。",
+            "提示词": prompt,
             "附件模式": 1,
         }
         result = self.推入通用豆包任务队列并阻塞获取结果(data, db队列名="豆包队列2")
-        return tool_dy_utils.去掉最后一句问句(result)
+        result = tool_dy_utils.去掉最后一句问句(result)
+        data.update(result=result)
+        return data
+
 
     def 提取设备屏幕截图信息(self):
         return self.识别图片信息(self.获取设备屏幕截图url())
@@ -1801,9 +1818,13 @@ class 基本任务(抽象持久序列):
 
         截图描述 = self.提取设备屏幕截图信息()
 
+        if not 截图描述:
+            print("识别截图失败!!!")
+            return
+
         if not tool_env.has_valid_result(截图描述) and 截图描述:
             self.数据.数据记录.enqueue({"封面文字描述": 封面文字描述 + "\n" + 截图描述})
-            return None
+            return
 
         print("完成截图, 等待1秒------------------------")
         time.sleep(1)
@@ -2234,6 +2255,12 @@ class 基本任务列表(抽象持久序列):
 
     def init(self, list_of_dict):
         self.jobs = [基本任务(d, self.device_pointed) for d in list_of_dict]
+
+    def 清理环境并得到主任务(self):
+        global_cache.clear()
+        main_job = self.jobs[-1]
+        global_cache.update(main_job.paras)
+        return main_job
 
     def 执行任务(self, 单步=False):
         global_cache.clear()
