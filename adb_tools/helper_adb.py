@@ -1854,6 +1854,12 @@ class BaseAdb(object):
         self.execute(f"input swipe {start[0]} {start[1]} {end[0]} {end[1]} {wait}")
         return self
 
+    def swipe_ua2(self, fx, fy, tx, ty, duration=None, steps=None):
+        try:
+            self.ua2.swipe(fx, fy, tx, ty, duration,steps)
+        except uiautomator2.exceptions.JSONRPCError as e:
+            print('swipe fail:', e)
+
     def do_longclick(self, x=None, y=None, duration=2000):
         if x is None or y is None:
             cx, cy = self.get_sys_center()
@@ -1894,7 +1900,7 @@ class BaseAdb(object):
     def scroll_down(self, distance=200, duration=None, wait=None):
         w, h = self.get_sys_width_height()
         if wait is None:
-            self.ua2.swipe(
+            self.swipe_ua2(
                 w // 2, h // 2, w // 2, (h // 2) - distance, duration=duration
             )
         else:
@@ -1908,15 +1914,15 @@ class BaseAdb(object):
 
     def scroll_up(self, distance=200, duration=None, steps=None):
         w, h = self.get_sys_width_height()
-        self.ua2.swipe(w // 2, h // 2, w // 2, (h // 2) + distance, duration=duration, steps=steps)
+        self.swipe_ua2(w // 2, h // 2, w // 2, (h // 2) + distance, duration=duration, steps=steps)
 
     # def page_up(self, duration=None, steps=None):
     #     w, h = self.get_sys_width_height()
-    #     self.ua2.swipe(w // 2, h // 2, w // 2, h, duration, steps)
+    #     self.swipe_ua2(w // 2, h // 2, w // 2, h, duration, steps)
 
     # def page_down(self, duration=None, steps=None):
     #     w, h = self.get_sys_width_height()
-    #     self.ua2.swipe(w // 2, h // 2, w // 2, 0, duration, steps)
+    #     self.swipe_ua2(w // 2, h // 2, w // 2, 0, duration, steps)
     def page_up(self, duration=None, steps=None, randomize=False, half=False):
         """
         模拟向上滑动（翻页）操作。
@@ -1957,7 +1963,7 @@ class BaseAdb(object):
             end_y = end_y + (start_y - end_y) // 2
 
         print(start_x, start_y, end_x, end_y)
-        self.ua2.swipe(start_x, start_y, end_x, end_y, duration, steps)
+        self.swipe_ua2(start_x, start_y, end_x, end_y, duration, steps)
 
 
     def page_down(self, duration=None, steps=None, randomize=False, half=False):
@@ -1994,22 +2000,22 @@ class BaseAdb(object):
             end_y = end_y + (start_y - end_y) // 2
 
         # print(start_x, start_y, end_x, end_y)
-        self.ua2.swipe(start_x, start_y, end_x, end_y, duration, steps)
+        self.swipe_ua2(start_x, start_y, end_x, end_y, duration, steps)
 
     def 向上滑动控件(self, e):
         rect = bounds_to_rect(e.bounds)
-        self.ua2.swipe(rect.center_x, rect.bottom, rect.center_x, rect.top)
+        self.swipe_ua2(rect.center_x, rect.bottom, rect.center_x, rect.top)
     
     def 向左滑动控件(self, e):
         rect = bounds_to_rect(e.bounds)
-        self.ua2.swipe(rect.right, rect.center_y, rect.left, rect.center_y)
+        self.swipe_ua2(rect.right, rect.center_y, rect.left, rect.center_y)
     
     def 滑动(self, 起始点, 结束点, duration=None, steps=None, 模拟人工=False):
         pass
 
     def 顶部下拉(self, duration=None, steps=None):
         w, h = self.get_sys_width_height()
-        self.ua2.swipe(w // 2, 0, w // 2, h // 2, duration, steps)
+        self.swipe_ua2(w // 2, 0, w // 2, h // 2, duration, steps)
 
     def scroll_bottom(self):
         self.page_down(duration=10, steps=2)
