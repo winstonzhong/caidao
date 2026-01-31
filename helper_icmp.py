@@ -5,9 +5,12 @@ Created on 2024 Oct 26
 '''
 import array
 import json
+import os
+import platform
 import random
 import socket
 import struct
+import subprocess
 import threading
 import time
 
@@ -24,12 +27,25 @@ class IcmpScan(object):
     
     @classmethod
     def 得到套接字(cls, timeout=3):
-        s = socket.socket(socket.AF_INET, 
-                             socket.SOCK_RAW, 
-                             socket.getprotobyname("icmp")
-                             )
-        s.settimeout(timeout)
-        return s
+        try:
+            s = socket.socket(socket.AF_INET, 
+                                 socket.SOCK_RAW, 
+                                 socket.getprotobyname("icmp")
+                                 )
+            s.settimeout(timeout)
+            return s
+        except PermissionError as e:
+            import os
+            import sys
+            if os.name == 'posix':  # Linux/Mac
+                raise PermissionError(
+                    "创建原始套接字需要 root 权限。\n"
+                    "解决方案:\n"
+                    "1. 使用 sudo 运行: sudo python your_script.py\n"
+                    "2. 赋予 Python 权限: sudo setcap cap_net_raw+ep $(which python)\n"
+                    f"3. 当前用户: {os.getlogin()}, UID: {os.getuid()}"
+                ) from e
+            raise
     
     @property
     def rawSocket(self):
@@ -111,14 +127,64 @@ class IcmpScan(object):
         return result
     
     @classmethod
-    def 检测设备状态(cls, ip):
-        s = cls.得到套接字()
-        packet, ID = cls.创建数据包()
-        s.sendto(packet, (ip, 0))
+    def 检测设备状态(cls, ip, use_ping_fallback=True):
+        """
+        检测设备是否存活
+        
+        Args:
+            ip: IP 地址
+            use_ping_fallback: 权限不足时是否使用系统 ping 命令作为备选
+        
+        Returns:
+            bool: 设备是否存活
+        """
         try:
-            return cls.接收数据(s, ID)
-        except TimeoutError:
-            pass
+            s = cls.得到套接字()
+            packet, ID = cls.创建数据包()
+            s.sendto(packet, (ip, 0))
+            try:
+                return cls.接收数据(s, ID)
+            except TimeoutError:
+                return False
+        except PermissionError:
+            if use_ping_fallback and os.name == 'posix':
+                # Linux/Mac 无权限时使用系统 ping 命令
+                return cls._ping_with_system_command(ip)
+            raise
+    
+    @classmethod
+    def _ping_with_system_command(cls, ip, timeout=3):
+        """
+        使用系统 ping 命令检测（无需 root 权限）
+        
+        Returns:
+            bool: 设备是否存活
+        """
+        import subprocess
+        import platform
+        
+        system = platform.system().lower()
+        
+        if system == 'linux':
+            # Linux: -c 次数, -W 超时秒数
+            cmd = ['ping', '-c', '1', '-W', str(timeout), ip]
+        elif system == 'darwin':  # macOS
+            # Mac: -c 次数, -t 超时秒数
+            cmd = ['ping', '-c', '1', '-t', str(timeout), ip]
+        else:
+            # Windows: -n 次数, -w 超时毫秒
+            cmd = ['ping', '-n', '1', '-w', str(timeout * 1000), ip]
+        
+        try:
+            result = subprocess.run(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=timeout + 2
+            )
+            return result.returncode == 0
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return False
         
 
     def start(self):
