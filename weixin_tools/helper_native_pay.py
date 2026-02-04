@@ -12,11 +12,11 @@ def generate_jwt_token(user_info, jwt_secret_key, jwt_expiration_delta):
     """生成登录JWT Token"""
     payload = {
         "user_id": user_info.get("unionid"),  # 用unionid作为用户唯一标识
-        "exp": datetime.utcnow() + timedelta(seconds=jwt_secret_key)
+        "exp": datetime.utcnow() + timedelta(seconds=jwt_expiration_delta)
     }
     token = jwt.encode(
         payload,
-        jwt_expiration_delta,
+        jwt_secret_key,
         algorithm="HS256"
     )
     return token
