@@ -566,6 +566,8 @@ class OffiAccount:
             assert rtn.get('is_end'), rtn
             return rtn.get('result')
 
+    def user_info(self, openid):
+        return self.client.user.get(openid)
 
 if __name__ == '__main__':
     # oa = OffiAccount()
@@ -591,8 +593,11 @@ if __name__ == '__main__':
     # print(oa.get_voice_material())
     # print(oa.get_image_material())
     # oa.reply_img('orRSd56HefLUut_ia-xwXGlmCH68', 'Ru5HW9LTcmgRCixmZ3_CdenSfac1JtXS1LoxWMVEViYDVx3ScpuHMrV3fGgOGvh9')
-    x = oa.get_tmp_img_media_id_by_url('https://file.j1.sale/api/file/static/crawler/img/icon_summary.png')
-    print(x)
+    # x = oa.get_tmp_img_media_id_by_url('https://file.j1.sale/api/file/static/crawler/img/icon_summary.png')
+    # print(x)
+    x = oa.user_info('orRSd56HefLUut_ia-xwXGlmCH68')
+    print('x', x)
+
     # x = oa.get_tmp_img_url('rEAssefTyr8MuDPtyugp5dr7Urew2P7u25pGK9M4Z-2Uo3FfVKkOguogIWHXLci7')
     # print(x)
     # menu_data = {
@@ -721,5 +726,5 @@ if __name__ == '__main__':
     #                              )
 
     # print(oa.publish_article('ILWSWmW3bP6zCwjvxO7jEbjHGA_7mPRxLRko4PV_KKKuCH9xeKJzcjC7vb2Qxp-m'))
-    print(oa.client.freepublish.batchget(0, 20))
+    # print(oa.client.freepublish.batchget(0, 20))
     # print(oa.client.freepublish.get('2247484058'))
