@@ -1741,21 +1741,12 @@ class 基本任务(抽象持久序列):
         # data.update(**kwargs)
         return self.推入通用豆包任务队列并阻塞获取结果(data)
 
-    # def 通用附件方式截图详细描述(self, prompt="请竭尽所能的,最为详细地, 描述这张图片所包含的所有内容。"):
-    #     data = {
-    #         "图片url": self.获取设备屏幕截图url(),
-    #         "提示词": prompt,
-    #         "附件模式": 1,
-    #     }
-    #     result = self.推入通用豆包任务队列并阻塞获取结果(data, db队列名="豆包队列2")
-    #     result = tool_dy_utils.去掉最后一句问句(result)
-    #     data.update(result=result)
-    #     return data
-
-    def 通用附件方式截图详细描述(self, 结果: str='json'):
+    def 通用附件方式截图详细描述(self, 结果: str='json', url=None):
         prompt = tool_prompt.获取提示词("截图解析", 方式='附件', 结果=结果)
+        if url is None:
+            url = self.获取设备屏幕截图url()
         data = {
-            "图片url": self.获取设备屏幕截图url(),
+            "图片url": url,
             "提示词": prompt,
             "附件模式": 1,
         }
@@ -2084,6 +2075,14 @@ class 基本任务(抽象持久序列):
             partial_content=partial_content,
         )
         return result
+    
+    def 获取回答数据(self, sys_prompt, question, partial_content=None):
+        return 全局队列.提交数据并阻塞等待结果(
+            self.返回队列_数据,
+            question=question,
+            sys_prompt=sys_prompt,
+            partial_content=partial_content,
+        )
 
     # @property
     # def 微信会话df_未处理(self):
