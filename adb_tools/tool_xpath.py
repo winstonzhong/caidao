@@ -108,6 +108,8 @@ from prompt.douyin_reply_prompt import gen_prompt_html, clear_reply_content
 
 import tool_prompt
 
+import tool_text_classifier
+
 global_redis = GLOBAL_REDIS
 
 global_cache = tool_dict.PropDict()
@@ -121,6 +123,9 @@ global_rom = tool_dict.PropDict()
 URL_TASK_QUEUE = f"https://{tool_env.HOST_TASK}"
 
 namespaces = {"re": "http://exslt.org/regular-expressions"}
+
+
+DB_QUEUE = "豆包队列2"
 
 
 def 得到url(task_key, 中继=False):
@@ -1041,6 +1046,10 @@ class 基本任务(抽象持久序列):
         return self.d.get("paras")
 
     @property
+    def config(self):
+        return tool_dict.PropDict(self.d.get("paras"))
+
+    @property
     def name(self):
         return self.d.get("name")
 
@@ -1625,11 +1634,11 @@ class 基本任务(抽象持久序列):
 
     @property
     def 返回队列(self):
-        return f"豆包队列_{self.串口号}"
+        return f"豆包返回队列_{self.串口号}"
 
     @property
     def 返回队列_数据(self):
-        return f"数据队列_{self.串口号}"
+        return f"数据返回队列_{self.串口号}"
 
     def 获取最近n条历史(self, n=5):
         history = self.数据.数据记录.list[-n:]
@@ -1650,7 +1659,7 @@ class 基本任务(抽象持久序列):
     def 从返回队列中获取结果(self, 阻塞, 超时秒数=5 * 60):
         return 全局队列.拉出Redis(self.返回队列, 阻塞, 超时秒数)
 
-    def 推入通用豆包任务队列(self, data: dict, db队列名="豆包队列"):
+    def 推入通用豆包任务队列(self, data: dict, db队列名=DB_QUEUE):
         d = self.获得豆包提示词队列数据(data)
         print("提示词字典:", d)
         全局队列.推入Redis(db队列名, d)
@@ -1666,12 +1675,12 @@ class 基本任务(抽象持久序列):
         )
 
     def 调试推入阻塞测试(self, d):
-        全局队列.推入Redis("豆包队列", d)
+        全局队列.推入Redis(DB_QUEUE, d)
         print("===========================================")
         return 全局队列.拉出Redis(d.get("返回队列"), True, 5 * 60)
 
     def 推入通用豆包任务队列并阻塞获取结果(
-        self, data: dict, 阻塞秒数=5 * 60, is_json=False, db队列名="豆包队列"
+        self, data: dict, 阻塞秒数=5 * 60, is_json=False, db队列名=DB_QUEUE
     ):
         ts = self.推入通用豆包任务队列(data, db队列名)
         print("-" * 66)
@@ -1702,14 +1711,14 @@ class 基本任务(抽象持久序列):
 
         return 结果
 
-    def 识别图片信息(self, url):
-        data = {
-            "类型": "提取图片信息_直接",
-            "url": url,
-        }
-        result = self.推入通用豆包任务队列并阻塞获取结果(data)
-        # print('图片')
-        return result
+    # def 识别图片信息(self, url):
+    #     data = {
+    #         "类型": "提取图片信息_直接",
+    #         "url": url,
+    #     }
+    #     result = self.推入通用豆包任务队列并阻塞获取结果(data)
+    #     # print('图片')
+    #     return result
 
     def 截图模板提取JSON(self, 模版文件名, **kwargs):
         data = {
@@ -1750,14 +1759,19 @@ class 基本任务(抽象持久序列):
             "提示词": prompt,
             "附件模式": 1,
         }
-        result = self.推入通用豆包任务队列并阻塞获取结果(data, db队列名="豆包队列2")
+        result = self.推入通用豆包任务队列并阻塞获取结果(data, db队列名=DB_QUEUE)
         result = tool_dy_utils.去掉最后一句问句(result)
         data.update(result=result)
         return data
 
 
     def 提取设备屏幕截图信息(self):
-        return self.识别图片信息(self.获取设备屏幕截图url())
+        data = {
+            "类型": "提取图片信息_直接",
+            "url": self.获取设备屏幕截图url(),
+        }
+        return self.推入通用豆包任务队列并阻塞获取结果(data)
+
 
     def 根据模版提取设备屏幕截图信息(self):
         data = {
@@ -1779,11 +1793,6 @@ class 基本任务(抽象持久序列):
 
         文字描述 = "\n".join([封面文字描述, 截图描述])
 
-        # data = {
-        #     "类型": "主动评价模版_纯文字_串门",
-        #     "封面文字描述": 文字描述,
-        #     "合法": tool_dy_utils.has_interaction_keywords(文字描述),
-        # }
         name = "抖音_数据爬虫"
         obj = self.持久对象.获取其他记录(name)
         data = {
@@ -1862,7 +1871,7 @@ class 基本任务(抽象持久序列):
         print(data)
         data = self.获得豆包提示词队列数据(data)
         print(data)
-        全局队列.推入Redis("豆包队列", data)
+        全局队列.推入Redis(DB_QUEUE, data)
         d = 全局队列.拉出Redis(self.返回队列, True, 5 * 60)
         结果 = d.get("结果") if d else None
         return 结果
@@ -1878,7 +1887,7 @@ class 基本任务(抽象持久序列):
             "url": tool_dy_utils.提取链接(self.剪贴板)[0],
             **self.传输队列字典,
         }
-        全局队列.推入Redis("豆包队列", data)
+        全局队列.推入Redis(DB_QUEUE, data)
         d = 全局队列.拉出Redis(self.返回队列, True, 5 * 60)
         print(d)
         视频内容 = d.get("结果") if d else None
@@ -1893,7 +1902,7 @@ class 基本任务(抽象持久序列):
             "返回队列": self.返回队列,
         }
         print(data)
-        全局队列.推入Redis("豆包队列", data)
+        全局队列.推入Redis(DB_QUEUE, data)
         d = 全局队列.拉出Redis(self.返回队列, True, 5 * 60)
         结果 = d.get("结果") if d else None
 
@@ -2222,25 +2231,9 @@ class 基本任务(抽象持久序列):
         self.更新微信会话(全局缓存.处理图片)
         全局缓存.pop("处理图片", None)
 
-    # @property
-    # def 抖音会话页面矩形(self):
-    #     elements = self.device.find_xpath_all('//androidx.recyclerview.widget.RecyclerView')
-    #     rects = [bounds_to_rect(e.bounds) for e in elements]
-    #     return max(rects, key=lambda x: x.height)
-
-    # @property
-    # def 抖音页面(self):
-    #     pass
-    #     # elements = self.device.find_xpath_all(
-    #     #     "//androidx.recyclerview.widget.RecyclerView"
-    #     # )
-    #     # e = max(elements, key=lambda x: bounds_to_rect(x.bounds).height)
-    #     # # print(e.attrib)
-    #     # return tool_dy_df.页面(e)
-
-    # def 获取抖音页面df(self, results):
-    #     return tool_dy_df.页面(results).messages
-
+    def 判断行业类别(self, txt):
+        # return tool_text_classifier.classify_text(txt)
+        return tool_text_classifier.match_category(txt, self.config.行业)
 
 class 前置预检查任务(基本任务):
     pass

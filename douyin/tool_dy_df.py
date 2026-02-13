@@ -3,9 +3,12 @@ import re
 import tool_env
 import pandas as pd
 import numpy as np
+from pandas._config.config import OptionError
 
-
-pd.set_option("future.no_silent_downcasting", True)
+try:
+    pd.set_option("future.no_silent_downcasting", True)
+except OptionError:
+    pass
 
 
 def 转历史(df, 是否群聊=False):
