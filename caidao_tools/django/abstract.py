@@ -574,12 +574,17 @@ class 抽象定时任务(BaseModel):
     #     return (timezone.now() - self.update_time).seconds >= self.超时秒
 
     def 刷新任务更新时间(self):
-        self.激活 = not self.一次执行
-        if self.是否到了执行时间():
-            update_time = timezone.localtime(self.update_time)
-            self.update_time = calculate_rtn(
-                update_time, self.间隔秒 or 1, shanghai_time_now(), safe=True
-            )
+        # self.激活 = not self.一次执行
+        if self.一次执行 and self.激活:
+            self.激活 = False
+
+        if not self.一次执行 and self.激活:
+            if self.是否到了执行时间():
+                update_time = timezone.localtime(self.update_time)
+                self.update_time = calculate_rtn(
+                    update_time, self.间隔秒 or 1, shanghai_time_now(), safe=True
+                )
+
 
     def save(self, *args, **kwargs):
         self.刷新任务更新时间()
