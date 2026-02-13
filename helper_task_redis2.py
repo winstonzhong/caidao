@@ -4,13 +4,17 @@ import bz2
 import redis
 from typing import Any
 import time
-
+import sys
 # import os
 # import tool_env
 
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent
+
+if getattr(sys, 'frozen', False):  # pyinstaller打包后的判断
+    BASE_DIR = Path(sys.executable).parent / '_internal'
+else:
+    BASE_DIR = Path(__file__).resolve().parent
 
 
 with open(BASE_DIR / "queue_redis_json.cfg", encoding="utf-8") as f:
