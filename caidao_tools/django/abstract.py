@@ -669,7 +669,7 @@ class 抽象定时任务(BaseModel):
     def 执行一轮定时任务(cls, **kwargs):
         reset_queries()
         cls.动态初始化(**kwargs)
-        # cls.心跳上传(**kwargs)
+        cls.心跳上传(**kwargs)
         q = cls.得到所有待执行的任务(**kwargs).order_by("-优先级", "update_time")
         max_priority = 0
         for obj in q.iterator():
