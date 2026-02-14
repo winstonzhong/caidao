@@ -6,7 +6,7 @@ from typing import Any
 import time
 import sys
 # import os
-# import tool_env
+import tool_env
 
 from pathlib import Path
 
@@ -150,8 +150,11 @@ class RedisTaskHandler:
                 continue
             break
 
-        if d and d.get("result") and partial_content:
-            d["result"] = json.loads(d["result"])
+        if d and d.get("result"):
+            if partial_content:
+                d["result"] = json.loads(d["result"])
+            # else:
+            #     d["result"] = tool_env.strip_quotes(d["result"])
 
         return d
 

@@ -1169,6 +1169,55 @@ def replace_trailing_tilde(s: str) -> str:
     )
     return result
 
+def strip_quotes(txt):
+    """
+    移除字符串首尾的单引号/双引号（仅当字符串完整被同一种引号包裹时）
+    
+    测试用例说明：
+    1. 双引号完整包裹的字符串，移除引号
+    2. 单引号完整包裹的字符串，移除引号
+    3. 无引号的字符串，返回原内容
+    4. 混合引号（首尾不同），返回原内容
+    5. 空引号对（仅两个双引号），返回空字符串
+    6. 仅单个单引号，返回原内容
+    7. 空字符串，返回空字符串
+    8. 内部含引号但首尾完整包裹，正常移除首尾引号
+
+    >>> strip_quotes('"hello world"')
+    'hello world'
+    >>> strip_quotes("'python'")
+    'python'
+    >>> strip_quotes("no quotes")
+    'no quotes'
+    >>> strip_quotes("'mixed'")
+    'mixed'
+    >>> strip_quotes('""')
+    ''
+    >>> strip_quotes("'")
+    "'"
+    >>> strip_quotes('')
+    ''
+    >>> strip_quotes('"ab"')
+    'ab'
+    >>> strip_quotes('"仅退款现象值得关注，电商老兵分享经验，让我们警惕这种不诚信行为。点赞支持！希望更多电商人站出来，共同维护公平的营商环境。👍"')[0]
+    '仅'
+    >>> strip_quotes('"ab')
+    '"ab'
+    """
+    # 正则表达式解析：
+    # ^ 匹配字符串开头
+    # (['"]) 捕获组1：匹配单引号或双引号（作为开头引号）
+    # (.*) 捕获组2：匹配中间任意内容（包括空字符串）
+    # \1 反向引用捕获组1的内容，确保结尾引号和开头一致
+    # $ 匹配字符串结尾
+    pattern = r'^(["\'])(.*)\1$'
+    match = re.match(pattern, txt)
+    
+    # 如果匹配成功，返回中间的内容（捕获组2）；否则返回原字符串
+    if match:
+        return match.group(2)
+    return txt
+
 
 if __name__ == "__main__":
     import doctest
