@@ -502,6 +502,101 @@ def 去掉最后一句问句(txt: str) -> str:
         return "\n".join(lines)
 
 
+def match_category(result, target_category, min_confidence=0.8):
+    """
+    检查分类结果中是否包含指定的目标分类且置信度满足要求。
+
+    Args:
+        result: JSON解析后的字典，包含categories列表
+        target_category: 目标分类标签，如'pdd_rights', 'mahjong', '3d_modeling', 'ai_tech'
+        min_confidence: 最低置信度阈值，默认0.8
+
+    Returns:
+        bool: 是否匹配目标分类且置信度达标
+
+    Examples:
+        >>> # 测试匹配成功的情况
+        >>> result1 = {
+        ...     "categories": [
+        ...         {"tag": "pdd_rights", "name": "拼多多维权相关", "confidence": 0.95, "keywords_found": ["假货"]},
+        ...         {"tag": "mahjong", "name": "麻将相关", "confidence": 0.3, "keywords_found": ["麻将"]}
+        ...     ],
+        ...     "primary_category": "pdd_rights",
+        ...     "analysis": "测试"
+        ... }
+        >>> match_category(result1, "pdd_rights")
+        True
+
+        >>> # 测试置信度不达标的情况
+        >>> result2 = {
+        ...     "categories": [
+        ...         {"tag": "mahjong", "name": "麻将相关", "confidence": 0.75, "keywords_found": ["立直"]}
+        ...     ]
+        ... }
+        >>> match_category(result2, "mahjong", 0.8)
+        False
+
+        >>> # 测试置信度边界值（等于阈值）
+        >>> result3 = {
+        ...     "categories": [
+        ...         {"tag": "ai_tech", "confidence": 0.8, "keywords_found": ["ChatGPT"]}
+        ...     ]
+        ... }
+        >>> match_category(result3, "ai_tech", 0.8)
+        True
+
+        >>> # 测试分类不存在的情况
+        >>> result4 = {
+        ...     "categories": [
+        ...         {"tag": "3d_modeling", "confidence": 0.9, "keywords_found": ["Blender"]}
+        ...     ]
+        ... }
+        >>> match_category(result4, "pdd_rights")
+        False
+
+        >>> # 测试空categories的情况
+        >>> result5 = {"categories": [], "primary_category": None}
+        >>> match_category(result5, "mahjong")
+        False
+
+        >>> # 测试自定义置信度阈值
+        >>> result6 = {
+        ...     "categories": [
+        ...         {"tag": "mahjong", "confidence": 0.6, "keywords_found": ["和牌"]}
+        ...     ]
+        ... }
+        >>> match_category(result6, "mahjong", 0.5)
+        True
+
+        >>> # 测试无效输入（无categories字段）
+        >>> result7 = {"error": "解析失败"}
+        >>> match_category(result7, "pdd_rights")
+        False
+    """
+    # 检查result是否为字典且包含categories字段
+    if not isinstance(result, dict) or "categories" not in result:
+        return False
+
+    categories = result.get("categories", [])
+
+    # 确保categories是列表
+    if not isinstance(categories, list):
+        return False
+
+    # 遍历查找匹配的分类
+    for cat in categories:
+        if not isinstance(cat, dict):
+            continue
+
+        # 检查标签是否匹配且置信度达标
+        if cat.get("tag") == target_category:
+            confidence = cat.get("confidence", 0)
+            if isinstance(confidence, (int, float)) and confidence >= min_confidence:
+                return True
+
+    return False
+
+
 # 运行doctest单元测试
 if __name__ == "__main__":
     import doctest

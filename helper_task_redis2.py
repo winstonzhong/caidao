@@ -120,6 +120,7 @@ class RedisTaskHandler:
         history=None,
         partial_content=None,
         timeout=300,
+        **k,
     ):
         task_key = "global_task_queue"
 
@@ -131,6 +132,7 @@ class RedisTaskHandler:
             "partial_content": partial_content,
             "key_back": key_back,
             "timestamp": ts,
+            **k,
         }
         self.推入Redis(task_key, d)
 

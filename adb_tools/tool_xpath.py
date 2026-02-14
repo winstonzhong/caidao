@@ -1750,8 +1750,8 @@ class 基本任务(抽象持久序列):
         # data.update(**kwargs)
         return self.推入通用豆包任务队列并阻塞获取结果(data)
 
-    def 通用附件方式截图详细描述(self, 结果: str='json', url=None):
-        prompt = tool_prompt.获取提示词("截图解析", 方式='附件', 结果=结果)
+    def 通用附件方式截图详细描述(self, 结果: str = "json", url=None):
+        prompt = tool_prompt.获取提示词("截图解析", 方式="附件", 结果=结果)
         if url is None:
             url = self.获取设备屏幕截图url()
         data = {
@@ -1764,14 +1764,12 @@ class 基本任务(抽象持久序列):
         data.update(result=result)
         return data
 
-
     def 提取设备屏幕截图信息(self):
         data = {
             "类型": "提取图片信息_直接",
             "url": self.获取设备屏幕截图url(),
         }
         return self.推入通用豆包任务队列并阻塞获取结果(data)
-
 
     def 根据模版提取设备屏幕截图信息(self):
         data = {
@@ -2034,7 +2032,14 @@ class 基本任务(抽象持久序列):
     def 抖音会话history(self):
         return tool_dy_df.转历史(self.抖音会话df, self.device.是否抖音群聊())
 
-    # 提交数据并阻塞等待结果
+    def 通过数据获取截图详情(self):
+        return 全局队列.提交数据并阻塞等待结果(
+            self.返回队列_数据,
+            img_url=self.获取设备屏幕截图url(),
+            sys_prompt='请尽可能详细解析这张截图',
+        )
+
+
     def 获取微信会话回复数据(self):
         return 全局队列.提交数据并阻塞等待结果(
             self.返回队列_数据,
@@ -2084,7 +2089,7 @@ class 基本任务(抽象持久序列):
             partial_content=partial_content,
         )
         return result
-    
+
     def 获取回答数据(self, sys_prompt, question, partial_content=None):
         return 全局队列.提交数据并阻塞等待结果(
             self.返回队列_数据,
@@ -2092,6 +2097,29 @@ class 基本任务(抽象持久序列):
             sys_prompt=sys_prompt,
             partial_content=partial_content,
         )
+
+    @property
+    def 抖音视频评论提示词(self):
+        return self.config[f"视频评论提示词_{self.config.行业}"]
+
+    def 是否当前页面描述符合行业分类(self, min_confidence=0.8):
+        prompt = self.config.sys_prompt_cls
+        partial = self.config.partial_content_cls
+        全局缓存.页面描述 = self.通用附件方式截图详细描述("文本").get("result")
+        result = self.获取回答数据(prompt, 全局缓存.页面描述, partial)
+        result = result.get("result")
+        return tool_dy_utils.match_category(result, self.config.行业, min_confidence)
+    
+    def 获取当前抖音视频评论(self):
+        prompt = self.config.sys_prompt_cls
+        partial = self.config.partial_content_cls
+        # content = self.通用附件方式截图详细描述("文本").get("result")
+        content = self.通过数据获取截图详情().get('result')
+        result = self.获取回答数据(prompt, content, partial)
+        result = result.get("result")
+        if tool_dy_utils.match_category(result, self.config.行业, min_confidence=0.8):
+            return self.获取回答数据(self.抖音视频评论提示词, content).get('result')
+
 
     # @property
     # def 微信会话df_未处理(self):
@@ -2234,6 +2262,7 @@ class 基本任务(抽象持久序列):
     def 判断行业类别(self, txt):
         # return tool_text_classifier.classify_text(txt)
         return tool_text_classifier.match_category(txt, self.config.行业)
+
 
 class 前置预检查任务(基本任务):
     pass
