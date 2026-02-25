@@ -145,3 +145,4 @@ db.sqlite3-journal
 */migrations/
 *.zip
 .idea/
+cache/
