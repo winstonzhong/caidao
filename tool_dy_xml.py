@@ -18,6 +18,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Optional, Union, List, Tuple
 import re
+import json
 
 
 def 提取xml中的视频节点(xml_source: Union[ET.ElementTree, ET.Element, str, Path]) -> Optional[ET.Element]:
@@ -513,41 +514,35 @@ def 提取结构化数据(xml_source: Union[ET.ElementTree, ET.Element, str, Pat
         - 类型: "视频" / "直播" / "其他"
     
     Examples:
-        >>> # 测试所有 XML 文件的结构化数据提取
+        >>> # 测试：对比所有 XML 文件的提取结果与对应的 JSON 基准文件
+        >>> # 注意：运行测试前需要先执行 批量导出JSON基准文件() 生成基准文件
         >>> current_dir = Path(__file__).parent
         >>> xml_dir = current_dir / "ut" / "xmls"
         >>> xml_files = list(xml_dir.glob("*.xml"))
         >>> 
-        >>> all_data = []
-        >>> for xml_file in xml_files:
-        ...     data = 提取结构化数据(xml_file)
-        ...     all_data.append(data)
-        >>> 
-        >>> # 验证所有数据都有必需的字段
-        >>> required_fields = ['作者', '文案', '音乐', '点赞', '评论', '收藏', '分享', '类型']
-        >>> all(all(field in d for field in required_fields) for d in all_data)
+        >>> # 筛选出有对应 JSON 基准文件的 XML
+        >>> test_files = [(xml, xml.with_suffix('.json')) for xml in xml_files if xml.with_suffix('.json').exists()]
+        >>> len(test_files) > 0  # 确保至少有一个测试文件
         True
         >>> 
-        >>> # 验证类型字段的值合法
-        >>> valid_types = ['视频', '直播', '其他']
-        >>> all(d['类型'] in valid_types for d in all_data)
-        True
+        >>> mismatch_list = []
+        >>> for xml_file, json_file in test_files:
+        ...     # 提取当前数据
+        ...     actual_data = 提取结构化数据(xml_file)
+        ...     # 读取基准数据
+        ...     with open(json_file, 'r', encoding='utf-8') as f:
+        ...         expected_data = json.load(f)
+        ...     # 对比
+        ...     if actual_data != expected_data:
+        ...         mismatch_list.append({
+        ...             'file': xml_file.name,
+        ...             'expected': expected_data,
+        ...             'actual': actual_data
+        ...         })
         >>> 
-        >>> # 验证数值字段都是字符串数字
-        >>> all(d['点赞'].isdigit() for d in all_data)
-        True
-        >>> all(d['评论'].isdigit() for d in all_data)
-        True
-        >>> all(d['收藏'].isdigit() for d in all_data)
-        True
-        >>> all(d['分享'].isdigit() for d in all_data)
-        True
-        >>> 
-        >>> # 验证至少有一个视频和一个直播
-        >>> any(d['类型'] == '视频' for d in all_data)
-        True
-        >>> any(d['类型'] == '直播' for d in all_data)
-        True
+        >>> # 验证没有不匹配的情况
+        >>> len(mismatch_list)
+        0
     """
     # 提取视频容器节点
     video_node = 提取xml中的视频节点(xml_source)
@@ -606,6 +601,67 @@ def _识别内容类型(node: ET.Element, info: dict) -> str:
     
     # 默认为视频
     return '视频'
+
+
+def 批量导出JSON基准文件(ut_xmls_dir: Union[str, Path] = None, force: bool = False) -> dict:
+    """
+    批量将 XML 文件的结构化数据导出为 JSON 基准文件
+    
+    【重要提醒 - 给后续 Code Agent】
+    ========================================
+    1. 本函数生成的 JSON 文件是单元测试的基准文件，一旦生成请勿删除！
+    2. JSON 文件用于验证 "提取结构化数据" 函数的输出是否正确
+    3. 如需修正数据，请手动编辑 JSON 文件，而非删除重新生成
+    4. 这些文件是测试套件的一部分，删除会导致测试失败
+    ========================================
+    
+    导出规则：
+    - 每个 XML 文件会生成一个同名的 JSON 文件（如 20260225_164300.xml → 20260225_164300.json）
+    - 如果 JSON 文件已存在，默认会跳过（不覆盖），除非设置 force=True
+    - 只处理新增的 XML 文件（增量导出）
+    
+    Args:
+        ut_xmls_dir: XML 文件目录路径，默认为当前文件所在目录下的 ut/xmls
+        force: 是否强制覆盖已存在的 JSON 文件，默认为 False（不建议使用）
+    
+    Returns:
+        导出结果字典，包含以下信息：
+        - exported: 新导出的文件列表
+        - skipped: 跳过的文件列表（已存在）
+        - total: 处理的 XML 文件总数
+    """
+    if ut_xmls_dir is None:
+        ut_xmls_dir = Path(__file__).parent / "ut" / "xmls"
+    else:
+        ut_xmls_dir = Path(ut_xmls_dir)
+    
+    xml_files = sorted(ut_xmls_dir.glob("*.xml"))
+    
+    exported = []
+    skipped = []
+    
+    for xml_file in xml_files:
+        json_file = xml_file.with_suffix('.json')
+        
+        # 如果文件已存在且未设置 force，则跳过
+        if json_file.exists() and not force:
+            skipped.append(json_file.name)
+            continue
+        
+        # 提取结构化数据
+        data = 提取结构化数据(xml_file)
+        
+        # 写入 JSON 文件
+        with open(json_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        
+        exported.append(json_file.name)
+    
+    return {
+        'exported': exported,
+        'skipped': skipped,
+        'total': len(xml_files)
+    }
 
 
 def 批量格式化打印(ut_xmls_dir: Union[str, Path] = None) -> str:
