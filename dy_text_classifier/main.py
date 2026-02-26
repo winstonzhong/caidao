@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from category_cache_manager import CategoryCacheManager
-from text_classifier import TextClassifier
+from .text_classifier import TextClassifier
 from batch_processor import BatchProcessor
 from evaluator import Evaluator
 from simple_matcher import SimpleMatcher, 文本匹配, 获取相似度

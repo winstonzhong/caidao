@@ -6,8 +6,8 @@
 """
 
 from typing import Dict, Union
-from category_cache_manager import CategoryCacheManager
-from text_classifier import TextClassifier
+from .category_cache_manager import CategoryCacheManager
+from .text_classifier import TextClassifier
 
 
 class SimpleMatcher:

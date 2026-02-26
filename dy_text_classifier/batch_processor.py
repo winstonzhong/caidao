@@ -8,7 +8,7 @@
 import json
 from pathlib import Path
 from typing import List, Dict
-from text_classifier import TextClassifier
+from .text_classifier import TextClassifier
 
 
 class BatchProcessor:

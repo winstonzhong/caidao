@@ -6,7 +6,7 @@
 """
 
 from typing import List, Dict, Optional
-from text_classifier import TextClassifier
+from .text_classifier import TextClassifier
 
 
 class Evaluator:
