@@ -168,26 +168,26 @@ class PromptGenerator:
         """
         获取评论助手提示词（带文件缓存机制）
         
-        【缓存策略说明】
-        - 提示词模板只基于【目标视频描述】缓存（相同主题共享模板）
-        - 视频具体信息（作者、文案）作为变量传入，不参与缓存Hash计算
-        - 这样既保证缓存命中率，又能针对不同视频生成特定评论
-        
         逻辑：
-        1. 计算 版本号+目标视频描述 的Hash（注意：不包含视频具体信息）
+        1. 计算 版本号+目标视频描述 的Hash
         2. 检查文件缓存是否存在
         3. 存在则直接返回缓存内容
         4. 不存在则调用 _生成默认评论提示词 生成并缓存
         
         Args:
             目标视频描述: 目标视频描述
-            video_data: 视频结构化数据，用于生成更精准的提示词（但不参与缓存Hash）
+            video_data: 视频结构化数据，用于生成更精准的提示词
         
         Returns:
             评论助手提示词
         """
-        # 1. 计算Hash（只基于目标描述，不包含视频具体信息，确保相同主题的缓存命中）
-        hash_id = cls._compute_hash(目标视频描述)
+        # 1. 计算Hash（如果有video_data，加入Hash计算以确保不同视频有不同提示词）
+        if video_data:
+            # 使用 目标描述 + 作者 + 文案前50字 作为Hash输入
+            hash_input = f"{目标视频描述}:{video_data.get('作者', '')}:{video_data.get('文案', '')[:50]}"
+            hash_id = hashlib.md5(hash_input.encode('utf-8')).hexdigest()
+        else:
+            hash_id = cls._compute_hash(目标视频描述)
         
         # 2. 检查缓存
         cached_prompt = cls._load_from_cache(hash_id)
