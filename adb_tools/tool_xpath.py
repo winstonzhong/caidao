@@ -2278,8 +2278,25 @@ class 基本任务(抽象持久序列):
             return None
         
         # 4. 匹配成功，调用公用函数生成评论
-        # 获取动态生成的评论助手提示词（如果有配置）
-        sys_prompt = self.config.get("sys_prompt_comment", None)
+        # 获取动态生成的评论助手提示词（如果有配置且版本号匹配）
+        from dy_text_classifier.prompt_generator import PromptGenerator
+        stored_prompt_data = self.config.get("sys_prompt_comment", None)
+        sys_prompt = None
+        
+        if stored_prompt_data:
+            # 检查存储的数据结构
+            if isinstance(stored_prompt_data, dict):
+                # 新格式：包含提示词和版本号
+                stored_version = stored_prompt_data.get("version", "")
+                current_version = PromptGenerator.PROMPT_TEMPLATE_VERSION
+                if stored_version == current_version:
+                    sys_prompt = stored_prompt_data.get("prompt", None)
+                    print(f"[获取评论] 使用已缓存的提示词（版本: {stored_version}）")
+                else:
+                    print(f"[获取评论] 提示词版本不匹配（存储: {stored_version}, 当前: {current_version}），将重新生成")
+            else:
+                # 旧格式：只有提示词字符串，视为过期
+                print(f"[获取评论] 提示词格式旧或缺少版本号，将重新生成")
         
         return self.根据视频数据生成评论(目标描述, video_data, sys_prompt)
 

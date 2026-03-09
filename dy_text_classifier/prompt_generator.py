@@ -23,6 +23,9 @@ class PromptGenerator:
     不再需要生成分类提示词(sys_prompt_cls/partial_content_cls)
     """
     
+    # 提示词模板版本号 - 修改模板后必须更新此版本号以使缓存失效
+    PROMPT_TEMPLATE_VERSION = "2.0.0"
+    
     # 通用评论生成指南（不含具体主题内容）
     COMMENT_GUIDELINES = """## 评论助手生成指南
 
@@ -39,6 +42,7 @@ class PromptGenerator:
 2. **深度性**：要有观点、有态度，能引发思考，不是简单附和
 3. **人设一致性**：评论风格要符合定义的人设定位
 4. **互动性**：能引起视频作者和其他观众的注意和回应
+5. **单一输出**：**必须只输出1条评论**，严禁输出多条评论供选择
 
 ### 评论风格（通用）
 - 语气真诚、有温度、不偏激
@@ -50,7 +54,8 @@ class PromptGenerator:
 生成的 System Prompt 必须：
 - 完全围绕【目标视频描述】的主题
 - 不包含与目标主题无关的内容
-- 提供 2-3 条符合主题的示例评论"""
+- **只提供1条**符合主题的示例评论（作为风格参考）
+- **明确要求只输出1条评论**，禁止输出多条供选择"""
 
     # 用于让LLM生成评论助手提示词的System Prompt
     SYS_PROMPT_FOR_COMMENT = """你是一个专业的提示词工程师，擅长为AI助手生成高质量的System Prompt。
@@ -149,6 +154,7 @@ class PromptGenerator:
 2. **深度性**：有观点、有态度，能引发思考
 3. **人设一致性**：符合你的博主身份和专业度
 4. **互动性**：能引起作者和其他观众的注意
+5. **单一输出**：**必须只输出1条评论**，严禁输出多条供选择
 
 ## 评论风格
 - 语气真诚、有温度、不偏激
@@ -157,7 +163,7 @@ class PromptGenerator:
 - 直接输出评论，不加解释
 
 ## 输出格式
-直接输出评论内容。"""
+**只输出1条评论内容**，不要输出多条或添加序号。"""
 
         # 如果有video_data，添加结构化数据使用指南
         if video_data:
@@ -228,10 +234,11 @@ class PromptGenerator:
 - 评论要自然融入数据信息，不要生硬堆砌
 - 可以引用文案中的观点或话题进行延伸讨论
 
-### 示例评论风格（参考）
-- "@作者 这个视频太有共鸣了！{{文案核心观点}}说得很对，[个人延伸观点] 👍"
-- "{{点赞数}}个赞实至名归！关于[文案话题]我也有类似经历...[分享观点]"
-- "看完这个视频真的[情感反应]，特别是[文案亮点]，值得收藏反复看！"""
+### 示例评论风格（参考，仅作为风格参考）
+"@作者 这个视频太有共鸣了！{{文案核心观点}}说得很对，[个人延伸观点] 👍"
+
+### 重要提醒
+**必须只输出1条评论**，不要输出多条供选择。直接给出你最好的那条评论即可。"""
 
 
 def 更新任务提示词(job_id: int, 目标视频描述: str) -> bool:
@@ -262,7 +269,12 @@ def 更新任务提示词(job_id: int, 目标视频描述: str) -> bool:
         from tasks.models import Job
         
         job = Job.objects.get(id=job_id)
-        job.json_data["sys_prompt_comment"] = sys_comment
+        # 存储提示词和版本号（用于缓存失效检查）
+        job.json_data["sys_prompt_comment"] = {
+            "prompt": sys_comment,
+            "version": PromptGenerator.PROMPT_TEMPLATE_VERSION,
+            "generated_at": time.time()
+        }
         job.save(update_fields=['json_data'])
         
         print(f"[Job {job_id}] ✅ 提示词生成并保存完成")
