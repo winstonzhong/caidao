@@ -4,15 +4,23 @@
 【重要变更】
 - 分类匹配已完全交给dy_text_classifier处理
 - 本模块只负责生成评论助手的System Prompt
+- 支持文件缓存机制，避免重复生成提示词
 """
+import hashlib
 import json
+import os
 import time
+from datetime import datetime
+from pathlib import Path
 from typing import Optional, Dict
 
 # 从sg项目导入Redis任务队列
 import sys
 sys.path.insert(0, '/home/yka-003/workspace/sg')
 from helper_task_redis2 import GLOBAL_REDIS
+
+# 模块所在目录（用于确定默认缓存位置）
+_MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class PromptGenerator:
@@ -21,69 +29,246 @@ class PromptGenerator:
     
     【注意】分类功能已由dy_text_classifier.SimpleMatcher独立完成，
     不再需要生成分类提示词(sys_prompt_cls/partial_content_cls)
+    
+    【缓存机制】
+    - 使用 版本号 + 目标视频描述 生成Hash作为缓存Key
+    - 缓存文件存储在 dy_text_classifier/prompt_cache/ 目录
+    - 模板版本更新后自动使旧缓存失效
     """
     
     # 提示词模板版本号 - 修改模板后必须更新此版本号以使缓存失效
     PROMPT_TEMPLATE_VERSION = "2.0.0"
     
+    # 默认缓存目录
+    _DEFAULT_CACHE_DIR = os.path.join(_MODULE_DIR, "prompt_cache")
+    
+    @classmethod
+    def _get_cache_dir(cls) -> Path:
+        """获取缓存目录路径"""
+        cache_dir = Path(cls._DEFAULT_CACHE_DIR)
+        cache_dir.mkdir(exist_ok=True)
+        return cache_dir
+    
+    @classmethod
+    def _compute_hash(cls, 目标视频描述: str) -> str:
+        """
+        计算缓存Hash（基于版本号 + 目标视频描述）
+        
+        Args:
+            目标视频描述: 目标视频描述文本
+        
+        Returns:
+            32位小写hex字符串
+        """
+        # 使用 版本号 + 目标视频描述 作为Hash输入
+        hash_input = f"{cls.PROMPT_TEMPLATE_VERSION}:{目标视频描述}"
+        return hashlib.md5(hash_input.encode('utf-8')).hexdigest()
+    
+    @classmethod
+    def _get_cache_path(cls, hash_id: str) -> Path:
+        """获取缓存文件路径"""
+        cache_dir = cls._get_cache_dir()
+        # 使用完整hash作为目录名
+        cache_subdir = cache_dir / hash_id
+        cache_subdir.mkdir(exist_ok=True)
+        return cache_subdir / "prompt.json"
+    
+    @classmethod
+    def _cache_exists(cls, hash_id: str) -> bool:
+        """检查缓存是否存在"""
+        cache_path = cls._get_cache_path(hash_id)
+        return cache_path.exists()
+    
+    @classmethod
+    def _load_from_cache(cls, hash_id: str) -> Optional[str]:
+        """
+        从缓存加载提示词
+        
+        Args:
+            hash_id: Hash ID
+        
+        Returns:
+            提示词字符串，如不存在返回None
+        """
+        cache_path = cls._get_cache_path(hash_id)
+        if not cache_path.exists():
+            return None
+        
+        try:
+            with open(cache_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return data.get('prompt', None)
+        except Exception as e:
+            print(f"[PromptGenerator] 加载缓存失败: {e}")
+            return None
+    
+    @classmethod
+    def _save_to_cache(cls, hash_id: str, 目标视频描述: str, prompt: str):
+        """
+        保存提示词到缓存
+        
+        Args:
+            hash_id: Hash ID
+            目标视频描述: 原始目标视频描述
+            prompt: 提示词内容
+        """
+        cache_path = cls._get_cache_path(hash_id)
+        
+        data = {
+            "hash_id": hash_id,
+            "目标视频描述": 目标视频描述,
+            "版本": cls.PROMPT_TEMPLATE_VERSION,
+            "生成时间": datetime.now().isoformat(),
+            "prompt": prompt
+        }
+        
+        try:
+            with open(cache_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            print(f"[PromptGenerator] 提示词已缓存: {cache_path}")
+        except Exception as e:
+            print(f"[PromptGenerator] 保存缓存失败: {e}")
+    
+    @classmethod
+    def 获取评论助手提示词(cls, 目标视频描述: str) -> str:
+        """
+        获取评论助手提示词（带文件缓存机制）
+        
+        逻辑：
+        1. 计算 版本号+目标视频描述 的Hash
+        2. 检查文件缓存是否存在
+        3. 存在则直接返回缓存内容
+        4. 不存在则调用 _生成默认评论提示词 生成并缓存
+        
+        Args:
+            目标视频描述: 目标视频描述
+        
+        Returns:
+            评论助手提示词
+        """
+        # 1. 计算Hash
+        hash_id = cls._compute_hash(目标视频描述)
+        
+        # 2. 检查缓存
+        cached_prompt = cls._load_from_cache(hash_id)
+        if cached_prompt is not None:
+            print(f"[PromptGenerator] 命中缓存: {hash_id[:8]}...")
+            return cached_prompt
+        
+        # 3. 缓存未命中，生成提示词
+        print(f"[PromptGenerator] 缓存未命中，生成提示词: {hash_id[:8]}...")
+        prompt = cls._生成默认评论提示词(目标视频描述)
+        
+        # 4. 保存到缓存
+        cls._save_to_cache(hash_id, 目标视频描述, prompt)
+        
+        return prompt
+    
+    @classmethod
+    def 清除缓存(cls, hash_id: str = None):
+        """
+        清除提示词缓存
+        
+        Args:
+            hash_id: 如指定则清理单个缓存，否则清理全部
+        """
+        cache_dir = cls._get_cache_dir()
+        
+        if hash_id:
+            cache_path = cls._get_cache_path(hash_id)
+            if cache_path.exists():
+                cache_path.unlink()
+                print(f"[PromptGenerator] 已删除缓存: {cache_path}")
+        else:
+            if cache_dir.exists():
+                import shutil
+                shutil.rmtree(cache_dir)
+                cache_dir.mkdir(exist_ok=True)
+                print(f"[PromptGenerator] 已清空所有缓存: {cache_dir}")
+    
+    @classmethod
+    def 列出缓存(cls) -> list:
+        """列出所有已缓存的提示词"""
+        cache_dir = cls._get_cache_dir()
+        cached = []
+        
+        if cache_dir.exists():
+            for sub_dir in cache_dir.iterdir():
+                if sub_dir.is_dir():
+                    cache_file = sub_dir / "prompt.json"
+                    if cache_file.exists():
+                        try:
+                            with open(cache_file, 'r', encoding='utf-8') as f:
+                                data = json.load(f)
+                            cached.append({
+                                "hash_id": data.get("hash_id", "")[:16] + "...",
+                                "目标视频描述": data.get("目标视频描述", "")[:30] + "...",
+                                "版本": data.get("版本", "unknown"),
+                                "生成时间": data.get("生成时间", "")
+                            })
+                        except:
+                            pass
+        
+        return cached
+    
     # 通用评论生成指南（不含具体主题内容）
     COMMENT_GUIDELINES = """## 评论助手生成指南
 
-### 人设定位原则
-根据目标视频描述的主题，选择或定义合适的人设：
-- 技术/教程类：热爱分享的技术爱好者、学习者、创作者
-- 电商/消费类：理性消费者、经验分享者、避坑指南者
-- 娱乐/游戏类：热情玩家、同好、圈内人
-- 生活/日常类：生活记录者、经验交流者、情感共鸣者
-- 知识/科普类：求知者、探讨者、知识分享者
+    ### 人设定位原则
+    根据目标视频描述的主题，选择或定义合适的人设：
+    - 技术/教程类：热爱分享的技术爱好者、学习者、创作者
+    - 电商/消费类：理性消费者、经验分享者、避坑指南者
+    - 娱乐/游戏类：热情玩家、同好、圈内人
+    - 生活/日常类：生活记录者、经验交流者、情感共鸣者
+    - 知识/科普类：求知者、探讨者、知识分享者
 
-### 评论要求（通用）
-1. **相关性**：评论必须与视频内容紧密相关，不能泛泛而谈
-2. **深度性**：要有观点、有态度，能引发思考，不是简单附和
-3. **人设一致性**：评论风格要符合定义的人设定位
-4. **互动性**：能引起视频作者和其他观众的注意和回应
-5. **单一输出**：**必须只输出1条评论**，严禁输出多条评论供选择
+    ### 评论要求（通用）
+    1. **相关性**：评论必须与视频内容紧密相关，不能泛泛而谈
+    2. **深度性**：要有观点、有态度，能引发思考，不是简单附和
+    3. **人设一致性**：评论风格要符合定义的人设定位
+    4. **互动性**：能引起视频作者和其他观众的注意和回应
+    5. **单一输出**：**必须只输出1条评论**，严禁输出多条评论供选择
 
-### 评论风格（通用）
-- 语气真诚、有温度、不偏激
-- 字数控制在 50-150 字之间，简洁有力
-- 可适当使用网络流行语和 emoji 表情增加亲和力
-- 直接输出评论内容，不要添加解释或 markdown 标记
+    ### 评论风格（通用）
+    - 语气真诚、有温度、不偏激
+    - 字数控制在 50-150 字之间，简洁有力
+    - 可适当使用网络流行语和 emoji 表情增加亲和力
+    - 直接输出评论内容，不要添加解释或 markdown 标记
 
-### 输出要求
-生成的 System Prompt 必须：
-- 完全围绕【目标视频描述】的主题
-- 不包含与目标主题无关的内容
-- **只提供1条**符合主题的示例评论（作为风格参考）
-- **明确要求只输出1条评论**，禁止输出多条供选择"""
+    ### 输出要求
+    生成的 System Prompt 必须：
+    - 完全围绕【目标视频描述】的主题
+    - 不包含与目标主题无关的内容
+    - **只提供1条**符合主题的示例评论（作为风格参考）
+    - **明确要求只输出1条评论**，禁止输出多条供选择"""
 
     # 用于让LLM生成评论助手提示词的System Prompt
     SYS_PROMPT_FOR_COMMENT = """你是一个专业的提示词工程师，擅长为AI助手生成高质量的System Prompt。
 
-你的任务是根据用户提供的【目标视频描述】，生成一个用于抖音视频评论的AI助手系统提示词。
+    你的任务是根据用户提供的【目标视频描述】，生成一个用于抖音视频评论的AI助手系统提示词。
 
-## 关键要求（必须遵守）
+    ## 关键要求（必须遵守）
 
-1. **完全基于目标视频描述**
-   - 生成的提示词必须完全围绕用户提供的【目标视频描述】
-   - 人设、分析维度、关键词、示例评论都必须符合目标描述的主题
-   - 严禁引入与目标描述无关的内容
+    1. **完全基于目标视频描述**
+    - 生成的提示词必须完全围绕用户提供的【目标视频描述】
+    - 人设、分析维度、关键词、示例评论都必须符合目标描述的主题
+    - 严禁引入与目标描述无关的内容
 
-2. **人设定义**
-   - 根据目标视频描述，定义一个合适的评论者人设
-   - 人设要自然、真实，符合该领域的特点
+    2. **人设定义**
+    - 根据目标视频描述，定义一个合适的评论者人设
+    - 人设要自然、真实，符合该领域的特点
 
-3. **分析维度**
-   - 根据目标主题，定义视频内容分析的关键维度
-   - 例如：技术类关注技巧/难点，生活类关注情感/共鸣等
+    3. **分析维度**
+    - 根据目标主题，定义视频内容分析的关键维度
+    - 例如：技术类关注技巧/难点，生活类关注情感/共鸣等
 
-4. **示例评论**
-   - 提供 2-3 条符合目标主题的示例评论
-   - 示例要体现人设特点和评论风格
+    4. **示例评论**
+    - 提供 2-3 条符合目标主题的示例评论
+    - 示例要体现人设特点和评论风格
 
-## 输出格式
+    ## 输出格式
 
-直接输出生成的 System Prompt 文本，不需要额外的解释或 markdown 标记。"""
+    直接输出生成的 System Prompt 文本，不需要额外的解释或 markdown 标记。"""
 
     @classmethod
     def 生成评论助手提示词(cls, 目标视频描述: str) -> str:
@@ -98,20 +283,20 @@ class PromptGenerator:
         """
         question = f"""请为以下目标视频描述生成评论助手的 System Prompt：
 
-【目标视频描述】
-{目标视频描述}
+        【目标视频描述】
+        {目标视频描述}
 
-【生成指南】
-{cls.COMMENT_GUIDELINES}
+        【生成指南】
+        {cls.COMMENT_GUIDELINES}
 
-【重要提醒】
-1. 评论助手的人设必须完全基于"目标视频描述"的主题
-2. 分析维度、关键词、场景描述都必须围绕"目标视频描述"
-3. 提供的示例评论也必须符合"目标视频描述"的主题
-4. 严禁包含任何与"目标视频描述"无关的内容
-5. 生成的 System Prompt 应该可以直接使用，不需要额外修改
+        【重要提醒】
+        1. 评论助手的人设必须完全基于"目标视频描述"的主题
+        2. 分析维度、关键词、场景描述都必须围绕"目标视频描述"
+        3. 提供的示例评论也必须符合"目标视频描述"的主题
+        4. 严禁包含任何与"目标视频描述"无关的内容
+        5. 生成的 System Prompt 应该可以直接使用，不需要额外修改
 
-请直接输出生成的 System Prompt 文本。"""
+        请直接输出生成的 System Prompt 文本。"""
         
         key_back = f"prompt_cmt_{int(time.time() * 1000)}"
         
@@ -127,7 +312,7 @@ class PromptGenerator:
         return cls._生成默认评论提示词(目标视频描述)
     
     @classmethod
-    def _生成默认评论提示词(cls, 目标视频描述: str, video_data: dict = None) -> str:
+    def _生成默认评论提示词(cls, 目标视频描述: str) -> str:
         """
         生成评论助手提示词（备用方案）
         
@@ -138,39 +323,46 @@ class PromptGenerator:
         # 基础提示词
         base_prompt = f"""你是一个专注于{目标视频描述}的视频博主，热衷于在该领域分享观点和经验。
 
-## 你的核心人设
-- 对该领域有深入了解和热情
-- 善于发现内容的亮点和价值
-- 乐于与创作者和观众互动交流
+        ## 你的核心人设
+        - 对该领域有深入了解和热情
+        - 善于发现内容的亮点和价值
+        - 乐于与创作者和观众互动交流
 
-## 视频内容分析
-用户将提供关于{目标视频描述}相关视频的描述，你需要：
-- 理解视频的核心内容和价值点
-- 识别视频的独特之处
-- 判断内容的受众和场景
+        ## 视频内容分析
+        用户将提供关于{目标视频描述}相关视频的描述，你需要：
+        - 理解视频的核心内容和价值点
+        - 识别视频的独特之处
+        - 判断内容的受众和场景
 
-## 评论要求
-1. **相关性**：评论必须与视频内容紧密相关
-2. **深度性**：有观点、有态度，能引发思考
-3. **人设一致性**：符合你的博主身份和专业度
-4. **互动性**：能引起作者和其他观众的注意
-5. **单一输出**：**必须只输出1条评论**，严禁输出多条供选择
+        ## 评论要求
+        1. **相关性**：评论必须与视频内容紧密相关
+        2. **深度性**：有观点、有态度，能引发思考
+        3. **人设一致性**：符合你的博主身份和专业度
+        4. **互动性**：能引起作者和其他观众的注意
+        5. **单一输出**：**必须只输出1条评论**，严禁输出多条供选择
 
-## 评论风格
-- 语气真诚、有温度、不偏激
-- 字数控制在 50-150 字之间
-- 可适当使用 emoji 表情
-- 直接输出评论，不加解释
+        ## 评论风格
+        - 语气真诚、有温度、不偏激
+        - 字数控制在 50-150 字之间
+        - 可适当使用 emoji 表情
+        - 直接输出评论，不加解释
 
-## 输出格式
-**只输出1条评论内容**，不要输出多条或添加序号。"""
+        ## 输出格式
+        **只输出1条评论内容**，不要输出多条或添加序号。"""
 
-        # 如果有video_data，添加结构化数据使用指南
-        if video_data:
-            structured_guide = cls._生成结构化数据使用指南(video_data)
-            return base_prompt + "\n\n" + structured_guide
-        
-        return base_prompt
+        video_data = {
+            '作者': '@23797136149',
+            '文案': '即然拼多多商家不愿抵制平台的压榨，那么我就用魔法打魔法，我也是消费者，我也可以去薅有运费险商家的羊毛，这样做虽然不对，但也是没办法的办法！#拼多...',
+            '音乐': '魂！！',
+            '点赞': '26',
+            '评论': '36',
+            '收藏': '3',
+            '分享': '0',
+            '类型': '视频'
+        }
+            
+        structured_guide = cls._生成结构化数据使用指南(video_data)
+        return base_prompt + "\n\n" + structured_guide
     
     @classmethod
     def _生成结构化数据使用指南(cls, video_data: dict) -> str:
