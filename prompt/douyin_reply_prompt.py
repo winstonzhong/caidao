@@ -1,7 +1,53 @@
 import os
 import random
+import sys
 
 from tool_static import 得到一个不重复的文件路径, 路径到链接
+
+
+def get_template_path(filename):
+    """
+    获取模板文件路径，兼容开发环境和 PyInstaller 打包环境
+    
+    查找顺序：
+    1. 打包环境：exe 同级目录下的 prompt/
+    2. 打包环境：_internal 目录下的 prompt/
+    3. 开发环境：当前文件所在目录
+    """
+    # 情况 1：PyInstaller 打包环境
+    if getattr(sys, 'frozen', False):
+        # exe 所在目录
+        exe_dir = os.path.dirname(sys.executable)
+        
+        # 尝试路径 1：exe 同级目录/prompt/
+        template_path = os.path.join(exe_dir, 'prompt', filename)
+        if os.path.exists(template_path):
+            return template_path
+        
+        # 尝试路径 2：_internal/prompt/（某些 PyInstaller 配置）
+        template_path = os.path.join(exe_dir, '_internal', 'prompt', filename)
+        if os.path.exists(template_path):
+            return template_path
+        
+        # 尝试路径 3：sys._MEIPASS（PyInstaller 临时解压目录）
+        if hasattr(sys, '_MEIPASS'):
+            template_path = os.path.join(sys._MEIPASS, 'prompt', filename)
+            if os.path.exists(template_path):
+                return template_path
+    
+    # 情况 2：开发环境，使用当前文件所在目录
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    template_path = os.path.join(current_dir, filename)
+    if os.path.exists(template_path):
+        return template_path
+    
+    # 找不到文件，抛出详细错误
+    raise FileNotFoundError(
+        f"找不到模板文件: {filename}\n"
+        f"请确保文件存在于以下位置之一:\n"
+        f"  - {os.path.join(os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else '<exe_dir>', 'prompt', filename)}\n"
+        f"  - {os.path.join(current_dir, filename)}"
+    )
 
 
 def random_select_two_dimensions():
@@ -243,11 +289,16 @@ def get_random_comment():
 
 
 def gen_prompt_html(account_json_data, video_user_name, video_content):
-    hook_dimensions = random_select_two_dimensions()
-    comment_template = get_random_comment()
-    current_dir = os.path.dirname(os.path.abspath(__file__))
+    account_json_data = account_json_data or '{}'
+    video_user_name = video_user_name or ''
+    video_content = video_content or ''
+    hook_dimensions = random_select_two_dimensions() or ''
+    comment_template = get_random_comment() or ''
+    
+    # 获取模板文件路径（兼容开发和打包环境）
+    template_path = get_template_path('douyin_reply_template.html')
 
-    with open(f'{current_dir}/douyin_reply_template.html', encoding='utf8') as f:
+    with open(template_path, encoding='utf8') as f:
         content = f.read()
     content = content.replace('{{ comment_template }}', comment_template)
     content = content.replace('{{ account_data }}', account_json_data)
