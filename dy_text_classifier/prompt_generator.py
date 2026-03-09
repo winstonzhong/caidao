@@ -122,9 +122,16 @@ class PromptGenerator:
         return cls._生成默认评论提示词(目标视频描述)
     
     @classmethod
-    def _生成默认评论提示词(cls, 目标视频描述: str) -> str:
-        """生成评论助手提示词（备用方案）"""
-        return f"""你是一个专注于{目标视频描述}的视频博主，热衷于在该领域分享观点和经验。
+    def _生成默认评论提示词(cls, 目标视频描述: str, video_data: dict = None) -> str:
+        """
+        生成评论助手提示词（备用方案）
+        
+        Args:
+            目标视频描述: 用户配置的目标视频描述
+            video_data: 视频结构化数据，包含作者、文案、点赞、评论等字段
+        """
+        # 基础提示词
+        base_prompt = f"""你是一个专注于{目标视频描述}的视频博主，热衷于在该领域分享观点和经验。
 
 ## 你的核心人设
 - 对该领域有深入了解和热情
@@ -151,6 +158,79 @@ class PromptGenerator:
 
 ## 输出格式
 直接输出评论内容。"""
+
+        # 如果有video_data，添加结构化数据使用指南
+        if video_data:
+            structured_guide = cls._生成结构化数据使用指南(video_data)
+            return base_prompt + "\n\n" + structured_guide
+        
+        return base_prompt
+    
+    @classmethod
+    def _生成结构化数据使用指南(cls, video_data: dict) -> str:
+        """
+        根据video_data生成结构化数据使用指南
+        告诉LLM可以利用哪些维度来生成更好的评论
+        """
+        # 构建可用字段说明
+        字段说明 = []
+        
+        if video_data.get('作者'):
+            字段说明.append(f"- **作者**: @{video_data['作者']} - 可以在评论中@作者或提及作者")
+        if video_data.get('文案'):
+            文案预览 = video_data['文案'][:50] + "..." if len(video_data['文案']) > 50 else video_data['文案']
+            字段说明.append(f"- **文案**: {文案预览} - 核心内容，评论应围绕此展开")
+        if video_data.get('音乐'):
+            字段说明.append(f"- **音乐**: {video_data['音乐']} - 可以提及背景音乐")
+        if video_data.get('点赞'):
+            字段说明.append(f"- **点赞**: {video_data['点赞']} - 可以评论受欢迎程度")
+        if video_data.get('评论'):
+            字段说明.append(f"- **评论**: {video_data['评论']} - 可以提及讨论热度")
+        if video_data.get('收藏'):
+            字段说明.append(f"- **收藏**: {video_data['收藏']} - 可以表示内容有价值值得收藏")
+        if video_data.get('分享'):
+            字段说明.append(f"- **分享**: {video_data['分享']} - 可以提及内容的传播价值")
+        if video_data.get('类型'):
+            字段说明.append(f"- **类型**: {video_data['类型']} - 内容形式")
+        
+        字段说明文本 = "\n".join(字段说明) if 字段说明 else "（无具体字段信息）"
+        
+        # 生成使用建议
+        建议 = []
+        if video_data.get('作者'):
+            建议.append("- 可以适当@作者，增加互动感")
+        if video_data.get('文案'):
+            建议.append("- 深入分析文案内容，提出有见地的观点")
+        if video_data.get('点赞') and video_data.get('评论'):
+            try:
+                点赞数 = int(video_data['点赞'].replace(',', '').replace('w', '0000').replace('万', '0000'))
+                评论数 = int(video_data['评论'].replace(',', '').replace('w', '0000').replace('万', '0000'))
+                if 点赞数 > 1000:
+                    建议.append("- 可以提及这个视频很受欢迎，表达共鸣")
+                if 评论数 > 100:
+                    建议.append("- 可以表示这个视频引发了热议")
+            except:
+                pass
+        if video_data.get('收藏'):
+            建议.append("- 可以表达这个内容值得收藏或已经收藏")
+        
+        建议文本 = "\n".join(建议) if 建议 else "- 根据视频内容自然发挥"
+        
+        return f"""## 结构化视频数据使用指南
+
+### 可用数据字段
+{字段说明文本}
+
+### 评论生成建议
+{建议文本}
+- 结合数据字段和文案内容，生成有针对性、有深度的评论
+- 评论要自然融入数据信息，不要生硬堆砌
+- 可以引用文案中的观点或话题进行延伸讨论
+
+### 示例评论风格（参考）
+- "@作者 这个视频太有共鸣了！{文案核心观点}说得很对，[个人延伸观点] 👍"
+- "{点赞数}个赞实至名归！关于[文案话题]我也有类似经历...[分享观点]"
+- "看完这个视频真的[情感反应]，特别是[文案亮点]，值得收藏反复看！"
 
 
 def 更新任务提示词(job_id: int, 目标视频描述: str) -> bool:

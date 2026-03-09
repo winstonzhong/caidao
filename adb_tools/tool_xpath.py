@@ -2184,15 +2184,15 @@ class 基本任务(抽象持久序列):
             return None
         
         # 4. 匹配成功，使用LLM生成评论
-        # raise NotImplementedError
-        content = self.通过数据获取截图详情().get('result')
+        # 直接使用video_data（dict结构），转换为JSON字符串作为content
+        content = json.dumps(video_data, ensure_ascii=False, indent=2)
         
         # 获取动态生成的评论助手提示词
         sys_prompt = self.config.json_data.get("sys_prompt_comment", "")
         if not sys_prompt:
-            # 如果没有生成提示词，使用默认模板
+            # 如果没有生成提示词，使用默认模板（传入video_data以生成更丰富的提示词）
             from dy_text_classifier.prompt_generator import PromptGenerator
-            sys_prompt = PromptGenerator._生成默认评论提示词(目标描述)
+            sys_prompt = PromptGenerator._生成默认评论提示词(目标描述, video_data)
         
         result = self.获取回答数据(sys_prompt, content)
         comment = result.get('result')
@@ -2237,11 +2237,11 @@ class 基本任务(抽象持久序列):
         content = json.dumps(video_data, ensure_ascii=False, indent=2)
         
         # 获取动态生成的评论助手提示词
-        sys_prompt = self.config.json_data.get("sys_prompt_comment", "")
+        sys_prompt = self.config.get("sys_prompt_comment", "")
         if not sys_prompt:
-            # 如果没有生成提示词，使用默认模板
+            # 如果没有生成提示词，使用默认模板（传入video_data以生成更丰富的提示词）
             from dy_text_classifier.prompt_generator import PromptGenerator
-            sys_prompt = PromptGenerator._生成默认评论提示词(目标描述)
+            sys_prompt = PromptGenerator._生成默认评论提示词(目标描述, video_data)
         
         result = self.获取回答数据(sys_prompt, content)
         comment = result.get('result')
