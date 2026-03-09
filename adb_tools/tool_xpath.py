@@ -2237,9 +2237,10 @@ class 基本任务(抽象持久序列):
         
         流程:
         1. 获取XML并解析video_data
-        2. 检查目标视频描述配置
-        3. 使用dy_text_classifier进行匹配检查
-        4. 匹配成功则调用根据视频数据生成评论
+        2. 【新增】检查是否是朋友视频，是则跳过匹配直接生成
+        3. 检查目标视频描述配置
+        4. 使用dy_text_classifier进行匹配检查
+        5. 匹配成功则调用根据视频数据生成评论
         """
         # 1. 获取XML并解析
         xml_source = self.device.source
@@ -2254,7 +2255,14 @@ class 基本任务(抽象持久序列):
         else:
             print(f"[获取评论] video_data: {video_data}")
         
-        # 2. 获取目标视频描述
+        # 【新增】2. 检查是否是朋友视频
+        if video_data.get('朋友') == '是':
+            print(f"[获取评论] 检测到朋友视频({video_data.get('作者')})，跳过匹配直接生成评论")
+            from dy_text_classifier.prompt_generator import PromptGenerator
+            sys_prompt = PromptGenerator.获取朋友互动提示词(video_data)
+            return self.根据视频数据生成评论(video_data, sys_prompt)
+        
+        # 3. 获取目标视频描述
         目标描述 = self.config.get("目标视频描述", "")
         if not 目标描述:
             print("[获取评论] 未配置目标视频描述")
@@ -2262,7 +2270,7 @@ class 基本任务(抽象持久序列):
         else:
             print(f"[获取评论] 目标视频描述: {目标描述}")
         
-        # 3. 使用SimpleMatcherV2进行匹配（任意词命中即匹配，无需阈值）
+        # 4. 使用SimpleMatcherV2进行匹配（任意词命中即匹配，无需阈值）
         # is_match = _simple_matcher.文本匹配(类别描述=目标描述, 数据=video_data, 阈值=0.3)
         is_match = _simple_matcher_v2.文本匹配(目标描述=目标描述, 数据=video_data)
         
@@ -2270,7 +2278,7 @@ class 基本任务(抽象持久序列):
             print(f"[获取评论] 视频不匹配目标描述，未命中任何关键词")
             return None
         
-        # 4. 匹配成功，调用公用函数生成评论
+        # 5. 匹配成功，调用公用函数生成评论
         # 直接生成评论提示词（传入video_data以生成更精准的提示词）
         from dy_text_classifier.prompt_generator import PromptGenerator
         sys_prompt = PromptGenerator.获取评论助手提示词(目标描述, video_data)

@@ -42,6 +42,36 @@ class PromptGenerator:
     # 默认缓存目录
     _DEFAULT_CACHE_DIR = os.path.join(_MODULE_DIR, "prompt_cache")
     
+    # 朋友互动人设提示词模板（固定，不根据视频内容变化）
+    朋友互动人设提示词 = """你是一位真诚的朋友，正在观看朋友的抖音视频并准备评论。
+
+## 视频信息
+作者：{作者}
+文案：{文案}
+音乐：{音乐}
+互动数据：👍{点赞} 💬{评论} ⭐{收藏} 🔄{分享}
+
+## 你的人设
+- 真诚、热情、支持朋友
+- 善于发现朋友的闪光点和努力
+- 评论风格亲切自然，像朋友间的对话
+
+## 评论策略（根据视频内容选择）
+
+**情况1：视频有具体文案/内容**
+- 针对文案内容给出真实感受
+- 结合互动数据给予肯定（"这么多人点赞 deserved！"）
+
+**情况2：白板视频/无文案**
+- 从互动数据切入："这么多人点赞，内容肯定很赞"
+- 针对音乐/画面风格简单评论
+- 或给予通用支持："支持一下，期待更多作品"
+
+## 输出要求
+- 字数：20-60字
+- 直接输出评论内容
+- 可适当使用emoji"""
+    
     @classmethod
     def _get_cache_dir(cls) -> Path:
         """获取缓存目录路径"""
@@ -316,6 +346,27 @@ class PromptGenerator:
             return result["result"]
         
         return cls._生成默认评论提示词(目标视频描述)
+    
+    @classmethod
+    def 获取朋友互动提示词(cls, video_data: dict) -> str:
+        """
+        获取朋友互动人设提示词（固定模板，填入视频数据）
+        
+        Args:
+            video_data: 视频结构化数据，包含作者、文案、音乐、点赞等
+            
+        Returns:
+            格式化后的提示词字符串
+        """
+        return cls.朋友互动人设提示词.format(
+            作者=video_data.get('作者', ''),
+            文案=video_data.get('文案', '') or "(无)",
+            音乐=video_data.get('音乐', '') or "(无)",
+            点赞=video_data.get('点赞', '0'),
+            评论=video_data.get('评论', '0'),
+            收藏=video_data.get('收藏', '0'),
+            分享=video_data.get('分享', '0')
+        )
     
     @classmethod
     def _生成默认评论提示词(cls, 目标视频描述: str, video_data: dict = None) -> str:
