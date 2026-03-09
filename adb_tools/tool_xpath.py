@@ -2125,25 +2125,25 @@ class 基本任务(抽象持久序列):
         result = result.get("result")
         return tool_dy_utils.match_category(result, self.config.行业, min_confidence)
     
+    # def 获取当前抖音视频评论_old(self):
+    #     """
+    #     【旧版本】获取当前抖音视频评论
+        
+    #     原逻辑：使用LLM分类，然后LLM生成评论
+    #     保留用于兼容和参考，后期可删除
+    #     """
+    #     prompt = self.config.sys_prompt_cls
+    #     partial = self.config.partial_content_cls
+    #     # content = self.通用附件方式截图详细描述("文本").get("result")
+    #     content = self.通过数据获取截图详情().get('result')
+    #     result = self.获取回答数据(prompt, content, partial)
+    #     result = result.get("result")
+    #     if tool_dy_utils.match_category(result, self.config.行业, min_confidence=0.8):
+    #         return self.获取回答数据(self.抖音视频评论提示词, content).get('result')
+
     def 获取当前抖音视频评论_old(self):
         """
         【旧版本】获取当前抖音视频评论
-        
-        原逻辑：使用LLM分类，然后LLM生成评论
-        保留用于兼容和参考，后期可删除
-        """
-        prompt = self.config.sys_prompt_cls
-        partial = self.config.partial_content_cls
-        # content = self.通用附件方式截图详细描述("文本").get("result")
-        content = self.通过数据获取截图详情().get('result')
-        result = self.获取回答数据(prompt, content, partial)
-        result = result.get("result")
-        if tool_dy_utils.match_category(result, self.config.行业, min_confidence=0.8):
-            return self.获取回答数据(self.抖音视频评论提示词, content).get('result')
-
-    def 获取当前抖音视频评论(self):
-        """
-        获取当前抖音视频评论（改造后版本）
         
         流程：
         1. 从device.source获取XML并解析
@@ -2158,30 +2158,83 @@ class 基本任务(抽象持久序列):
         xml_source = self.device.source
         if not xml_source:
             print("[获取评论] 无法获取device.source")
-            return None
+            raise ValueError("device.source is None")
         
         video_data = 提取结构化数据(xml_source)
         if not video_data:
             print("[获取评论] XML解析失败或无视频数据")
             return None
+        else:
+            print(f"[获取评论] video_data: {video_data}")
         
         # 2. 获取目标视频描述
-        目标描述 = self.config.json_data.get("目标视频描述", "")
+        目标描述 = self.config.get("目标视频描述", "")
         if not 目标描述:
             print("[获取评论] 未配置目标视频描述")
             return None
+        else:
+            print(f"[获取评论] 目标视频描述: {目标描述}")
         
         # 3. 使用dy_text_classifier进行匹配（阈值0.3）
-        # 【重要】此处完全由dy_text_classifier内部逻辑处理匹配
-        # 不再需要sys_prompt_cls/partial_content_cls
-        is_match = _simple_matcher.文本匹配(目标描述, video_data, threshold=0.3)
+
+        is_match = _simple_matcher.文本匹配(类别描述=目标描述, 数据=video_data, 阈值=0.3)
         
         if not is_match:
             print(f"[获取评论] 视频不匹配目标描述，相似度低于阈值0.3")
             return None
         
         # 4. 匹配成功，使用LLM生成评论
+        # raise NotImplementedError
         content = self.通过数据获取截图详情().get('result')
+        
+        # 获取动态生成的评论助手提示词
+        sys_prompt = self.config.json_data.get("sys_prompt_comment", "")
+        if not sys_prompt:
+            # 如果没有生成提示词，使用默认模板
+            from dy_text_classifier.prompt_generator import PromptGenerator
+            sys_prompt = PromptGenerator._生成默认评论提示词(目标描述)
+        
+        result = self.获取回答数据(sys_prompt, content)
+        comment = result.get('result')
+        
+        if comment:
+            print(f"[获取评论] 生成评论: {comment[:50]}...")
+        
+        return comment
+
+    def 获取当前抖音视频评论(self):
+        # 1. 获取XML并解析
+        xml_source = self.device.source
+        if not xml_source:
+            print("[获取评论] 无法获取device.source")
+            raise ValueError("device.source is None")
+        
+        video_data = 提取结构化数据(xml_source)
+        if not video_data:
+            print("[获取评论] XML解析失败或无视频数据")
+            return None
+        else:
+            print(f"[获取评论] video_data: {video_data}")
+        
+        # 2. 获取目标视频描述
+        目标描述 = self.config.get("目标视频描述", "")
+        if not 目标描述:
+            print("[获取评论] 未配置目标视频描述")
+            return None
+        else:
+            print(f"[获取评论] 目标视频描述: {目标描述}")
+        
+        # 3. 使用dy_text_classifier进行匹配（阈值0.3）
+
+        is_match = _simple_matcher.文本匹配(类别描述=目标描述, 数据=video_data, 阈值=0.3)
+        
+        if not is_match:
+            print(f"[获取评论] 视频不匹配目标描述，相似度低于阈值0.3")
+            return None
+        
+        # 4. 匹配成功，使用LLM生成评论
+        # 直接使用video_data（dict结构），转换为JSON字符串作为content
+        content = json.dumps(video_data, ensure_ascii=False, indent=2)
         
         # 获取动态生成的评论助手提示词
         sys_prompt = self.config.json_data.get("sys_prompt_comment", "")
