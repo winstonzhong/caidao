@@ -37,7 +37,7 @@ class PromptGenerator:
     """
     
     # 提示词模板版本号 - 修改模板后必须更新此版本号以使缓存失效
-    PROMPT_TEMPLATE_VERSION = "2.0.0"
+    PROMPT_TEMPLATE_VERSION = "3.0.0"
     
     # 默认缓存目录
     _DEFAULT_CACHE_DIR = os.path.join(_MODULE_DIR, "prompt_cache")
@@ -130,7 +130,7 @@ class PromptGenerator:
             print(f"[PromptGenerator] 保存缓存失败: {e}")
     
     @classmethod
-    def 获取评论助手提示词(cls, 目标视频描述: str) -> str:
+    def 获取评论助手提示词(cls, 目标视频描述: str, video_data: dict = None) -> str:
         """
         获取评论助手提示词（带文件缓存机制）
         
@@ -142,12 +142,18 @@ class PromptGenerator:
         
         Args:
             目标视频描述: 目标视频描述
+            video_data: 视频结构化数据，用于生成更精准的提示词
         
         Returns:
             评论助手提示词
         """
-        # 1. 计算Hash
-        hash_id = cls._compute_hash(目标视频描述)
+        # 1. 计算Hash（如果有video_data，加入Hash计算以确保不同视频有不同提示词）
+        if video_data:
+            # 使用 目标描述 + 作者 + 文案前50字 作为Hash输入
+            hash_input = f"{目标视频描述}:{video_data.get('作者', '')}:{video_data.get('文案', '')[:50]}"
+            hash_id = hashlib.md5(hash_input.encode('utf-8')).hexdigest()
+        else:
+            hash_id = cls._compute_hash(目标视频描述)
         
         # 2. 检查缓存
         cached_prompt = cls._load_from_cache(hash_id)
@@ -157,7 +163,7 @@ class PromptGenerator:
         
         # 3. 缓存未命中，生成提示词
         print(f"[PromptGenerator] 缓存未命中，生成提示词: {hash_id[:8]}...")
-        prompt = cls._生成默认评论提示词(目标视频描述)
+        prompt = cls._生成默认评论提示词(目标视频描述, video_data)
         
         # 4. 保存到缓存
         cls._save_to_cache(hash_id, 目标视频描述, prompt)
@@ -312,9 +318,9 @@ class PromptGenerator:
         return cls._生成默认评论提示词(目标视频描述)
     
     @classmethod
-    def _生成默认评论提示词(cls, 目标视频描述: str) -> str:
+    def _生成默认评论提示词(cls, 目标视频描述: str, video_data: dict = None) -> str:
         """
-        生成评论助手提示词（备用方案）
+        生成评论助手提示词（V3.0 增强版）
         
         Args:
             目标视频描述: 用户配置的目标视频描述
@@ -350,19 +356,12 @@ class PromptGenerator:
         ## 输出格式
         **只输出1条评论内容**，不要输出多条或添加序号。"""
 
-        video_data = {
-            '作者': '@23797136149',
-            '文案': '即然拼多多商家不愿抵制平台的压榨，那么我就用魔法打魔法，我也是消费者，我也可以去薅有运费险商家的羊毛，这样做虽然不对，但也是没办法的办法！#拼多...',
-            '音乐': '魂！！',
-            '点赞': '26',
-            '评论': '36',
-            '收藏': '3',
-            '分享': '0',
-            '类型': '视频'
-        }
-            
-        structured_guide = cls._生成结构化数据使用指南(video_data)
-        return base_prompt + "\n\n" + structured_guide
+        # 如果有video_data传入，生成更具体的提示词
+        if video_data:
+            return cls._生成增强版评论提示词(目标视频描述, video_data)
+        
+        # 否则返回基础提示词
+        return base_prompt
     
     @classmethod
     def _生成结构化数据使用指南(cls, video_data: dict) -> str:
@@ -431,6 +430,167 @@ class PromptGenerator:
 
 ### 重要提醒
 **必须只输出1条评论**，不要输出多条供选择。直接给出你最好的那条评论即可。"""
+
+    # 立场分析关键词
+    _负面关键词 = ['不知耻', '恶意', '损害', '坑', '骗', '翻车', '恶果', '损人', '害人', '虚假', '假货', '劣', '糟', '烂', '差', '坏', '怒', '气', '骂', '喷']
+    _正面关键词 = ['干货', '技巧', '成功', '到账', '分享', '推荐', '好', '棒', '赞', '牛', '赚', '赢', '厉害', '不错', '优秀']
+    _中立关键词 = ['教程', '方法', '如何', '介绍', '说明', '教', '讲', '学', '问', '咨询']
+    
+    @classmethod
+    def _分析视频立场(cls, video_data: dict) -> str:
+        """
+        分析视频的立场/情感倾向
+        
+        通过关键词判断：
+        - 负面/批判：不知耻、恶意、损害、坑、骗、翻车、恶果等
+        - 正面/支持：干货、技巧、成功、到账、分享等
+        - 中立/客观：教程、方法、如何、介绍等
+        
+        Args:
+            video_data: 视频结构化数据
+            
+        Returns:
+            str: '批判' | '支持' | '中立'
+        """
+        # 提取文案和音乐用于分析
+        text = video_data.get('文案', '') + ' ' + video_data.get('音乐', '')
+        
+        # 统计各类关键词出现次数
+        负面计数 = sum(1 for word in cls._负面关键词 if word in text)
+        正面计数 = sum(1 for word in cls._正面关键词 if word in text)
+        中立计数 = sum(1 for word in cls._中立关键词 if word in text)
+        
+        # 判断立场
+        if 负面计数 > 正面计数 and 负面计数 > 中立计数:
+            return '批判'
+        elif 正面计数 > 负面计数 and 正面计数 > 中立计数:
+            return '支持'
+        else:
+            return '中立'
+    
+    @classmethod
+    def _检查评论质量(cls, comment: str, video_data: dict, 立场: str) -> tuple:
+        """
+        检查生成的评论是否符合要求
+        
+        检查项：
+        1. 是否包含泛泛词汇（学习了、很实用等）
+        2. emoji数量是否超过1个
+        3. 是否包含hashtag
+        4. 字数是否在50-100之间
+        5. 是否与文案内容相关
+        6. 立场是否一致
+        
+        Args:
+            comment: 生成的评论
+            video_data: 视频数据
+            立场: 视频立场
+            
+        Returns:
+            (是否合格, 问题列表)
+        """
+        问题列表 = []
+        
+        # 1. 检查泛泛词汇
+        泛泛词汇 = ['学习了', '很实用', '有道理', '说得好', '支持', '赞', '好帖', '顶', '马克', '收藏了']
+        for word in 泛泛词汇:
+            if word in comment:
+                问题列表.append(f"包含泛泛词汇'{word}'")
+        
+        # 2. 检查emoji数量
+        import re
+        emojis = re.findall(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002702-\U000027B0\U000024C2-\U0001F251]', comment)
+        if len(emojis) > 1:
+            问题列表.append(f"emoji数量过多({len(emojis)}个)，应控制在1个以内")
+        
+        # 3. 检查hashtag
+        if '#' in comment:
+            问题列表.append("评论中不应包含hashtag(#)")
+        
+        # 4. 检查字数
+        字数 = len(comment)
+        if 字数 < 30 or 字数 > 120:
+            问题列表.append(f"字数不合适({字数}字)，应在30-120字之间")
+        
+        # 5. 检查是否与文案相关
+        文案 = video_data.get('文案', '')
+        # 提取文案中的关键词（简单提取2字以上的词）
+        文案关键词 = set()
+        for i in range(len(文案) - 1):
+            for j in range(i + 2, min(i + 6, len(文案) + 1)):
+                文案关键词.add(文案[i:j])
+        # 检查评论中是否包含文案关键词
+        命中关键词 = [w for w in 文案关键词 if w in comment and len(w) >= 2]
+        if len(命中关键词) < 1:
+            问题列表.append("评论与文案内容关联度低")
+        
+        return (len(问题列表) == 0, 问题列表)
+    
+    @classmethod
+    def _生成增强版评论提示词(cls, 目标视频描述: str, video_data: dict) -> str:
+        """
+        生成增强版评论提示词（V3.0 - 优化版）
+        
+        Args:
+            目标视频描述: 用户配置的目标视频描述
+            video_data: 视频结构化数据
+        """
+        # 分析视频立场
+        立场 = cls._分析视频立场(video_data)
+        
+        # 提取作者名（用于@作者决策）
+        作者 = video_data.get('作者', '').lstrip('@')
+        文案 = video_data.get('文案', '')
+        
+        # 构建立场说明
+        立场说明 = {
+            '批判': '视频对目标现象持批判/负面态度，评论应保持批判立场，指出问题或表达不认同',
+            '支持': '视频对目标现象持支持/正面态度，评论应保持支持立场，认同或补充观点',
+            '中立': '视频对目标现象持客观/中立态度，评论应客观分析，可以提问或补充信息'
+        }.get(立场, '根据视频内容自然表达观点')
+        
+        # 构建提示词
+        prompt = f"""你是一个专注于{目标视频描述}的视频博主。
+
+## 视频信息
+- 作者: @{作者}
+- 文案: {文案[:100]}{'...' if len(文案) > 100 else ''}
+- 立场分析: {立场}（{立场说明}）
+
+## 评论生成核心要求（按优先级排序）
+
+### 1. 内容针对性（最重要）
+- 评论必须针对【文案】的具体内容，不能泛泛而谈
+- 必须引用或回应文案中的核心观点/话题
+- 禁止出现"学习了"、"很实用"、"说得好"、"有道理"等泛泛评论
+- 评论要具体、有信息量，让读者觉得你真的看了视频
+
+### 2. 立场一致性
+- 视频立场: {立场}
+- {立场说明}
+- 评论必须与视频立场一致
+
+### 3. 字数控制
+- 严格控制在 30-100 字之间
+- 超出字数必须删减，不足必须补充
+
+### 4. @作者规则（重要）
+- 不要每次都 @作者
+- 只有以下情况可以@作者：
+  a) 向作者提问（如"@作者 我想请教一下..."）
+  b) 强烈情感表达（如"@作者 太赞同了！"）
+- 一般情况下不要@作者
+
+### 5. 格式约束
+- 最多使用 1 个 emoji，不要堆砌
+- 不要在评论中使用 hashtag（#话题）
+- 语言要自然，像真人评论，不要像AI生成的模板
+- 不要出现"作为一个..."、"从...角度来看"等AI口吻
+
+### 6. 输出要求
+**只输出1条评论内容**，不要输出多条或添加序号。"""
+
+        return prompt
 
 
 def 更新任务提示词(job_id: int, 目标视频描述: str) -> bool:

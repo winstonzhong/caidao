@@ -2271,9 +2271,9 @@ class 基本任务(抽象持久序列):
             return None
         
         # 4. 匹配成功，调用公用函数生成评论
-        # 直接生成评论提示词（无需从配置获取，版本号内置）
+        # 直接生成评论提示词（传入video_data以生成更精准的提示词）
         from dy_text_classifier.prompt_generator import PromptGenerator
-        sys_prompt = PromptGenerator.获取评论助手提示词(目标描述)
+        sys_prompt = PromptGenerator.获取评论助手提示词(目标描述, video_data)
         # print(f"[获取评论] 已生成评论提示词")
         
         return self.根据视频数据生成评论(video_data, sys_prompt)
