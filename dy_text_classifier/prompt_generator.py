@@ -275,22 +275,76 @@ def 更新任务提示词(job_id: int, 目标视频描述: str) -> bool:
 
 
 if __name__ == "__main__":
-    # 测试用例
-    test_cases = [
-        ("Blender, 3D建模, 动漫, 游戏", "技术类：Blender/3D建模相关的评论助手"),
-        ("拼多多维权、假货、薅羊毛", "电商类：电商维权相关的评论助手"),
-        ("美食探店、烹饪教程", "生活类：美食相关的评论助手"),
-    ]
+    import argparse
     
-    for desc, expected_theme in test_cases:
+    # 默认测试用的 video_data
+    DEFAULT_VIDEO_DATA = {
+        '作者': '@23797136149',
+        '文案': '即然拼多多商家不愿抵制平台的压榨，那么我就用魔法打魔法，我也是消费者，我也可以去薅有运费险商家的羊毛，这样做虽然不对，但也是没办法的办法！#拼多...',
+        '音乐': '魂！！',
+        '点赞': '26',
+        '评论': '36',
+        '收藏': '3',
+        '分享': '0',
+        '类型': '视频'
+    }
+    
+    parser = argparse.ArgumentParser(description='测试评论提示词生成器')
+    parser.add_argument(
+        '--with-video-data', '-v',
+        action='store_true',
+        help='使用带 video_data 的 _生成默认评论提示词 函数进行测试'
+    )
+    parser.add_argument(
+        '--desc', '-d',
+        type=str,
+        default='拼多多维权、假货、薅羊毛',
+        help='目标视频描述（默认：拼多多维权、假货、薅羊毛）'
+    )
+    parser.add_argument(
+        '--full', '-f',
+        action='store_true',
+        help='显示完整的提示词（默认只显示前2000字符）'
+    )
+    
+    args = parser.parse_args()
+    
+    if args.with_video_data:
+        # 使用带 video_data 的测试
         print("\n" + "=" * 70)
-        print(f"【测试】{expected_theme}")
-        print(f"【输入】{desc}")
+        print("【测试】_生成默认评论提示词(目标描述, video_data)")
+        print(f"【目标描述】{args.desc}")
+        print("【video_data】")
+        for k, v in DEFAULT_VIDEO_DATA.items():
+            print(f"  {k}: {v}")
         print("=" * 70)
         
-        sys_prompt = PromptGenerator.生成评论助手提示词(desc)
+        sys_prompt = PromptGenerator._生成默认评论提示词(args.desc, DEFAULT_VIDEO_DATA)
         
         print("\n【生成的评论助手提示词】")
-        print(sys_prompt[:1000], "..." if len(sys_prompt) > 1000 else "")
+        if args.full:
+            print(sys_prompt)
+        else:
+            print(sys_prompt[:2000], "..." if len(sys_prompt) > 2000 else "")
         print(f"\n【总长度】{len(sys_prompt)} 字符")
         print("\n" + "-" * 70)
+    else:
+        # 原有测试：使用 LLM 生成提示词（不带 video_data）
+        test_cases = [
+            ("Blender, 3D建模, 动漫, 游戏", "技术类：Blender/3D建模相关的评论助手"),
+            ("拼多多维权、假货、薅羊毛", "电商类：电商维权相关的评论助手"),
+            ("美食探店、烹饪教程", "生活类：美食相关的评论助手"),
+        ]
+        
+        for desc, expected_theme in test_cases:
+            print("\n" + "=" * 70)
+            print(f"【测试】{expected_theme}")
+            print(f"【输入】{desc}")
+            print("=" * 70)
+            
+            sys_prompt = PromptGenerator.生成评论助手提示词(desc)
+            
+            print("\n【生成的评论助手提示词】")
+            print(sys_prompt[:1000], "..." if len(sys_prompt) > 1000 else "")
+            print(f"\n【总长度】{len(sys_prompt)} 字符")
+            print("\n" + "-" * 70)
