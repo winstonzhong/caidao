@@ -243,9 +243,15 @@ class SynonymCacheManager:
                 # 尝试解析JSON
                 synonyms = json.loads(result["result"])
                 if isinstance(synonyms, dict):
-                    # 确保值是列表
-                    synonyms = {k: v if isinstance(v, list) else [v] for k, v in synonyms.items()}
-                    return synonyms
+                    # 确保值是列表，并将关键词本身加入同义词列表
+                    result_dict = {}
+                    for k, v in synonyms.items():
+                        syn_list = v if isinstance(v, list) else [v]
+                        # 确保关键词本身在同义词列表中
+                        if k not in syn_list:
+                            syn_list.insert(0, k)  # 将关键词本身放到列表首位
+                        result_dict[k] = syn_list
+                    return result_dict
             except json.JSONDecodeError:
                 # JSON解析失败，使用备用方案
                 print(f"[SynonymCacheManager] JSON解析失败，使用备用方案")

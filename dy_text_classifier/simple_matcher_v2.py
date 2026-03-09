@@ -108,18 +108,19 @@ class SimpleMatcherV2:
     
     def _get_word_set(self, description: str) -> Set[str]:
         """
-        获取目标描述的词库集合（含同义词）
+        获取目标描述的词库集合（含同义词及子串）
         
         逻辑：
         1. 检查内存缓存
         2. 获取或创建同义词库
         3. 合并所有关键词及其同义词为集合
+        4. 提取关键词的子串（处理像"售后白嫖"中包含"白嫖"的情况）
         
         Args:
             description: 目标描述
         
         Returns:
-            词库集合 {词1, 词2, 同义词1, ...}
+            词库集合 {词1, 词2, 同义词1, 子串1, ...}
         """
         # 检查内存缓存
         if description in self._word_set_cache:
@@ -134,11 +135,19 @@ class SimpleMatcherV2:
             keywords=keywords
         )
         
-        # 构建词库集合：关键词 + 同义词
+        # 构建词库集合：关键词 + 同义词 + 关键词子串
         word_set = set()
         for keyword, syn_list in synonyms.items():
             word_set.add(keyword)  # 添加关键词本身
             word_set.update(syn_list)  # 添加同义词
+            
+            # 添加关键词的子串（2-4字的子串）
+            # 例如"售后白嫖" → 添加"售后"、"白嫖"、"后白嫖"等
+            for i in range(len(keyword)):
+                for j in range(i + 2, min(i + 5, len(keyword) + 1)):
+                    substring = keyword[i:j]
+                    if self._是有效子串(substring):
+                        word_set.add(substring)
         
         # 存入内存缓存
         self._word_set_cache[description] = word_set
@@ -301,10 +310,21 @@ class SimpleMatcherV2:
             return False
         
         # 检查词库中任意一词是否在文本中出现（子串匹配）
+        # 同时检查文本中的词是否在词库中（双向匹配）
         matched_words = []
+        
+        # 方式1: 词库中的词在文本中
         for word in word_set:
             if word in text:
                 matched_words.append(word)
+        
+        # 方式2: 文本中的词（2字以上）在词库中（处理jieba分词不准确的情况）
+        # 提取文本中所有2字以上的子串进行检查
+        text_words = self._提取文本中的所有可能词(text)
+        for word in text_words:
+            if word in word_set:
+                if word not in matched_words:
+                    matched_words.append(word)
         
         is_match = len(matched_words) > 0
         
@@ -312,8 +332,48 @@ class SimpleMatcherV2:
             print(f"[SimpleMatcherV2] 匹配成功，命中词汇: {matched_words[:5]}")
         else:
             print(f"[SimpleMatcherV2] 匹配失败，无命中词汇")
+            print(f"[SimpleMatcherV2] 调试信息 - 词库大小: {len(word_set)}, 文本长度: {len(text)}")
+            print(f"[SimpleMatcherV2] 调试信息 - 词库样本: {list(word_set)[:10]}")
         
         return is_match
+    
+    def _提取文本中的所有可能词(self, text: str, min_len: int = 2, max_len: int = 8) -> Set[str]:
+        """
+        提取文本中所有可能长度的子串
+        
+        用于处理jieba分词不准确的情况，例如：
+        - "恶意白嫖"被jieba分成["恶意", "白", "嫖"]
+        - 但通过子串提取可以找到"白嫖"
+        
+        Args:
+            text: 输入文本
+            min_len: 最小词长
+            max_len: 最大词长
+        
+        Returns:
+            所有可能的子串集合
+        """
+        words = set()
+        for i in range(len(text)):
+            for j in range(i + min_len, min(i + max_len + 1, len(text) + 1)):
+                substring = text[i:j]
+                # 过滤包含停用词和标点的
+                if self._是有效子串(substring):
+                    words.add(substring)
+        return words
+    
+    def _是有效子串(self, s: str) -> bool:
+        """检查子串是否有效（不包含停用词和标点）"""
+        # 过滤标点
+        if any(c in s for c in '，。！？；：""''（）【】[]{},.!?;:\'"()'):
+            return False
+        # 过滤纯数字
+        if s.isdigit():
+            return False
+        # 过滤停用词
+        if s in self.stopwords:
+            return False
+        return True
     
     def 获取匹配详情(
         self,
