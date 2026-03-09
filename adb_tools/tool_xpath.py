@@ -2215,6 +2215,8 @@ class 基本任务(抽象持久序列):
         """
         print(f"[生成评论] video_data: {video_data}")
         
+        content = json.dumps(video_data, ensure_ascii=False, indent=2)
+        
         # 3. 调用API生成评论
         result = self.获取回答数据(sys_prompt, content)
         comment = result.get('result')
@@ -2267,8 +2269,8 @@ class 基本任务(抽象持久序列):
         # 4. 匹配成功，调用公用函数生成评论
         # 直接生成评论提示词（无需从配置获取，版本号内置）
         from dy_text_classifier.prompt_generator import PromptGenerator
-        sys_prompt = PromptGenerator._生成默认评论提示词(目标描述)
-        print(f"[获取评论] 已生成评论提示词")
+        sys_prompt = PromptGenerator.获取评论助手提示词(目标描述)
+        # print(f"[获取评论] 已生成评论提示词")
         
         return self.根据视频数据生成评论(video_data, sys_prompt)
 

@@ -98,7 +98,17 @@ def 提取xml中的视频节点(xml_source: Union[ET.ElementTree, ET.Element, st
         True
     """
     # 处理不同类型的输入
-    if isinstance(xml_source, (str, Path)):
+    if isinstance(xml_source, str):
+        # 判断是 XML 内容还是文件路径
+        xml_source_stripped = xml_source.strip()
+        if xml_source_stripped.startswith('<?xml') or xml_source_stripped.startswith('<'):
+            # 是 XML 内容字符串
+            root = ET.fromstring(xml_source_stripped)
+        else:
+            # 是文件路径
+            tree = ET.parse(xml_source)
+            root = tree.getroot()
+    elif isinstance(xml_source, Path):
         tree = ET.parse(xml_source)
         root = tree.getroot()
     elif isinstance(xml_source, ET.ElementTree):
