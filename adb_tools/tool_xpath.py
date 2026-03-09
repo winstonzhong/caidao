@@ -119,10 +119,13 @@ if '/home/yka-003/workspace/caidao' not in sys.path:
 from dy_text_classifier.category_cache_manager import CategoryCacheManager
 from dy_text_classifier.text_classifier import TextClassifier, MatchResult
 from dy_text_classifier.simple_matcher import SimpleMatcher
+from dy_text_classifier.simple_matcher_v2 import SimpleMatcherV2, 文本匹配 as 文本匹配V2
 from tool_dy_xml import 提取结构化数据
 
-# 初始化匹配器
+# 初始化匹配器（保留旧版本兼容）
 _simple_matcher = SimpleMatcher()
+# 初始化V2匹配器（新简单匹配：任意词命中即匹配）
+_simple_matcher_v2 = SimpleMatcherV2()
 # ==========================================
 
 global_redis = GLOBAL_REDIS
@@ -2259,11 +2262,12 @@ class 基本任务(抽象持久序列):
         else:
             print(f"[获取评论] 目标视频描述: {目标描述}")
         
-        # 3. 使用dy_text_classifier进行匹配（阈值0.3）
-        is_match = _simple_matcher.文本匹配(类别描述=目标描述, 数据=video_data, 阈值=0.3)
+        # 3. 使用SimpleMatcherV2进行匹配（任意词命中即匹配，无需阈值）
+        # is_match = _simple_matcher.文本匹配(类别描述=目标描述, 数据=video_data, 阈值=0.3)
+        is_match = _simple_matcher_v2.文本匹配(目标描述=目标描述, 数据=video_data)
         
         if not is_match:
-            print(f"[获取评论] 视频不匹配目标描述，相似度低于阈值0.3")
+            print(f"[获取评论] 视频不匹配目标描述，未命中任何关键词")
             return None
         
         # 4. 匹配成功，调用公用函数生成评论
