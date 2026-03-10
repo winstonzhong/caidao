@@ -2256,11 +2256,17 @@ class 基本任务(抽象持久序列):
             print(f"[获取评论] video_data: {video_data}")
         
         # 【新增】2. 检查是否是朋友视频
-        if video_data.get('朋友') == '是':
+        # 环境变量 DY_FORCE_MATCH_FRIEND_VIDEO 控制是否强制匹配朋友视频
+        # 如果设置为任意值（如 "1", "true", "yes"），则朋友视频也需要经过匹配检查
+        _force_match_friend = os.environ.get('DY_FORCE_MATCH_FRIEND_VIDEO', '').lower() in ('1', 'true', 'yes', 'on')
+        
+        if video_data.get('朋友') == '是' and not _force_match_friend:
             print(f"[获取评论] 检测到朋友视频({video_data.get('作者')})，跳过匹配直接生成评论")
             from dy_text_classifier.prompt_generator import PromptGenerator
             sys_prompt = PromptGenerator.获取朋友互动提示词(video_data)
             return self.根据视频数据生成评论(video_data, sys_prompt)
+        elif video_data.get('朋友') == '是' and _force_match_friend:
+            print(f"[获取评论] 检测到朋友视频({video_data.get('作者')})，但 DY_FORCE_MATCH_FRIEND_VIDEO 已启用，强制进行匹配检查")
         
         # 3. 获取目标视频描述
         目标描述 = self.config.get("目标视频描述", "")
