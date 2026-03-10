@@ -1,0 +1,37 @@
+{
+  "hash_id": "83d13764b404fafe14233e1a587b2858",
+  "目标描述": "in at on",
+  "版本": "1.0.0",
+  "生成时间": "2026-03-10T11:01:15.823233",
+  "synonyms": {
+    "in": [
+      "in",
+      "inside",
+      "within",
+      "among",
+      "during",
+      "throughout"
+    ],
+    "at": [
+      "at",
+      "on",
+      "by",
+      "near",
+      "around",
+      "toward"
+    ],
+    "on": [
+      "on",
+      "over",
+      "upon",
+      "above",
+      "across",
+      "alongside"
+    ]
+  },
+  "统计信息": {
+    "关键词数": 3,
+    "同义词总数": 18,
+    "平均每词同义词数": 6.0
+  }
+}
