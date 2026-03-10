@@ -146,6 +146,47 @@ namespaces = {"re": "http://exslt.org/regular-expressions"}
 DB_QUEUE = "豆包队列2"
 
 
+def 深度合并字典(base_dict, override_dict):
+    """
+    深度合并两个字典，override_dict的值会覆盖base_dict中的同名键
+    
+    合并规则：
+    1. 如果键在base_dict中不存在，直接添加
+    2. 如果键存在且双方都是字典，递归合并
+    3. 如果键存在但类型不同，或override_dict中的值不是字典，直接覆盖
+    
+    Args:
+        base_dict: 基础字典（不会被修改）
+        override_dict: 覆盖字典
+    
+    Returns:
+        合并后的新字典（深拷贝，不修改原始字典）
+    
+    Examples:
+        >>> base = {'a': 1, 'b': {'c': 2, 'd': 3}}
+        >>> override = {'b': {'c': 99}, 'e': 5}
+        >>> 深度合并字典(base, override)
+        {'a': 1, 'b': {'c': 99, 'd': 3}, 'e': 5}
+    """
+    import copy
+    
+    # 深拷贝基础字典，避免修改原始数据
+    result = copy.deepcopy(base_dict) if base_dict else {}
+    
+    if not override_dict:
+        return result
+    
+    for key, value in override_dict.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            # 双方都是字典，递归合并
+            result[key] = 深度合并字典(result[key], value)
+        else:
+            # 直接覆盖或新增
+            result[key] = value
+    
+    return result
+
+
 def 得到url(task_key, 中继=False):
     return f'{URL_TASK_QUEUE}/pull/{task_key}{"_" if 中继 else ""}'
 
@@ -1010,8 +1051,111 @@ class 基本任务(抽象持久序列):
     def blocks_precheck(self):
         return list(filter(lambda x: x.is_precheck(), self._blocks))
 
+    def _提取配置覆盖值字典(self, 配置):
+        """
+        从定时任务配置中提取需要覆盖到paras的键值对
+        
+        支持两种配置格式：
+        1. 旧格式: {"目标视频描述": "...", ...}
+        2. 新格式: {"keys": [{"name": "...", "current_value": "..."}]}
+        
+        Args:
+            配置: 定时任务.配置字段的值
+        
+        Returns:
+            dict: 标准化的覆盖值字典 {"key": "value", ...}
+        """
+        if not 配置:
+            return {}
+        
+        if not isinstance(配置, dict):
+            print(f"[配置合并] 警告：配置不是字典类型: {type(配置)}")
+            return {}
+        
+        # 新格式：{"keys": [{"name": "...", "current_value": "..."}]}
+        if "keys" in 配置:
+            覆盖值字典 = {}
+            keys_list = 配置.get("keys", [])
+            
+            if not isinstance(keys_list, list):
+                print(f"[配置合并] 警告：配置.keys不是列表类型: {type(keys_list)}")
+                return {}
+            
+            for item in keys_list:
+                if not isinstance(item, dict):
+                    continue
+                    
+                name = item.get("name")
+                if name is not None:  # name可以是空字符串，但不能是None
+                    覆盖值字典[name] = item.get("current_value")
+            
+            return 覆盖值字典
+        
+        # 旧格式：直接是字典 {"key": "value"}
+        else:
+            return 配置
+
+    def _合并定时任务配置到数据(self, data_dict):
+        """
+        将定时任务配置合并到数据字典的paras中
+        
+        Args:
+            data_dict: 任务数据字典，会被修改（合并后的paras）
+        
+        Returns:
+            bool: 是否进行了合并
+        """
+        import copy
+        
+        # 检查是否有持久对象和配置
+        if not self.持久对象:
+            return False
+        
+        if not hasattr(self.持久对象, '配置'):
+            return False
+        
+        配置 = self.持久对象.配置
+        if not 配置:
+            return False
+        
+        # 提取覆盖值字典
+        覆盖值字典 = self._提取配置覆盖值字典(配置)
+        
+        if not 覆盖值字典:
+            return False
+        
+        # 获取原始paras
+        original_paras = data_dict.get("paras", {}) or {}
+        
+        # 保存原始值用于调试
+        self._原始paras = copy.deepcopy(original_paras)
+        
+        # 深度合并
+        merged_paras = 深度合并字典(original_paras, 覆盖值字典)
+        
+        # 修改data_dict
+        data_dict["paras"] = merged_paras
+        
+        print(f"[配置合并] 成功合并 {len(覆盖值字典)} 个配置项: {list(覆盖值字典.keys())}")
+        return True
+
     def init(self, d):
+        """
+        初始化任务数据
+        
+        注意：在super().__init__()中被调用，此时device_pointed和持久对象已设置
+        """
+        # 【配置合并】将定时任务配置合并到paras中
+        # 在self.d赋值前完成，确保操作块创建时使用的是合并后的配置
+        合并成功 = self._合并定时任务配置到数据(d)
+        
+        if 合并成功:
+            print("[init] 配置合并完成，使用合并后的paras创建操作块")
+        
+        # 赋值self.d（此时paras可能已经被合并）
         self.d = d
+        
+        # 创建操作块（使用合并后的self.paras）
         self._blocks = [操作块(x, self.paras) for x in self.d.get("blocks")]
 
     @cached_property
@@ -1061,6 +1205,14 @@ class 基本任务(抽象持久序列):
 
     @property
     def paras(self):
+        """获取任务参数（已合并配置）"""
+        return self.d.get("paras")
+
+    @property
+    def 原始paras(self):
+        """获取未经合并的原始paras（用于调试）"""
+        if hasattr(self, '_原始paras'):
+            return self._原始paras
         return self.d.get("paras")
 
     @property
@@ -2231,6 +2383,36 @@ class 基本任务(抽象持久序列):
         
         return comment
 
+    def _获取强制匹配朋友视频配置(self):
+        """
+        获取是否强制匹配朋友视频的配置
+        
+        优先级：
+        1. 定时任务配置中的 '强制匹配朋友视频' 或 'DY_FORCE_MATCH_FRIEND_VIDEO'
+        2. 环境变量 DY_FORCE_MATCH_FRIEND_VIDEO
+        3. 默认值 False
+        
+        Returns:
+            bool: 是否强制匹配朋友视频
+        """
+        # 1. 优先从定时任务配置读取（self.config 已合并配置）
+        # 支持配置键名：'强制匹配朋友视频' 或 'DY_FORCE_MATCH_FRIEND_VIDEO'
+        force_match_config = self.config.get('强制匹配朋友视频')
+        if force_match_config is None:
+            force_match_config = self.config.get('DY_FORCE_MATCH_FRIEND_VIDEO')
+        
+        if force_match_config is not None:
+            # 解析配置值（支持多种格式）
+            if isinstance(force_match_config, bool):
+                return force_match_config
+            return str(force_match_config).lower() in (
+                '1', 'true', 'yes', 'on', '启用', '开启', 'True', 'TRUE'
+            )
+        
+        # 2. 回退到环境变量
+        env_value = os.environ.get('DY_FORCE_MATCH_FRIEND_VIDEO', '')
+        return env_value.lower() in ('1', 'true', 'yes', 'on')
+
     def 获取当前抖音视频评论(self):
         """
         获取当前抖音视频评论（完整流程，包含匹配检查）
@@ -2255,10 +2437,8 @@ class 基本任务(抽象持久序列):
         else:
             print(f"[获取评论] video_data: {video_data}")
         
-        # 【新增】2. 检查是否是朋友视频
-        # 环境变量 DY_FORCE_MATCH_FRIEND_VIDEO 控制是否强制匹配朋友视频
-        # 如果设置为任意值（如 "1", "true", "yes"），则朋友视频也需要经过匹配检查
-        _force_match_friend = os.environ.get('DY_FORCE_MATCH_FRIEND_VIDEO', '').lower() in ('1', 'true', 'yes', 'on')
+        # 【修改】2. 检查是否是朋友视频（优先从配置读取）
+        _force_match_friend = self._获取强制匹配朋友视频配置()
         
         if video_data.get('朋友') == '是' and not _force_match_friend:
             print(f"[获取评论] 检测到朋友视频({video_data.get('作者')})，跳过匹配直接生成评论")
@@ -2266,7 +2446,8 @@ class 基本任务(抽象持久序列):
             sys_prompt = PromptGenerator.获取朋友互动提示词(video_data)
             return self.根据视频数据生成评论(video_data, sys_prompt)
         elif video_data.get('朋友') == '是' and _force_match_friend:
-            print(f"[获取评论] 检测到朋友视频({video_data.get('作者')})，但 DY_FORCE_MATCH_FRIEND_VIDEO 已启用，强制进行匹配检查")
+            config_source = "配置" if (self.config.get('强制匹配朋友视频') is not None or self.config.get('DY_FORCE_MATCH_FRIEND_VIDEO') is not None) else "环境变量"
+            print(f"[获取评论] 检测到朋友视频({video_data.get('作者')})，但强制匹配已启用（来源：{config_source}），进行匹配检查")
         
         # 3. 获取目标视频描述
         目标描述 = self.config.get("目标视频描述", "")
