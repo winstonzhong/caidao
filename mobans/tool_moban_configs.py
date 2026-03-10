@@ -5,10 +5,10 @@ import helper_tpls
 import tool_img
 
 import tool_static
-from tool_resource import get_base_dir
+from tool_resource import get_resource_dir
 
 # BASE_DIR = pathlib.Path(__file__).parent
-BASE_DIR = get_base_dir()
+BASE_DIR = get_resource_dir('mobans')
 
 CFG = {
     "测试微信客服": {

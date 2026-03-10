@@ -144,7 +144,7 @@ class CategoryCacheManager:
     ) -> tuple:
         """
         获取或创建词库（核心方法）
-        
+
         逻辑：
         1. 计算description的hash
         2. 检查缓存是否存在
@@ -164,7 +164,7 @@ class CategoryCacheManager:
         # 2. 检查缓存
         word_bank = self.load(hash_id)
         if word_bank is not None:
-            print(f"命中缓存: {hash_id[:8]}...")
+            print(f"命中分类字典缓存: {hash_id[:8]}...")
             return hash_id, word_bank, True
         
         # 3. 缓存未命中，调用API生成

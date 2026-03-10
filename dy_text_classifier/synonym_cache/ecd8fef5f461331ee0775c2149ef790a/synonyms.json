@@ -1,0 +1,93 @@
+{
+  "hash_id": "ecd8fef5f461331ee0775c2149ef790a",
+  "目标描述": "- 大模型：ChatGPT、GPT-4、Claude、Kimi、豆包、文心一言、通义千问、Gemini等\n- 开源生态：OpenAI、开源大模型、LLaMA、Hugging Face、LangChain等\n- AI应用：AI绘画(Midjourney/Stable Diffusion)、AI编程、AI音乐、AI视频、Agent、RAG等\n- 硬件：AI手机、豆包手机、AI Pin、智能体设备等\n- 概念：提示词工程(Prompt Engineering)、微调、训练、推理、幻觉、对齐、多模态等",
+  "版本": "1.0.0",
+  "生成时间": "2026-03-10T10:21:53.325459",
+  "synonyms": {
+    "大模型": [
+      "大模型",
+      "大型AI模型",
+      "高级AI系统",
+      "巨型AI",
+      "先进AI模型",
+      "高性能AI"
+    ],
+    "ChatGPT": [
+      "ChatGPT",
+      "GPT-3",
+      "OpenAI Chatbot",
+      "智能对话AI",
+      "文本生成AI",
+      "交互式AI"
+    ],
+    "GPT": [
+      "GPT",
+      "生成预训练转换器",
+      "Generative Pre-trained Transformer",
+      "文本生成模型",
+      "预训练语言模型",
+      "自回归语言模型"
+    ],
+    "Claude": [
+      "Claude",
+      "Anthropic AI",
+      "AI助手Claude",
+      "智能助手Claude",
+      "对话AI Claude",
+      "Anthropic智能体"
+    ],
+    "Kimi": [
+      "Kimi",
+      "Kimi Chat",
+      "Kimi AI",
+      "Kimi智能助手",
+      "Kimi对话系统",
+      "Kimi语言模型"
+    ],
+    "豆包": [
+      "豆包",
+      "豆包AI",
+      "豆包智能助手",
+      "豆包聊天机器人",
+      "豆包语言模型",
+      "豆包对话系统"
+    ],
+    "文心一言": [
+      "文心一言",
+      "文心AI",
+      "文心对话系统",
+      "文心智能助手",
+      "文心语言模型",
+      "文心聊天机器人"
+    ],
+    "通义千问": [
+      "通义千问",
+      "通义AI",
+      "通义智能助手",
+      "通义语言模型",
+      "通义问答系统",
+      "通义对话系统"
+    ],
+    "Gemini": [
+      "Gemini",
+      "Gemini AI",
+      "Gemini智能助手",
+      "Gemini对话系统",
+      "Gemini语言模型",
+      "Gemini问答系统"
+    ],
+    "开源生态": [
+      "开源生态",
+      "开放源代码生态",
+      "开源AI生态",
+      "开放AI社区",
+      "开源技术生态",
+      "开放源代码AI"
+    ]
+  },
+  "统计信息": {
+    "关键词数": 10,
+    "同义词总数": 60,
+    "平均每词同义词数": 6.0
+  }
+}

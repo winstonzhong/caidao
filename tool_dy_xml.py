@@ -98,16 +98,19 @@ def 提取xml中的视频节点(xml_source: Union[ET.ElementTree, ET.Element, st
         True
     """
     # 处理不同类型的输入
-    if isinstance(xml_source, (str, Path)):
-        # 兼容处理：判断是文件路径还是XML内容
-        xml_str = str(xml_source).strip()
-        if xml_str.startswith('<?xml') or xml_str.startswith('<'):
-            # 是XML字符串内容
-            root = ET.fromstring(xml_str)
+    if isinstance(xml_source, str):
+        # 判断是 XML 内容还是文件路径
+        xml_source_stripped = xml_source.strip()
+        if xml_source_stripped.startswith('<?xml') or xml_source_stripped.startswith('<'):
+            # 是 XML 内容字符串
+            root = ET.fromstring(xml_source_stripped)
         else:
             # 是文件路径
             tree = ET.parse(xml_source)
             root = tree.getroot()
+    elif isinstance(xml_source, Path):
+        tree = ET.parse(xml_source)
+        root = tree.getroot()
     elif isinstance(xml_source, ET.ElementTree):
         root = xml_source.getroot()
     elif isinstance(xml_source, ET.Element):
@@ -303,6 +306,7 @@ def 格式化视频信息(xml_source: Union[ET.ElementTree, ET.Element, str, Pat
         '评论': _提取评论数(video_node),
         '收藏': _提取收藏数(video_node),
         '分享': _提取分享数(video_node),
+        '朋友': _提取朋友标记(video_node),
     }
     
     # 格式化输出
@@ -464,6 +468,22 @@ def _提取分享数(node: ET.Element) -> str:
     return _从描述中提取数字(node, r'分享', r'(\d+)')
 
 
+def _提取朋友标记(node: ET.Element) -> str:
+    """
+    提取"你的朋友"标记
+    
+    策略：
+    1. 查找 text="你的朋友" 的节点
+    2. 如果找到，返回"是"
+    3. 否则返回"否"
+    """
+    for child in node.iter():
+        text = child.get('text', '').strip()
+        if text == '你的朋友':
+            return '是'
+    return '否'
+
+
 def _从描述中提取数字(node: ET.Element, desc_pattern: str, num_pattern: str) -> str:
     """
     从 content-desc 匹配的节点中提取数字
@@ -563,6 +583,7 @@ def 提取结构化数据(xml_source: Union[ET.ElementTree, ET.Element, str, Pat
             '评论': '0',
             '收藏': '0',
             '分享': '0',
+            '朋友': '否',
             '类型': '其他'
         }
     
@@ -575,6 +596,7 @@ def 提取结构化数据(xml_source: Union[ET.ElementTree, ET.Element, str, Pat
         '评论': _提取评论数(video_node),
         '收藏': _提取收藏数(video_node),
         '分享': _提取分享数(video_node),
+        '朋友': _提取朋友标记(video_node),
     }
     
     # 识别类型

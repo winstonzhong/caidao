@@ -119,10 +119,13 @@ if '/home/yka-003/workspace/caidao' not in sys.path:
 from dy_text_classifier.category_cache_manager import CategoryCacheManager
 from dy_text_classifier.text_classifier import TextClassifier, MatchResult
 from dy_text_classifier.simple_matcher import SimpleMatcher
+from dy_text_classifier.simple_matcher_v2 import SimpleMatcherV2, 文本匹配 as 文本匹配V2
 from tool_dy_xml import 提取结构化数据
 
-# 初始化匹配器
+# 初始化匹配器（保留旧版本兼容）
 _simple_matcher = SimpleMatcher()
+# 初始化V2匹配器（新简单匹配：任意词命中即匹配）
+_simple_matcher_v2 = SimpleMatcherV2()
 # ==========================================
 
 global_redis = GLOBAL_REDIS
@@ -2125,78 +2128,169 @@ class 基本任务(抽象持久序列):
         result = result.get("result")
         return tool_dy_utils.match_category(result, self.config.行业, min_confidence)
     
-    def 获取当前抖音视频评论_old(self):
-        """
-        【旧版本】获取当前抖音视频评论
+    # def 获取当前抖音视频评论_old(self):
+    #     """
+    #     【旧版本】获取当前抖音视频评论
         
-        原逻辑：使用LLM分类，然后LLM生成评论
-        保留用于兼容和参考，后期可删除
+    #     原逻辑：使用LLM分类，然后LLM生成评论
+    #     保留用于兼容和参考，后期可删除
+    #     """
+    #     prompt = self.config.sys_prompt_cls
+    #     partial = self.config.partial_content_cls
+    #     # content = self.通用附件方式截图详细描述("文本").get("result")
+    #     content = self.通过数据获取截图详情().get('result')
+    #     result = self.获取回答数据(prompt, content, partial)
+    #     result = result.get("result")
+    #     if tool_dy_utils.match_category(result, self.config.行业, min_confidence=0.8):
+    #         return self.获取回答数据(self.抖音视频评论提示词, content).get('result')
+
+    # def 获取当前抖音视频评论_old(self):
+    #     """
+    #     【旧版本】获取当前抖音视频评论
+        
+    #     流程：
+    #     1. 从device.source获取XML并解析
+    #     2. 使用dy_text_classifier判断视频是否匹配目标描述（阈值0.3）
+    #        【注意】此处完全由dy_text_classifier处理，不再需要LLM分类提示词
+    #     3. 如果匹配，调用LLM生成评论
+        
+    #     Returns:
+    #         str: 生成的评论内容，不匹配时返回None
+    #     """
+    #     # 1. 获取XML并解析
+    #     xml_source = self.device.source
+    #     if not xml_source:
+    #         print("[获取评论] 无法获取device.source")
+    #         raise ValueError("device.source is None")
+        
+    #     video_data = 提取结构化数据(xml_source)
+    #     if not video_data:
+    #         print("[获取评论] XML解析失败或无视频数据")
+    #         return None
+    #     else:
+    #         print(f"[获取评论] video_data: {video_data}")
+        
+    #     # 2. 获取目标视频描述
+    #     目标描述 = self.config.get("目标视频描述", "")
+    #     if not 目标描述:
+    #         print("[获取评论] 未配置目标视频描述")
+    #         return None
+    #     else:
+    #         print(f"[获取评论] 目标视频描述: {目标描述}")
+        
+    #     # 3. 使用dy_text_classifier进行匹配（阈值0.3）
+
+    #     is_match = _simple_matcher.文本匹配(类别描述=目标描述, 数据=video_data, 阈值=0.3)
+        
+    #     if not is_match:
+    #         print(f"[获取评论] 视频不匹配目标描述，相似度低于阈值0.3")
+    #         return None
+        
+    #     # 4. 匹配成功，使用LLM生成评论
+    #     # 直接使用video_data（dict结构），转换为JSON字符串作为content
+    #     content = json.dumps(video_data, ensure_ascii=False, indent=2)
+        
+    #     # 获取动态生成的评论助手提示词
+    #     sys_prompt = self.config.json_data.get("sys_prompt_comment", "")
+    #     if not sys_prompt:
+    #         # 如果没有生成提示词，使用默认模板（传入video_data以生成更丰富的提示词）
+    #         from dy_text_classifier.prompt_generator import PromptGenerator
+    #         sys_prompt = PromptGenerator._生成默认评论提示词(目标描述, video_data)
+        
+    #     result = self.获取回答数据(sys_prompt, content)
+    #     comment = result.get('result')
+        
+    #     if comment:
+    #         print(f"[获取评论] 生成评论: {comment[:50]}...")
+        
+    #     return comment
+
+    def 根据视频数据生成评论(self, video_data: dict, sys_prompt: str) -> str:
         """
-        prompt = self.config.sys_prompt_cls
-        partial = self.config.partial_content_cls
-        # content = self.通用附件方式截图详细描述("文本").get("result")
-        content = self.通过数据获取截图详情().get('result')
-        result = self.获取回答数据(prompt, content, partial)
-        result = result.get("result")
-        if tool_dy_utils.match_category(result, self.config.行业, min_confidence=0.8):
-            return self.获取回答数据(self.抖音视频评论提示词, content).get('result')
+        根据视频数据生成评论（核心公用函数，不做匹配检查）
+        
+        Args:
+            video_data: 视频结构化数据（作者、文案、点赞等）
+            sys_prompt: 系统提示词，必须传入
+            
+        Returns:
+            str: 生成的评论内容，失败返回None
+        """
+        print(f"[生成评论] video_data: {video_data}")
+        
+        content = json.dumps(video_data, ensure_ascii=False, indent=2)
+        
+        # 3. 调用API生成评论
+        result = self.获取回答数据(sys_prompt, content)
+        comment = result.get('result')
+        
+        if comment:
+            print(f"[生成评论] 成功生成评论: {comment[:50]}...")
+        else:
+            print(f"[生成评论] 生成评论失败")
+        
+        return comment
 
     def 获取当前抖音视频评论(self):
         """
-        获取当前抖音视频评论（改造后版本）
+        获取当前抖音视频评论（完整流程，包含匹配检查）
         
-        流程：
-        1. 从device.source获取XML并解析
-        2. 使用dy_text_classifier判断视频是否匹配目标描述（阈值0.3）
-           【注意】此处完全由dy_text_classifier处理，不再需要LLM分类提示词
-        3. 如果匹配，调用LLM生成评论
-        
-        Returns:
-            str: 生成的评论内容，不匹配时返回None
+        流程:
+        1. 获取XML并解析video_data
+        2. 【新增】检查是否是朋友视频，是则跳过匹配直接生成
+        3. 检查目标视频描述配置
+        4. 使用dy_text_classifier进行匹配检查
+        5. 匹配成功则调用根据视频数据生成评论
         """
         # 1. 获取XML并解析
         xml_source = self.device.source
         if not xml_source:
             print("[获取评论] 无法获取device.source")
-            return None
+            raise ValueError("device.source is None")
         
         video_data = 提取结构化数据(xml_source)
         if not video_data:
             print("[获取评论] XML解析失败或无视频数据")
             return None
+        else:
+            print(f"[获取评论] video_data: {video_data}")
         
-        # 2. 获取目标视频描述
-        目标描述 = self.config.json_data.get("目标视频描述", "")
+        # 【新增】2. 检查是否是朋友视频
+        # 环境变量 DY_FORCE_MATCH_FRIEND_VIDEO 控制是否强制匹配朋友视频
+        # 如果设置为任意值（如 "1", "true", "yes"），则朋友视频也需要经过匹配检查
+        _force_match_friend = os.environ.get('DY_FORCE_MATCH_FRIEND_VIDEO', '').lower() in ('1', 'true', 'yes', 'on')
+        
+        if video_data.get('朋友') == '是' and not _force_match_friend:
+            print(f"[获取评论] 检测到朋友视频({video_data.get('作者')})，跳过匹配直接生成评论")
+            from dy_text_classifier.prompt_generator import PromptGenerator
+            sys_prompt = PromptGenerator.获取朋友互动提示词(video_data)
+            return self.根据视频数据生成评论(video_data, sys_prompt)
+        elif video_data.get('朋友') == '是' and _force_match_friend:
+            print(f"[获取评论] 检测到朋友视频({video_data.get('作者')})，但 DY_FORCE_MATCH_FRIEND_VIDEO 已启用，强制进行匹配检查")
+        
+        # 3. 获取目标视频描述
+        目标描述 = self.config.get("目标视频描述", "")
         if not 目标描述:
             print("[获取评论] 未配置目标视频描述")
             return None
+        else:
+            print(f"[获取评论] 目标视频描述: {目标描述}")
         
-        # 3. 使用dy_text_classifier进行匹配（阈值0.3）
-        # 【重要】此处完全由dy_text_classifier内部逻辑处理匹配
-        # 不再需要sys_prompt_cls/partial_content_cls
-        is_match = _simple_matcher.文本匹配(目标描述, video_data, threshold=0.3)
+        # 4. 使用SimpleMatcherV2进行匹配（任意词命中即匹配，无需阈值）
+        # is_match = _simple_matcher.文本匹配(类别描述=目标描述, 数据=video_data, 阈值=0.3)
+        is_match = _simple_matcher_v2.文本匹配(目标描述=目标描述, 数据=video_data)
         
         if not is_match:
-            print(f"[获取评论] 视频不匹配目标描述，相似度低于阈值0.3")
+            print(f"[获取评论] 视频不匹配目标描述，未命中任何关键词")
             return None
         
-        # 4. 匹配成功，使用LLM生成评论
-        content = self.通过数据获取截图详情().get('result')
+        # 5. 匹配成功，调用公用函数生成评论
+        # 直接生成评论提示词（传入video_data以生成更精准的提示词）
+        from dy_text_classifier.prompt_generator import PromptGenerator
+        sys_prompt = PromptGenerator.获取评论助手提示词(目标描述, video_data)
+        # print(f"[获取评论] 已生成评论提示词")
         
-        # 获取动态生成的评论助手提示词
-        sys_prompt = self.config.json_data.get("sys_prompt_comment", "")
-        if not sys_prompt:
-            # 如果没有生成提示词，使用默认模板
-            from dy_text_classifier.prompt_generator import PromptGenerator
-            sys_prompt = PromptGenerator._生成默认评论提示词(目标描述)
-        
-        result = self.获取回答数据(sys_prompt, content)
-        comment = result.get('result')
-        
-        if comment:
-            print(f"[获取评论] 生成评论: {comment[:50]}...")
-        
-        return comment
+        return self.根据视频数据生成评论(video_data, sys_prompt)
 
 
     # @property
