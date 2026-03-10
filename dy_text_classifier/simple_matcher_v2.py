@@ -52,7 +52,7 @@ DEFAULT_STOPWORDS = {
 
 # 最短词长限制
 MIN_WORD_LENGTH = 2  # 中文词最短2字
-MIN_ENGLISH_WORD_LENGTH = 3  # 英文词最短3字母（过滤 'in', 'on', 'at' 等）
+MIN_ENGLISH_WORD_LENGTH = 4  # 英文词最短4字母（过滤 'in', 'on', 'at', 'Max', 'Maya' 等短缩写）
 
 
 class SimpleMatcherV2:
@@ -106,17 +106,27 @@ class SimpleMatcherV2:
         keywords = []
         for word in words:
             word = word.strip()
+            if not word:
+                continue
             # 过滤条件：
             # 1. 不是纯数字
             # 2. 不是停用词
             # 3. 中文词：长度 >= MIN_WORD_LENGTH（2）
-            # 4. 英文词：长度 >= MIN_ENGLISH_WORD_LENGTH（3），且过滤短单词
+            # 4. 纯英文词：长度 >= MIN_ENGLISH_WORD_LENGTH（3），避免匹配 'in', 'on', 'Max' 等短词
+            # 5. 数字字母混合词：长度 >= 5，避免 '3ds', 'C4D' 等短缩写
             is_chinese = any('\u4e00' <= c <= '\u9fff' for c in word)
-            is_english_short = word.isalpha() and word.islower() and len(word) < MIN_ENGLISH_WORD_LENGTH
+            is_pure_english = word.isalpha()
+            is_mixed_alnum = any(c.isdigit() for c in word) and any(c.isalpha() for c in word)
+            
+            # 纯英文词长度检查
+            if is_pure_english and len(word) < MIN_ENGLISH_WORD_LENGTH:
+                continue
+            # 数字字母混合词长度检查（如 '3ds', 'C4D'）
+            if is_mixed_alnum and len(word) < 5:
+                continue
             
             if (not word.isdigit() and 
                 word not in self.stopwords and
-                not is_english_short and
                 (is_chinese or len(word) >= MIN_ENGLISH_WORD_LENGTH)):
                 keywords.append(word)
         
@@ -171,15 +181,30 @@ class SimpleMatcherV2:
                 if self._是有效子串(syn):
                     word_set.add(syn)
             
-            # 添加关键词的子串（2-4字的子串）
+            # 添加关键词的子串（中文2-4字，英文不提取子串避免过短匹配）
             # 例如"售后白嫖" → 添加"售后"、"白嫖"等
             # 注意：不跨语言边界提取，避免"Fusion视频"提取出"视频"
+            # 注意：英文单词不提取子串，避免"Max"提取出"Ma"
             for i in range(len(keyword)):
                 for j in range(i + MIN_WORD_LENGTH, min(i + MIN_WORD_LENGTH + 3, len(keyword) + 1)):
                     substring = keyword[i:j]
                     # 确保子串不跨语言边界
-                    if self._是有效子串(substring) and self._是语言一致子串(keyword, i, j):
-                        word_set.add(substring)
+                    if not self._是语言一致子串(keyword, i, j):
+                        continue
+                    # 对英文子串进行额外长度检查
+                    if not self._是有效子串(substring):
+                        continue
+                    # 额外过滤：纯ASCII英文子串必须满足英文最小长度
+                    # 注意：isalpha() 对中文也返回True，所以要检查是否全是ASCII字母
+                    is_pure_ascii_english = all(c.isascii() and c.isalpha() for c in substring)
+                    if is_pure_ascii_english and len(substring) < MIN_ENGLISH_WORD_LENGTH:
+                        continue
+                    # 额外过滤：数字字母混合子串必须至少4个字符
+                    has_digit = any(c.isdigit() for c in substring)
+                    has_ascii_alpha = any(c.isascii() and c.isalpha() for c in substring)
+                    if has_digit and has_ascii_alpha and len(substring) < 4:
+                        continue
+                    word_set.add(substring)
         
         # 存入内存缓存
         self._word_set_cache[description] = word_set
