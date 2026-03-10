@@ -182,6 +182,130 @@ class TestSimpleMatcherV2EdgeCases(unittest.TestCase):
         self.assertFalse(result, "纯数字不应作为有效子串")
 
 
+class TestEnglishSubstringExtraction(unittest.TestCase):
+    """测试英文单词不进行子串提取"""
+    
+    @classmethod
+    def setUpClass(cls):
+        cls.matcher = SimpleMatcherV2()
+    
+    def test_Maya不提取Ma(self):
+        """测试 'Maya' 不提取 'Ma' 子串"""
+        word_set = self.matcher._get_word_set('Maya测试')  # 添加中文确保有内容
+        self.assertNotIn('Ma', word_set, "'Maya' 不应提取 'Ma' 子串")
+        self.assertNotIn('ay', word_set, "'Maya' 不应提取 'ay' 子串")
+        self.assertNotIn('ya', word_set, "'Maya' 不应提取 'ya' 子串")
+    
+    def test_Max不提取Ma(self):
+        """测试 'Max' 不提取 'Ma' 子串"""
+        word_set = self.matcher._get_word_set('Max测试')
+        self.assertNotIn('Ma', word_set, "'Max' 不应提取 'Ma' 子串")
+    
+    def test_3ds不提取3d(self):
+        """测试 '3ds' 不提取 '3d' 子串"""
+        word_set = self.matcher._get_word_set('3ds测试')
+        self.assertNotIn('3d', word_set, "'3ds' 不应提取 '3d' 子串")
+        self.assertNotIn('ds', word_set, "'3ds' 不应提取 'ds' 子串")
+    
+    def test_Blender不提取子串(self):
+        """测试 'Blender' 不提取 'Blen', 'lend' 等子串"""
+        word_set = self.matcher._get_word_set('Blender测试')
+        self.assertNotIn('Ble', word_set, "'Blender' 不应提取 'Ble' 子串")
+        self.assertNotIn('Blen', word_set, "'Blender' 不应提取 'Blen' 子串")
+        self.assertNotIn('lend', word_set, "'Blender' 不应提取 'lend' 子串")
+        self.assertNotIn('ende', word_set, "'Blender' 不应提取 'ende' 子串")
+        self.assertNotIn('nder', word_set, "'Blender' 不应提取 'nder' 子串")
+    
+    def test_Fusion不提取Fus(self):
+        """测试 'Fusion' 不提取 'Fus', 'Fusi' 等子串"""
+        word_set = self.matcher._get_word_set('Fusion测试')
+        self.assertNotIn('Fus', word_set, "'Fusion' 不应提取 'Fus' 子串")
+        self.assertNotIn('Fusi', word_set, "'Fusion' 不应提取 'Fusi' 子串")
+        self.assertNotIn('usio', word_set, "'Fusion' 不应提取 'usio' 子串")
+
+
+class TestProfessionalVocabulary(unittest.TestCase):
+    """测试专业词汇保留"""
+    
+    @classmethod
+    def setUpClass(cls):
+        cls.matcher = SimpleMatcherV2()
+    
+    def test_Maya保留(self):
+        """测试 'Maya' 作为专业词汇被保留"""
+        keywords = self.matcher._提取关键词('Maya, Blender, 3ds Max')
+        self.assertIn('Maya', keywords, "'Maya' 应该被保留为关键词")
+    
+    def test_Max保留(self):
+        """测试 'Max' 作为专业词汇被保留"""
+        keywords = self.matcher._提取关键词('Maya, Blender, 3ds Max')
+        self.assertIn('Max', keywords, "'Max' 应该被保留为关键词")
+    
+    def test_3ds保留(self):
+        """测试 '3ds' 作为专业词汇被保留"""
+        keywords = self.matcher._提取关键词('Maya, Blender, 3ds Max')
+        self.assertIn('3ds', keywords, "'3ds' 应该被保留为关键词")
+    
+    def test_C4D保留(self):
+        """测试 'C4D' 作为专业词汇被保留"""
+        keywords = self.matcher._提取关键词('Blender, C4D, Maya')
+        self.assertIn('C4D', keywords, "'C4D' 应该被保留为关键词")
+    
+    def test_Blender保留(self):
+        """测试 'Blender' 作为专业词汇被保留"""
+        keywords = self.matcher._提取关键词('Blender, C4D, Maya')
+        self.assertIn('Blender', keywords, "'Blender' 应该被保留为关键词")
+    
+    def test_3D软件名在词库中(self):
+        """测试 3D 软件名在同义词库中"""
+        目标 = 'Blender, Maya, 3ds Max, C4D, ZBrush'
+        word_set = self.matcher._get_word_set(目标)
+        
+        # 检查专业词汇在词库中
+        self.assertIn('Blender', word_set, "'Blender' 应该在词库中")
+        self.assertIn('Maya', word_set, "'Maya' 应该在词库中")
+        self.assertIn('3ds', word_set, "'3ds' 应该在词库中")
+        self.assertIn('Max', word_set, "'Max' 应该在词库中")
+        self.assertIn('C4D', word_set, "'C4D' 应该在词库中")
+        self.assertIn('ZBrush', word_set, "'ZBrush' 应该在词库中")
+        
+        # 检查子串不在词库中
+        self.assertNotIn('Ma', word_set, "'Ma' 不应该在词库中")
+        self.assertNotIn('3d', word_set, "'3d' 不应该在词库中")
+
+
+class TestEnglishWordLength(unittest.TestCase):
+    """测试英文词最小长度为3"""
+    
+    @classmethod
+    def setUpClass(cls):
+        cls.matcher = SimpleMatcherV2()
+    
+    def test_两个字母英文词被过滤(self):
+        """测试两个字母的英文词被过滤"""
+        keywords = self.matcher._提取关键词('in on at to')
+        self.assertNotIn('in', keywords, "'in' 应该被过滤")
+        self.assertNotIn('on', keywords, "'on' 应该被过滤")
+        self.assertNotIn('at', keywords, "'at' 应该被过滤")
+        self.assertNotIn('to', keywords, "'to' 应该被过滤")
+    
+    def test_三个字母英文词保留(self):
+        """测试三个字母的英文专业词汇被保留"""
+        keywords = self.matcher._提取关键词('Max Maya 3ds')
+        self.assertIn('Max', keywords, "'Max' (3字母) 应该被保留")
+        
+    def test_四个字母英文词保留(self):
+        """测试四个字母的英文词被保留"""
+        keywords = self.matcher._提取关键词('Maya Auto')
+        self.assertIn('Maya', keywords, "'Maya' (4字母) 应该被保留")
+    
+    def test_停用词过滤不受长度影响(self):
+        """测试停用词即使在长度范围内也被过滤"""
+        keywords = self.matcher._提取关键词('the and')
+        self.assertNotIn('the', keywords, "'the' 是停用词，应该被过滤")
+        self.assertNotIn('and', keywords, "'and' 是停用词，应该被过滤")
+
+
 def run_tests():
     """运行所有测试"""
     # 创建测试套件
@@ -191,6 +315,9 @@ def run_tests():
     # 添加测试类
     suite.addTests(loader.loadTestsFromTestCase(TestSimpleMatcherV2))
     suite.addTests(loader.loadTestsFromTestCase(TestSimpleMatcherV2EdgeCases))
+    suite.addTests(loader.loadTestsFromTestCase(TestEnglishSubstringExtraction))
+    suite.addTests(loader.loadTestsFromTestCase(TestProfessionalVocabulary))
+    suite.addTests(loader.loadTestsFromTestCase(TestEnglishWordLength))
     
     # 运行测试
     runner = unittest.TextTestRunner(verbosity=2)
