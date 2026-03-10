@@ -204,7 +204,7 @@ class SynonymCacheManager:
             keywords = [w.strip() for w in words if len(w.strip()) >= 2]
         
         # 构建提示词
-        keywords_str = "、".join(keywords[:10])  # 最多处理10个关键词
+        keywords_str = "、".join(keywords[:30])  # 最多处理30个关键词
         
         sys_prompt = """你是一个专业的同义词扩展助手。
 
