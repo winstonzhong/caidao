@@ -52,7 +52,7 @@ DEFAULT_STOPWORDS = {
 
 # 最短词长限制
 MIN_WORD_LENGTH = 2  # 中文词最短2字
-MIN_ENGLISH_WORD_LENGTH = 4  # 英文词最短4字母（过滤 'in', 'on', 'at', 'Max', 'Maya' 等短缩写）
+MIN_ENGLISH_WORD_LENGTH = 3  # 英文词最短3字母（过滤 'in', 'on', 'at' 等停用词，但保留 'Max', 'Maya', '3ds' 等专业词汇）
 
 
 class SimpleMatcherV2:
@@ -112,17 +112,13 @@ class SimpleMatcherV2:
             # 1. 不是纯数字
             # 2. 不是停用词
             # 3. 中文词：长度 >= MIN_WORD_LENGTH（2）
-            # 4. 纯英文词：长度 >= MIN_ENGLISH_WORD_LENGTH（3），避免匹配 'in', 'on', 'Max' 等短词
-            # 5. 数字字母混合词：长度 >= 5，避免 '3ds', 'C4D' 等短缩写
+            # 4. 纯英文词：长度 >= MIN_ENGLISH_WORD_LENGTH（3），过滤停用词如 'in', 'on'
+            #    但保留专业词汇如 'Max', 'Maya', '3ds', 'C4D'
             is_chinese = any('\u4e00' <= c <= '\u9fff' for c in word)
-            is_pure_english = word.isalpha()
-            is_mixed_alnum = any(c.isdigit() for c in word) and any(c.isalpha() for c in word)
+            is_pure_ascii_english = word.isalpha() and all(c.isascii() for c in word)
             
-            # 纯英文词长度检查
-            if is_pure_english and len(word) < MIN_ENGLISH_WORD_LENGTH:
-                continue
-            # 数字字母混合词长度检查（如 '3ds', 'C4D'）
-            if is_mixed_alnum and len(word) < 5:
+            # 纯ASCII英文词长度检查（仅过滤3字母以下的停用词）
+            if is_pure_ascii_english and len(word) < MIN_ENGLISH_WORD_LENGTH:
                 continue
             
             if (not word.isdigit() and 
@@ -181,30 +177,32 @@ class SimpleMatcherV2:
                 if self._是有效子串(syn):
                     word_set.add(syn)
             
-            # 添加关键词的子串（中文2-4字，英文不提取子串避免过短匹配）
+            # 添加关键词的子串（仅中文词提取子串）
             # 例如"售后白嫖" → 添加"售后"、"白嫖"等
+            # 注意：纯英文单词不进行子串提取，避免"Maya"提取出"Ma"、"Max"提取出"Ma"
+            # 注意：数字字母混合词不进行子串提取，避免"3ds"提取出"3d"
             # 注意：不跨语言边界提取，避免"Fusion视频"提取出"视频"
-            # 注意：英文单词不提取子串，避免"Max"提取出"Ma"
-            for i in range(len(keyword)):
-                for j in range(i + MIN_WORD_LENGTH, min(i + MIN_WORD_LENGTH + 3, len(keyword) + 1)):
-                    substring = keyword[i:j]
-                    # 确保子串不跨语言边界
-                    if not self._是语言一致子串(keyword, i, j):
-                        continue
-                    # 对英文子串进行额外长度检查
-                    if not self._是有效子串(substring):
-                        continue
-                    # 额外过滤：纯ASCII英文子串必须满足英文最小长度
-                    # 注意：isalpha() 对中文也返回True，所以要检查是否全是ASCII字母
-                    is_pure_ascii_english = all(c.isascii() and c.isalpha() for c in substring)
-                    if is_pure_ascii_english and len(substring) < MIN_ENGLISH_WORD_LENGTH:
-                        continue
-                    # 额外过滤：数字字母混合子串必须至少4个字符
-                    has_digit = any(c.isdigit() for c in substring)
-                    has_ascii_alpha = any(c.isascii() and c.isalpha() for c in substring)
-                    if has_digit and has_ascii_alpha and len(substring) < 4:
-                        continue
-                    word_set.add(substring)
+            
+            # 判断关键词类型
+            has_chinese = any('\u4e00' <= c <= '\u9fff' for c in keyword)
+            is_pure_ascii_english = all(c.isascii() and c.isalpha() for c in keyword) and not has_chinese
+            has_mixed_alnum = any(c.isdigit() for c in keyword) and any(c.isalpha() for c in keyword)
+            
+            # 只有包含中文的关键词才提取子串
+            if has_chinese:
+                for i in range(len(keyword)):
+                    for j in range(i + MIN_WORD_LENGTH, min(i + MIN_WORD_LENGTH + 3, len(keyword) + 1)):
+                        substring = keyword[i:j]
+                        # 确保子串不跨语言边界
+                        if not self._是语言一致子串(keyword, i, j):
+                            continue
+                        # 检查子串有效性
+                        if not self._是有效子串(substring):
+                            continue
+                        # 子串也必须包含中文（避免从"3D打印"中提取出"D打"）
+                        if not any('\u4e00' <= c <= '\u9fff' for c in substring):
+                            continue
+                        word_set.add(substring)
         
         # 存入内存缓存
         self._word_set_cache[description] = word_set
