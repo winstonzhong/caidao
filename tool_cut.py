@@ -9,11 +9,13 @@ import re
 import jieba
 
 from tool_env import has_chinese
+from tool_resource import get_resource_path
 
 ptn_digit = re.compile('\d+')
 
-FPATH_STOP_WORDS = os.path.join(os.path.dirname(__file__), 'cn_stopwords.txt')
+# FPATH_STOP_WORDS = os.path.join(os.path.dirname(__file__), 'cn_stopwords.txt')
 
+FPATH_STOP_WORDS = get_resource_path('cn_stopwords.txt')
 
 def get_stop_words():
     with open(FPATH_STOP_WORDS, 'r', encoding='utf8') as fp:
@@ -23,7 +25,8 @@ def get_stop_words():
 STOP_WORDS = get_stop_words()
 
 def get_userdict_fpath(fname):
-    return os.path.join(os.path.dirname(__file__), fname)
+    # return os.path.join(os.path.dirname(__file__), fname)
+    return get_resource_path(fname)  # 使用通用函数
 
 def get_words(txt):
     if txt:

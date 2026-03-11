@@ -18,7 +18,17 @@ from typing import Optional, Dict, List
 
 
 # 模块所在目录（用于确定默认缓存位置）
-_MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+# _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+# print('_MODULE_DIR', _MODULE_DIR)
+
+import sys
+
+if getattr(sys, 'frozen', False):
+    # 打包环境：exe 所在目录
+    _MODULE_DIR = os.path.dirname(sys.executable)
+else:
+    # 开发环境：当前文件所在目录
+    _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class CategoryCacheManager:
@@ -45,6 +55,7 @@ class CategoryCacheManager:
             cache_dir = os.path.join(_MODULE_DIR, cache_dir)
         
         self.cache_dir = Path(cache_dir)
+        print('cache_dir', self.cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
     
     @staticmethod
@@ -133,7 +144,7 @@ class CategoryCacheManager:
     ) -> tuple:
         """
         获取或创建词库（核心方法）
-        
+
         逻辑：
         1. 计算description的hash
         2. 检查缓存是否存在
