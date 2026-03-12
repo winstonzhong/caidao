@@ -171,11 +171,17 @@ class SimpleMatcherV2:
             # 检查关键词本身是否有效
             if self._是有效子串(keyword):
                 word_set.add(keyword)  # 添加关键词本身
+                # 对英文词同时添加全小写形式（支持大小写不敏感匹配）
+                if keyword.isalpha() and all(c.isascii() for c in keyword):
+                    word_set.add(keyword.lower())
             
             # 添加同义词（过滤短词）
             for syn in syn_list:
                 if self._是有效子串(syn):
                     word_set.add(syn)
+                    # 对英文词同时添加全小写形式
+                    if syn.isalpha() and all(c.isascii() for c in syn):
+                        word_set.add(syn.lower())
             
             # 添加关键词的子串（仅中文词提取子串）
             # 例如"售后白嫖" → 添加"售后"、"白嫖"等
@@ -439,10 +445,12 @@ class SimpleMatcherV2:
         
         # 区分中英文
         is_chinese = any('\u4e00' <= c <= '\u9fff' for c in s)
-        is_english = s.isalpha() and s.islower()
+        is_english = s.isalpha() and all(c.isascii() for c in s)
+        is_all_lowercase = is_english and s.islower()
         
         # 过滤纯英文小写短单词（如 'in', 'on', 'at'）
-        if is_english and len(s) < MIN_ENGLISH_WORD_LENGTH:
+        # 但保留混合大小写的专业词汇（如 'OpenClaw', 'ClawdBot'）
+        if is_all_lowercase and len(s) < MIN_ENGLISH_WORD_LENGTH:
             return False
         
         # 非中文非英文的内容（如纯数字、特殊符号）且长度不足
