@@ -377,12 +377,22 @@ class SimpleMatcherV2:
         
         # 检查词库中任意一词是否在文本中出现（子串匹配）
         # 同时检查文本中的词是否在词库中（双向匹配）
+        # 支持大小写不敏感匹配（对纯ASCII英文词）
         matched_words = []
         
-        # 方式1: 词库中的词在文本中
+        # 预计算文本的小写形式（用于大小写不敏感匹配）
+        text_lower = text.lower()
+        
+        # 方式1: 词库中的词在文本中（支持大小写不敏感）
         for word in word_set:
+            # 原始形式匹配
             if word in text:
                 matched_words.append(word)
+            else:
+                # 对纯ASCII英文词，尝试大小写不敏感匹配
+                if word.isalpha() and all(c.isascii() for c in word):
+                    if word.lower() in text_lower:
+                        matched_words.append(word)
         
         # 方式2: 文本中的词（2字以上）在词库中（处理jieba分词不准确的情况）
         # 提取文本中所有2字以上的子串进行检查
@@ -391,6 +401,12 @@ class SimpleMatcherV2:
             if word in word_set:
                 if word not in matched_words:
                     matched_words.append(word)
+            else:
+                # 对纯ASCII英文词，尝试大小写不敏感匹配
+                if word.isalpha() and all(c.isascii() for c in word):
+                    if word.lower() in word_set:
+                        if word not in matched_words:
+                            matched_words.append(word)
         
         is_match = len(matched_words) > 0
         
