@@ -2255,3 +2255,65 @@ class BaseAdb(object):
                 return
             time.sleep(0.1)
         raise SwitchOverviewError
+
+
+# ============================================================================
+# Patch: uiautomator2 atx-agent 本地缓存支持
+# 目的: 解决 GitHub 下载超时/失败问题，从本地缓存目录获取 atx-agent
+# ============================================================================
+import os
+from uiautomator2 import init as u2_init
+
+# 获取当前文件所在目录，构建本地缓存路径
+_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+LOCAL_ATX_CACHE_DIR = os.path.join(_CURRENT_DIR, "cache", "atx-agent")
+
+# ATX Agent 版本和文件映射（与 uiautomator2/version.py 中的 __atx_agent_version__ 保持一致）
+ATX_AGENT_VERSION = "0.10.0"
+ATX_AGENT_FILES = {
+    "arm64-v8a": f"atx-agent_{ATX_AGENT_VERSION}_linux_arm64.tar.gz",
+    "armeabi-v7a": f"atx-agent_{ATX_AGENT_VERSION}_linux_armv7.tar.gz",
+    "armeabi": f"atx-agent_{ATX_AGENT_VERSION}_linux_armv6.tar.gz",
+    "x86": f"atx-agent_{ATX_AGENT_VERSION}_linux_386.tar.gz",
+    "x86_64": f"atx-agent_{ATX_AGENT_VERSION}_linux_386.tar.gz",
+}
+
+
+def _get_local_atx_agent_path(url: str) -> str:
+    """
+    根据 URL 判断架构，返回本地缓存文件路径
+    本地不存在则返回 None
+    """
+    for arch, filename in ATX_AGENT_FILES.items():
+        if filename in url:
+            local_path = os.path.join(LOCAL_ATX_CACHE_DIR, filename)
+            if os.path.exists(local_path):
+                return local_path
+            break
+    return None
+
+
+def _local_mirror_download(url: str, filename=None, logger=None):
+    """
+    替代 uiautomator2.init.mirror_download 的函数
+    对于 atx-agent 文件，优先从本地缓存获取
+    本地不存在则回退到原始网络下载
+    """
+    # 只处理 atx-agent 的 tar.gz 文件
+    if "atx-agent" in url and url.endswith(".tar.gz"):
+        local_path = _get_local_atx_agent_path(url)
+        if local_path:
+            logger and logger.debug("Use local atx-agent: %s", local_path)
+            return local_path
+    
+    # 其他文件或本地缓存不存在时，回退到原始网络下载
+    return u2_init._original_mirror_download(url, filename=filename, logger=logger)
+
+
+# 保存原始函数引用（防止重复 patch）
+if not hasattr(u2_init, '_original_mirror_download'):
+    u2_init._original_mirror_download = u2_init.mirror_download
+
+# 应用 patch
+u2_init.mirror_download = _local_mirror_download
+# ============================================================================
