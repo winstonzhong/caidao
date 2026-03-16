@@ -158,8 +158,9 @@ def 检查视频信息正确性(sys_prompt: str, video_data: dict) -> tuple:
     # 从 sys_prompt 中提取视频信息
     # 格式："- 作者: @xxx" "- 文案: xxx"
     
-    提示词作者匹配 = re.search(r'- 作者:\s*@?(\S+)', sys_prompt)
-    提示词作者 = 提示词作者匹配.group(1) if 提示词作者匹配 else None
+    # 修复：支持包含空格的作者名（如"毛毛 西安"）
+    提示词作者匹配 = re.search(r'- 作者:\s*@?(.+?)(?:\n|$)', sys_prompt)
+    提示词作者 = 提示词作者匹配.group(1).strip() if 提示词作者匹配 else None
     
     提示词文案匹配 = re.search(r'- 文案:\s*(.+?)(?:\n|$)', sys_prompt)
     提示词文案 = 提示词文案匹配.group(1)[:50] if 提示词文案匹配 else None
