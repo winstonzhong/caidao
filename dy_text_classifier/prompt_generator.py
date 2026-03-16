@@ -38,6 +38,7 @@ class PromptGenerator:
     
     # 提示词模板版本号 - 修改模板后必须更新此版本号以使缓存失效
     # 版本变更日志：
+    # V3.2.5 (2026-03-12): 【重要修复】移除错误的文件缓存机制，修复视频信息固定问题(BUG-001)
     # V3.2.4 (2026-03-09): 进一步降低"很好奇"句式使用概率（从30%降至10%）
     # V3.2.3 (2026-03-09): 避免泛泛问题，要求专业术语和具体实例
     # V3.2.2 (2026-03-09): 增加句式多样性，避免"很好奇..."过度重复
@@ -46,7 +47,7 @@ class PromptGenerator:
     # V3.1.0 (2026-03-09): 新增专业钩子问题策略，明确限制只能看到标题/摘要
     # V3.0.0 (2026-03-09): 新增视频立场分析、评论质量检查、@作者随机规则
     # V2.0.0 (2026-03-09): 初始版本，基础评论生成功能
-    PROMPT_TEMPLATE_VERSION = "3.2.4"
+    PROMPT_TEMPLATE_VERSION = "3.2.5"
     
     # 默认缓存目录
     _DEFAULT_CACHE_DIR = os.path.join(_MODULE_DIR, "prompt_cache")
@@ -171,46 +172,43 @@ class PromptGenerator:
     @classmethod
     def 获取评论助手提示词(cls, 目标视频描述: str, video_data: dict = None) -> str:
         """
-        获取评论助手提示词（带文件缓存机制）
+        获取评论助手提示词
         
-        【缓存策略 V2】
-        - Hash计算基于：提示词模板基础内容 + 目标视频描述
-        - 模板内容修改后，Hash自动变化，缓存自动失效（无需版本号）
-        - 视频具体信息（作者、文案）不参与Hash计算，只用于生成时的变量填充
+        【修复BUG-001 - V3.2.5】
+        移除错误的文件缓存机制，确保每个视频都使用正确的video_data
         
-        逻辑：
-        1. 计算 Hash(模板内容 + 目标视频描述)
-        2. 检查文件缓存是否存在
-        3. 存在则直接返回缓存内容
-        4. 不存在则调用 _生成增强版评论提示词 生成并缓存
+        原问题：
+        - 缓存了填充后的提示词（包含特定视频的作者、文案）
+        - 但缓存Key不包含video_data，导致不同视频共享错误缓存
+        - 例如：视频A的提示词被视频B使用，导致视频信息错误
+        
+        修复方案：
+        - 直接调用 _生成增强版评论提示词 生成提示词
+        - 该方法仅做本地字符串替换，无LLM调用，性能开销极小
+        - 每个视频都使用自己的作者、文案等信息
+        
+        【确认无LLM调用】
+        _生成增强版评论提示词 方法仅包含：
+        1. 本地立场分析（关键词匹配）
+        2. 本地数据提取（video_data.get）
+        3. 本地时间获取（datetime.now）
+        4. 本地字符串替换（.replace）
+        单次生成耗时 < 1ms，无需缓存优化
         
         Args:
             目标视频描述: 目标视频描述
-            video_data: 视频结构化数据，用于生成时的变量填充
+            video_data: 视频结构化数据
         
         Returns:
             评论助手提示词
         """
-        # 1. 计算Hash（基于模板基础内容 + 目标描述，不包含视频具体信息）
-        # 这样模板修改后Hash自动变化，缓存自动失效
-        模板内容 = cls._获取提示词模板基础内容()
-        hash_input = f"{模板内容}:{目标视频描述}"
-        hash_id = hashlib.md5(hash_input.encode('utf-8')).hexdigest()
+        # 【修复】直接生成，移除缓存逻辑
+        # 原缓存代码（第194-211行）已移除：
+        # - 删除 Hash计算
+        # - 删除 缓存检查
+        # - 删除 缓存保存
         
-        # 2. 检查缓存
-        cached_prompt = cls._load_from_cache(hash_id)
-        if cached_prompt is not None:
-            print(f"[PromptGenerator] 命中缓存: {hash_id[:8]}...")
-            return cached_prompt
-        
-        # 3. 缓存未命中，生成提示词
-        print(f"[PromptGenerator] 缓存未命中，生成提示词: {hash_id[:8]}...")
-        prompt = cls._生成增强版评论提示词(目标视频描述, video_data)
-        
-        # 4. 保存到缓存
-        cls._save_to_cache(hash_id, 目标视频描述, prompt)
-        
-        return prompt
+        return cls._生成增强版评论提示词(目标视频描述, video_data)
     
     @classmethod
     def 清除缓存(cls, hash_id: str = None):
