@@ -33,8 +33,12 @@ def 加载历史记录(目录: str, 限制数量: int = 10) -> list:
         print(f"[错误] 目录不存在: {目录}")
         return 记录列表
     
-    json文件列表 = sorted(目录路径.glob("result_*.json"))
-    print(f"[信息] 找到 {len(json文件列表)} 个历史记录文件")
+    # 按文件修改时间排序（最早的在前），避免加载到最新的测试结果
+    json文件列表 = sorted(
+        目录路径.glob("result_*.json"),
+        key=lambda p: p.stat().st_mtime  # 按修改时间排序
+    )
+    print(f"[信息] 找到 {len(json文件列表)} 个历史记录文件（按时间从早到晚排序）")
     
     for i, 文件 in enumerate(json文件列表[:限制数量], 1):
         try:
