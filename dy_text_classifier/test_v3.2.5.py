@@ -126,6 +126,15 @@ def 生成新评论(video_data: dict, 目标描述: str, dry_run: bool = False) 
         
         if result and result.get("result"):
             comment = result["result"]
+            
+            # 【新增】后处理过滤：移除hashtag、限制emoji、替换"很好奇"句式
+            comment_原始 = comment
+            comment = PromptGenerator._后处理过滤(comment)
+            
+            if comment != comment_原始:
+                print(f"      [后处理] 已过滤违规内容")
+                print(f"      原始: {comment_原始[:80]}...")
+                print(f"      处理后: {comment[:80]}...")
         else:
             comment = "[错误] LLM调用失败"
         

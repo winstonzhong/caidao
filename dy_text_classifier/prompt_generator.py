@@ -762,6 +762,69 @@ class PromptGenerator:
                      .replace('{{当前时间}}', 当前时间)
         
         return prompt
+    
+    @classmethod
+    def _后处理过滤(cls, comment: str) -> str:
+        """
+        后处理：强制移除或替换违规内容
+        
+        处理规则：
+        1. 移除所有hashtag
+        2. 限制emoji数量为1个（使用预定义的常用emoji列表）
+        3. 替换"很好奇"句式为直接疑问
+        
+        Args:
+            comment: LLM生成的原始评论
+            
+        Returns:
+            处理后的评论
+        """
+        if not comment:
+            return comment
+        
+        import re
+        
+        # 1. 移除hashtag
+        # 匹配 #字母数字下划线 的组合
+        comment = re.sub(r'#\w+\s*', '', comment)
+        comment = re.sub(r'\s+#\w+', '', comment)
+        
+        # 2. 替换"很好奇"句式为直接疑问
+        # 规则1: "很好奇[内容]吗？" -> "[内容]吗？"
+        comment = re.sub(r'很好奇\s*[，,]?\s*(.+?)\s*[吗\?]?[？?]', r'\1？', comment)
+        # 规则2: "很好奇，[内容]" -> "[内容]"
+        comment = re.sub(r'很好奇\s*[，,]\s*', '', comment)
+        # 规则3: 剩余的"很好奇" -> "想了解"
+        comment = re.sub(r'很好奇', '想了解', comment)
+        # 规则4: "想问问" -> 直接移除
+        comment = re.sub(r'想问问\s*[，,]?\s*', '', comment)
+        
+        # 3. 限制emoji数量为1个
+        # 使用常用的emoji Unicode范围（避开中文字符范围U+4E00-U+9FFF）
+        emoji_pattern = re.compile(
+            "["
+            "\U0001F600-\U0001F64F"  # emoticons
+            "\U0001F300-\U0001F5FF"  # symbols & pictographs  
+            "\U0001F680-\U0001F6FF"  # transport & map symbols
+            "\U0001F1E0-\U0001F1FF"  # flags
+            "\U00002702-\U000027B0"  # dingbats
+            "\U00002600-\U000026FF"  # miscellaneous symbols
+            "\U0001F900-\U0001F9FF"  # supplemental symbols
+            "\U0001FA00-\U0001FA6F"  # chess symbols etc
+            "\U0001FA70-\U0001FAFF"  # symbols and pictographs extended-a
+            "\U0001F000-\U0001F02F"  # mahjong tiles (🀄️)
+            "]+",
+            flags=re.UNICODE
+        )
+        
+        emojis = emoji_pattern.findall(comment)
+        if len(emojis) > 1:
+            # 只保留第一个emoji
+            first_emoji = emojis[0]
+            comment = emoji_pattern.sub('', comment)
+            comment = comment.strip() + ' ' + first_emoji
+        
+        return comment.strip()
 
 
 def 更新任务提示词(job_id: int, 目标视频描述: str) -> bool:
