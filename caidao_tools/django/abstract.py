@@ -237,16 +237,17 @@ class BaseModel(models.Model):
         return tool_dict.模型的便捷属性字典(self, 30)
 
     def 变更间隔秒数(
-        self, 每小时最多运行次数: int = 8, 两次运行最小间隔秒数=10 * 60, 间隔秒数=None
+        self, 每小时最多运行次数: int = None, 两次运行最小间隔秒数=None, 间隔秒数=None
     ):
         if 间隔秒数 is not None:
             self.间隔秒 = 间隔秒数
         else:
-            self.间隔秒 = 计算下一次运行等待秒数(
-                df=self.df_发送记录,
-                两次运行最小间隔秒数=两次运行最小间隔秒数,
-                每小时最多运行次数=每小时最多运行次数,
-            )
+            raise NotImplementedError('暂不支持自动计算间隔')
+            # self.间隔秒 = 计算下一次运行等待秒数(
+            #     df=self.df_发送记录,
+            #     两次运行最小间隔秒数=两次运行最小间隔秒数,
+            #     每小时最多运行次数=每小时最多运行次数,
+            # )
         self.save()
 
     def 获取其他记录(self, 名称):
