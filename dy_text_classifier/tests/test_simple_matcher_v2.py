@@ -157,6 +157,33 @@ class TestSimpleMatcherV2:
         
         assert result1 == result2 == True
         print("✅ test_缓存机制 通过")
+    
+    def test_英文大小写匹配(self):
+        """测试英文词大小写不敏感匹配 - OpenClaw 应该能匹配 openclaw"""
+        目标描述 = "OpenClaw,养虾，龙虾AI,ClawdBot"
+        
+        # 测试小写形式匹配
+        data_lower = {"文案": "国家超算互联网平台：向每位虾友免费发放1000万Tokens额度#openclaw"}
+        result1 = self.matcher.文本匹配(目标描述, data_lower)
+        assert result1 == True, "OpenClaw 应该匹配 openclaw（小写）"
+        
+        # 测试大写形式匹配
+        data_upper = {"文案": "使用 OpenClaw 系统进行虾类养殖"}
+        result2 = self.matcher.文本匹配(目标描述, data_upper)
+        assert result2 == True, "OpenClaw 应该匹配 OpenClaw（原始形式）"
+        
+        # 测试混合大小写
+        data_mixed = {"文案": "Clawdbot 系统升级"}
+        result3 = self.matcher.文本匹配(目标描述, data_mixed)
+        assert result3 == True, "ClawdBot 应该匹配 clawdbot（混合大小写）"
+        
+        # 验证词库中包含小写形式
+        word_set = self.matcher._get_word_set(目标描述)
+        assert "openclaw" in word_set, "词库应该包含 openclaw（全小写）"
+        assert "clawdbot" in word_set, "词库应该包含 clawdbot（全小写）"
+        assert "OpenClaw" in word_set, "词库应该包含 OpenClaw（原始形式）"
+        
+        print("✅ test_英文大小写匹配 通过")
 
 
 def run_all_tests():

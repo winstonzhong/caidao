@@ -158,5 +158,107 @@ class RedisTaskHandler:
 
         return d
 
+    def 测试服务可用性(self, timeout=10) -> dict:
+        """
+        测试"提交数据并阻塞等待结果"调用的服务可用性
+        
+        测试链路：
+        1. Redis连接测试 - 验证连接池和ping
+        2. 任务队列测试 - 验证推入/拉出功能
+        3. Worker响应测试 - 提交测试任务，验证Worker是否响应
+        
+        Args:
+            timeout: 等待Worker响应的超时时间（秒）
+            
+        Returns:
+            {
+                "整体状态": "可用" | "部分可用" | "不可用",
+                "Redis连接": {"状态": "正常" | "异常", "详情": "..."},
+                "任务队列": {"状态": "正常" | "异常", "详情": "..."},
+                "Worker服务": {"状态": "正常" | "异常" | "无响应", "详情": "..."},
+                "建议操作": "..."
+            }
+        """
+        结果 = {
+            "整体状态": "不可用",
+            "Redis连接": {"状态": "待测试", "详情": ""},
+            "任务队列": {"状态": "待测试", "详情": ""},
+            "Worker服务": {"状态": "待测试", "详情": ""},
+            "建议操作": ""
+        }
+        
+        # 步骤1: 测试Redis连接
+        try:
+            conn = self._get_conn()
+            if conn and conn.ping():
+                结果["Redis连接"] = {"状态": "正常", "详情": "Redis连接池可用，ping成功"}
+            else:
+                结果["Redis连接"] = {"状态": "异常", "详情": "Redis ping失败"}
+                结果["建议操作"] = "检查Redis服务是否启动: sudo systemctl status redis"
+                return 结果
+        except Exception as e:
+            结果["Redis连接"] = {"状态": "异常", "详情": f"连接异常: {str(e)}"}
+            结果["建议操作"] = "检查Redis配置和网络连接"
+            return 结果
+        
+        # 步骤2: 测试任务队列
+        try:
+            测试键 = f"test_queue_{time.time()}"
+            测试数据 = {"test": "data", "timestamp": time.time()}
+            
+            # 推入
+            推入结果 = self.推入Redis(测试键, 测试数据, expire_seconds=60)
+            # 拉出
+            拉出数据 = self.拉出Redis(测试键, 阻塞=False)
+            
+            if 推入结果 and 拉出数据 and 拉出数据.get("test") == "data":
+                结果["任务队列"] = {"状态": "正常", "详情": "推入/拉出功能正常"}
+                # 清理
+                self.删除任务队列(测试键)
+            else:
+                结果["任务队列"] = {"状态": "异常", "详情": "推入或拉出失败"}
+                结果["建议操作"] = "检查Redis读写权限"
+                return 结果
+        except Exception as e:
+            结果["任务队列"] = {"状态": "异常", "详情": f"队列操作异常: {str(e)}"}
+            return 结果
+        
+        # 步骤3: 测试Worker响应
+        try:
+            测试键 = f"test_worker_{int(time.time() * 1000)}"
+            
+            print(f"\n[服务测试] 提交Worker测试任务，等待响应（超时{timeout}秒）...")
+            
+            # 提交测试任务（简单的echo任务）
+            开始时间 = time.time()
+            响应 = self.提交数据并阻塞等待结果(
+                key_back=测试键,
+                sys_prompt="你是一个简单的测试助手，收到测试请求请回复'pong'。",
+                question="ping",
+                timeout=timeout
+            )
+            耗时 = time.time() - 开始时间
+            
+            if 响应 and 响应.get("result"):
+                结果["Worker服务"] = {
+                    "状态": "正常", 
+                    "详情": f"Worker响应正常，耗时{耗时:.2f}秒"
+                }
+                结果["整体状态"] = "可用"
+            else:
+                结果["Worker服务"] = {
+                    "状态": "无响应", 
+                    "详情": f"在{timeout}秒内未收到Worker响应"
+                }
+                结果["整体状态"] = "部分可用"
+                结果["建议操作"] = "检查LLM Worker是否正常运行，或队列是否积压"
+                
+        except Exception as e:
+            结果["Worker服务"] = {"状态": "异常", "详情": f"Worker测试异常: {str(e)}"}
+            结果["整体状态"] = "部分可用"
+            结果["建议操作"] = "检查Worker日志和队列状态"
+        
+        return 结果
+
 
 GLOBAL_REDIS = RedisTaskHandler(pool=GLOBAL_POOL)

@@ -1,0 +1,61 @@
+{
+  "hash_id": "9e0eb8d1325a98d565c377ef0ad53fca",
+  "目标描述": "Blender, Maya, 3ds Max, C4D, ZBrush",
+  "版本": "1.0.0",
+  "生成时间": "2026-03-10T14:59:52.946786",
+  "synonyms": {
+    "Blender": [
+      "Blender",
+      "Blender 3D",
+      "Blender软件",
+      "Blender建模工具",
+      "Blender渲染器",
+      "Blender动画软件"
+    ],
+    "Maya": [
+      "Maya",
+      "Maya 3D",
+      "Maya动画",
+      "Maya建模",
+      "Maya软件",
+      "Maya渲染"
+    ],
+    "3ds": [
+      "3ds",
+      "3ds Max",
+      "3ds软件",
+      "3ds建模",
+      "3ds动画",
+      "3ds渲染"
+    ],
+    "Max": [
+      "Max",
+      "3ds Max",
+      "Max软件",
+      "Max建模",
+      "Max动画",
+      "Max渲染"
+    ],
+    "C4D": [
+      "C4D",
+      "Cinema 4D",
+      "C4D软件",
+      "C4D建模",
+      "C4D动画",
+      "C4D渲染"
+    ],
+    "ZBrush": [
+      "ZBrush",
+      "ZBrush雕刻",
+      "ZBrush软件",
+      "ZBrush建模",
+      "ZBrush数字雕刻",
+      "ZBrush纹理绘制"
+    ]
+  },
+  "统计信息": {
+    "关键词数": 6,
+    "同义词总数": 36,
+    "平均每词同义词数": 6.0
+  }
+}

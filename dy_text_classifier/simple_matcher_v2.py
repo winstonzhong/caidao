@@ -52,7 +52,7 @@ DEFAULT_STOPWORDS = {
 
 # 最短词长限制
 MIN_WORD_LENGTH = 2  # 中文词最短2字
-MIN_ENGLISH_WORD_LENGTH = 3  # 英文词最短3字母（过滤 'in', 'on', 'at' 等）
+MIN_ENGLISH_WORD_LENGTH = 3  # 英文词最短3字母（过滤 'in', 'on', 'at' 等停用词，但保留 'Max', 'Maya', '3ds' 等专业词汇）
 
 
 class SimpleMatcherV2:
@@ -106,17 +106,23 @@ class SimpleMatcherV2:
         keywords = []
         for word in words:
             word = word.strip()
+            if not word:
+                continue
             # 过滤条件：
             # 1. 不是纯数字
             # 2. 不是停用词
             # 3. 中文词：长度 >= MIN_WORD_LENGTH（2）
-            # 4. 英文词：长度 >= MIN_ENGLISH_WORD_LENGTH（3），且过滤短单词
+            # 4. 纯英文词：长度 >= MIN_ENGLISH_WORD_LENGTH（3），过滤停用词如 'in', 'on'
+            #    但保留专业词汇如 'Max', 'Maya', '3ds', 'C4D'
             is_chinese = any('\u4e00' <= c <= '\u9fff' for c in word)
-            is_english_short = word.isalpha() and word.islower() and len(word) < MIN_ENGLISH_WORD_LENGTH
+            is_pure_ascii_english = word.isalpha() and all(c.isascii() for c in word)
+            
+            # 纯ASCII英文词长度检查（仅过滤3字母以下的停用词）
+            if is_pure_ascii_english and len(word) < MIN_ENGLISH_WORD_LENGTH:
+                continue
             
             if (not word.isdigit() and 
                 word not in self.stopwords and
-                not is_english_short and
                 (is_chinese or len(word) >= MIN_ENGLISH_WORD_LENGTH)):
                 keywords.append(word)
         
@@ -165,20 +171,43 @@ class SimpleMatcherV2:
             # 检查关键词本身是否有效
             if self._是有效子串(keyword):
                 word_set.add(keyword)  # 添加关键词本身
+                # 对英文词同时添加全小写形式（支持大小写不敏感匹配）
+                if keyword.isalpha() and all(c.isascii() for c in keyword):
+                    word_set.add(keyword.lower())
             
             # 添加同义词（过滤短词）
             for syn in syn_list:
                 if self._是有效子串(syn):
                     word_set.add(syn)
+                    # 对英文词同时添加全小写形式
+                    if syn.isalpha() and all(c.isascii() for c in syn):
+                        word_set.add(syn.lower())
             
-            # 添加关键词的子串（2-4字的子串）
+            # 添加关键词的子串（仅中文词提取子串）
             # 例如"售后白嫖" → 添加"售后"、"白嫖"等
+            # 注意：纯英文单词不进行子串提取，避免"Maya"提取出"Ma"、"Max"提取出"Ma"
+            # 注意：数字字母混合词不进行子串提取，避免"3ds"提取出"3d"
             # 注意：不跨语言边界提取，避免"Fusion视频"提取出"视频"
-            for i in range(len(keyword)):
-                for j in range(i + MIN_WORD_LENGTH, min(i + MIN_WORD_LENGTH + 3, len(keyword) + 1)):
-                    substring = keyword[i:j]
-                    # 确保子串不跨语言边界
-                    if self._是有效子串(substring) and self._是语言一致子串(keyword, i, j):
+            
+            # 判断关键词类型
+            has_chinese = any('\u4e00' <= c <= '\u9fff' for c in keyword)
+            is_pure_ascii_english = all(c.isascii() and c.isalpha() for c in keyword) and not has_chinese
+            has_mixed_alnum = any(c.isdigit() for c in keyword) and any(c.isalpha() for c in keyword)
+            
+            # 只有包含中文的关键词才提取子串
+            if has_chinese:
+                for i in range(len(keyword)):
+                    for j in range(i + MIN_WORD_LENGTH, min(i + MIN_WORD_LENGTH + 3, len(keyword) + 1)):
+                        substring = keyword[i:j]
+                        # 确保子串不跨语言边界
+                        if not self._是语言一致子串(keyword, i, j):
+                            continue
+                        # 检查子串有效性
+                        if not self._是有效子串(substring):
+                            continue
+                        # 子串也必须包含中文（避免从"3D打印"中提取出"D打"）
+                        if not any('\u4e00' <= c <= '\u9fff' for c in substring):
+                            continue
                         word_set.add(substring)
         
         # 存入内存缓存
@@ -348,12 +377,22 @@ class SimpleMatcherV2:
         
         # 检查词库中任意一词是否在文本中出现（子串匹配）
         # 同时检查文本中的词是否在词库中（双向匹配）
+        # 支持大小写不敏感匹配（对纯ASCII英文词）
         matched_words = []
         
-        # 方式1: 词库中的词在文本中
+        # 预计算文本的小写形式（用于大小写不敏感匹配）
+        text_lower = text.lower()
+        
+        # 方式1: 词库中的词在文本中（支持大小写不敏感）
         for word in word_set:
+            # 原始形式匹配
             if word in text:
                 matched_words.append(word)
+            else:
+                # 对纯ASCII英文词，尝试大小写不敏感匹配
+                if word.isalpha() and all(c.isascii() for c in word):
+                    if word.lower() in text_lower:
+                        matched_words.append(word)
         
         # 方式2: 文本中的词（2字以上）在词库中（处理jieba分词不准确的情况）
         # 提取文本中所有2字以上的子串进行检查
@@ -362,6 +401,12 @@ class SimpleMatcherV2:
             if word in word_set:
                 if word not in matched_words:
                     matched_words.append(word)
+            else:
+                # 对纯ASCII英文词，尝试大小写不敏感匹配
+                if word.isalpha() and all(c.isascii() for c in word):
+                    if word.lower() in word_set:
+                        if word not in matched_words:
+                            matched_words.append(word)
         
         is_match = len(matched_words) > 0
         
@@ -416,10 +461,12 @@ class SimpleMatcherV2:
         
         # 区分中英文
         is_chinese = any('\u4e00' <= c <= '\u9fff' for c in s)
-        is_english = s.isalpha() and s.islower()
+        is_english = s.isalpha() and all(c.isascii() for c in s)
+        is_all_lowercase = is_english and s.islower()
         
         # 过滤纯英文小写短单词（如 'in', 'on', 'at'）
-        if is_english and len(s) < MIN_ENGLISH_WORD_LENGTH:
+        # 但保留混合大小写的专业词汇（如 'OpenClaw', 'ClawdBot'）
+        if is_all_lowercase and len(s) < MIN_ENGLISH_WORD_LENGTH:
             return False
         
         # 非中文非英文的内容（如纯数字、特殊符号）且长度不足

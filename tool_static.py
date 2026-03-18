@@ -195,10 +195,10 @@ def 存储字典到文件(d, suffix, 返回路径=False, base_dir=BASE_DIR_56T):
     return 存储文件(json.dumps(d).encode("utf8"), suffix, 返回路径, base_dir=base_dir)
 
 
-def 转存文件(fpath):
+def 转存文件(fpath, 返回路径=True):
     with open(fpath, "rb") as fp:
         content = fp.read()
-    return 存储文件(content, 得到后缀(fpath), 返回路径=True)
+    return 存储文件(content, 得到后缀(fpath), 返回路径=返回路径)
 
 
 def 存储链接到文件(url, suffix, 返回路径=False, base_dir=BASE_DIR_56T, fpath=None):

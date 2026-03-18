@@ -146,3 +146,12 @@ db.sqlite3-journal
 *.zip
 .idea/
 cache/
+
+# PromptGenerator cache
+dy_text_classifier/prompt_cache/
+dy_text_classifier/synonym_cache/
+
+# 例外：允许 cache/atx-agent/ 目录下的 gz 文件进入版本控制
+!cache/
+!cache/atx-agent/
+!cache/atx-agent/*.gz
