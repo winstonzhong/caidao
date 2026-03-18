@@ -1593,7 +1593,7 @@ class 基本任务(抽象持久序列):
     def 存储历史页(self, df, name=None):
         会话名称 = self.device.干净的微信会话名称 if name is None else name
         self.持久对象.数据.setdefault("会话列表", {})[会话名称] = df.to_json()
-        self.持久对象.save()
+        self.持久对象.save(update_fields=['数据'])
 
     def 清空历史(self, name=None):
         self.存储历史页(
