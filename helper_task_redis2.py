@@ -60,6 +60,23 @@ class RedisTaskHandler:
     def 获取队列中任务个数(self, task_key: str) -> int:
         return self._get_conn().llen(task_key)
 
+    def 预览队列内容(self, task_key: str, count=10):
+        """预览队列内容（不解压取出），返回解码后的数据列表"""
+        try:
+            items = self._get_conn().lrange(task_key, 0, count - 1)
+            result = []
+            for item in items:
+                try:
+                    # 尝试解压缩和解析JSON
+                    result.append(json.loads(bz2.decompress(item)))
+                except:
+                    # 如果不是压缩数据，直接返回原始内容
+                    result.append(item.decode() if isinstance(item, bytes) else item)
+            return result
+        except Exception as e:
+            print(f"[Redis] 预览队列内容失败: {e}")
+            return []
+
     def 队列中是否有任务(self, task_key: str) -> bool:
         return bool(self._get_conn().exists(task_key))
 
