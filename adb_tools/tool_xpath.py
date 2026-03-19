@@ -2692,7 +2692,7 @@ class TaskSnapShotDevice(SnapShotDevice):
             task.fpath_xml = os.path.join(base_dir, f"{task.id}.xml")
             with open(task.fpath_xml.path, "wb") as fp:
                 fp.write(self.source.replace("'\\", "").encode("utf8"))
-            task.save()
+            task.save(update_fields=['fpath_screenshot', 'fpath_xml'])
 
     def perform_operation_of_template(self):
         tpl = self.task.tpl_result

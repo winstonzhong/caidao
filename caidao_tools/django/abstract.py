@@ -208,7 +208,7 @@ class BaseModel(models.Model):
         records = self.数据.setdefault("数据记录", [])
         d.update({"时间": int(time.time())})
         records.append(d)
-        self.save()
+        self.save(update_fields=['数据'])
 
     def 查找数据记录(self, **k):
         records = self.数据.setdefault("数据记录", [])
@@ -221,13 +221,13 @@ class BaseModel(models.Model):
         if r:
             r.update(update)
             r.update({"时间": int(time.time())})
-            self.save()
+            self.save(update_fields=['数据'])
         else:
             raise ValueError(f"未找到数据记录: {query}")
 
     def 设置字段值(self, field, value):
         self.数据[field] = value
-        self.save()
+        self.save(update_fields=['数据'])
 
     def 获取字段值(self, field: str, 弹出=False):
         return self.数据.get(field) if not 弹出 else self.数据.pop(field, None)
@@ -248,7 +248,7 @@ class BaseModel(models.Model):
             #     两次运行最小间隔秒数=两次运行最小间隔秒数,
             #     每小时最多运行次数=每小时最多运行次数,
             # )
-        self.save()
+        self.save(update_fields=['间隔秒'])
 
     def 获取其他记录(self, 名称):
         if "name" in self.get_fields():
@@ -727,7 +727,8 @@ class 抽象定时任务(BaseModel):
             if self.远程数据记录 is None or not self.远程数据记录.is_empty():
                 self.print_info(f"开始执行任务:{self.名称} - {self.执行函数}")
                 executed = getattr(self, self.执行函数)()
-            self.save()
+            # 只更新可能被修改的字段：update_time 和 激活
+            self.save(update_fields=['update_time', '激活'])
 
         # except SessionNotCreatedException:
         #     raise SessionNotCreatedException
