@@ -564,14 +564,31 @@ class SteadyDevice(DummyDevice):
         self.adb.ua2.send_keys(keys, clear)
 
     def 上传到下载目录(self, url, fname=None, clean_temp=True):
-        if tool_static.is_inner():
+        """
+        上传文件到手机下载目录
+
+        支持：
+        1. 56T内部链接（本地文件推送）
+        2. 内网非56T链接（下载后推送，如nocobase链接）
+        3. Termux环境（原有逻辑，保持不变）
+        """
+        if tool_static.is_inner() and tool_static.is_56t_url(url):
+            # 内网 + 56T链接：使用本地文件推送
             fpath = tool_static.链接到路径(url)
             return self.adb.push_file_to_download(
-                fpath,
+                src=fpath,
                 fname=fname,
                 clean_temp=clean_temp,
             )
+        elif tool_static.is_inner():
+            # 内网 + 非56T链接（如nocobase）：下载后推送
+            return self.adb.push_url_to_download(
+                url=url,
+                use_timestamp=(fname is None),
+                fname=fname,
+            )
         else:
+            # Termux 环境逻辑（完全不动）
             """
             根据url的文件名匹配robot temp下的文件
             并且将此文件拷贝至download目录

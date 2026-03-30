@@ -933,6 +933,63 @@ class BaseAdb(object):
             fname=fname,
         )
 
+    def push_url_to_download(
+        self,
+        url: str,
+        sleep_span=0.1,
+        use_timestamp=True,
+        fname=None,
+    ):
+        """
+        从URL直接下载内容并推送到手机下载目录
+
+        实现：下载到临时文件 -> 调用 push_file_to_download
+
+        Args:
+            url: 文件URL
+            sleep_span: 推送后等待时间
+            use_timestamp: 是否使用时间戳作为文件名
+            fname: 指定文件名（优先级高于use_timestamp）
+
+        Returns:
+            str: 手机端文件路径
+        """
+        import requests
+        import tempfile
+        from urllib.parse import urlparse, unquote
+
+        # 下载URL内容到临时文件
+        response = requests.get(url, timeout=30, stream=True)
+        response.raise_for_status()
+
+        # 确定临时文件后缀
+        parsed = urlparse(url)
+        path = unquote(parsed.path)
+        url_basename = os.path.basename(path) or "download"
+        suffix = "." + url_basename.split(".")[-1] if "." in url_basename else ""
+
+        # 创建临时文件
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    tmp_file.write(chunk)
+            tmp_path = tmp_file.name
+
+        try:
+            # 复用 push_file_to_download
+            return self.push_file_to_download(
+                src=tmp_path,
+                sleep_span=sleep_span,
+                clean_temp=True,
+                use_timestamp=use_timestamp,
+                fname=fname if fname else (None if use_timestamp else url_basename),
+            )
+        finally:
+            try:
+                os.unlink(tmp_path)
+            except:
+                pass
+
     def push_file_to_temp_all(self, files):
         self.clear_temp_dir()
         for x in files:
