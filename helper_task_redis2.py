@@ -129,6 +129,65 @@ class RedisTaskHandler:
     # partial_content=None,
     # history=None,
 
+    def 提交字典到队列并阻塞等待结果(
+        self,
+        task_key: str,
+        data_dict: dict,
+        key_back: str = None,
+        timeout: int = 300,
+    ) -> dict:
+        """
+        通用队列任务提交函数 - 直接传入字典，支持多队列
+
+        Args:
+            task_key: 任务队列名称（如 "global_task_queue"）
+            data_dict: 要提交的字典数据（直接传入，无需组装）
+            key_back: 返回队列名称（可选，为空则自动生成）
+            timeout: 拉取结果的超时时间（秒）
+
+        Returns:
+            dict: 包含结果的字典，失败返回空字典
+
+        自动生成 key_back 规则:
+            - 格式: "{task_key}_return_{timestamp}_{random}"
+            - 保证每个队列有自己的回传队列，不会重复
+        """
+        import random
+
+        # 1. 生成唯一 timestamp
+        ts = str(time.time())
+
+        # 2. 如果 key_back 为空，自动生成
+        if key_back is None:
+            rand_suffix = random.randint(1000, 9999)
+            key_back = f"{task_key}_return_{ts}_{rand_suffix}"
+
+        # 3. 将 timestamp 注入 data_dict（用于结果匹配）
+        data_dict["timestamp"] = ts
+        data_dict["key_back"] = key_back
+
+        # 4. 推入 Redis
+        self.推入Redis(task_key, data_dict)
+
+        # 5. 循环拉取结果，比较 timestamp
+        result = None
+        while 1:
+            d = self.拉出Redis(key_back, True, timeout)
+            print("-" * 66)
+            print("获取结果:")
+            print(d)
+
+            if not d:
+                result = {}
+                break
+            if d.get("timestamp") != ts:
+                print("丢弃前期废弃结果:", d)
+                continue
+            result = d
+            break
+
+        return result if result else {}
+
     def 提交数据并阻塞等待结果(
         self,
         key_back,
@@ -139,39 +198,33 @@ class RedisTaskHandler:
         timeout=300,
         **k,
     ):
+        """
+        提交数据到 global_task_queue 并阻塞等待结果（兼容旧接口）
+
+        此函数保持向后兼容，内部调用新的通用函数 提交字典到队列并阻塞等待结果
+        """
         task_key = "global_task_queue"
 
-        ts = str(time.time())
-        d = {
+        # 组装数据字典
+        data_dict = {
             "sys_prompt": sys_prompt,
             "question": question,
             "history": history,
             "partial_content": partial_content,
-            "key_back": key_back,
-            "timestamp": ts,
             **k,
         }
-        self.推入Redis(task_key, d)
 
-        # return self.拉出Redis(key_back, True, timeout)
-        while 1:
-            d = self.拉出Redis(key_back, True, timeout)
-            print("-" * 66)
-            print("获取结果:")
-            print(d)
+        # 调用新的通用函数
+        d = self.提交字典到队列并阻塞等待结果(
+            task_key=task_key,
+            data_dict=data_dict,
+            key_back=key_back,
+            timeout=timeout,
+        )
 
-            if not d:
-                break
-            if d.get("timestamp") != ts:
-                print("丢弃前期废弃结果:", d)
-                continue
-            break
-
-        if d and d.get("result"):
-            if partial_content:
-                d["result"] = json.loads(d["result"])
-            # else:
-            #     d["result"] = tool_env.strip_quotes(d["result"])
+        # 处理 partial_content 的特殊逻辑（保持向后兼容）
+        if d and d.get("result") and partial_content:
+            d["result"] = json.loads(d["result"])
 
         return d
 
