@@ -193,7 +193,7 @@ def 得到url(task_key, 中继=False):
 
 def 在队列中是否有任务(task_key, 中继=False):
     url = f"{得到url(task_key, 中继)}?query_only=1"
-    # print("在队列中是否有任务:", url)
+    print("在队列中是否有任务:", url)
     return bool(requests.get(url).json())
 
 
@@ -869,6 +869,9 @@ class 操作块(基本输入字段对象):
         super().__init__(d)
         d["paras"] = paras
         self.tpls = [基本界面元素.from_dict(x, self.paras) for x in d.get("tpls")]
+        # 实例化 must_with 和 must_without 中的模板
+        self.must_with_tpls = [基本界面元素.from_dict(x, self.paras) for x in d.get("must_with_tpls") or []]
+        self.must_without_tpls = [基本界面元素.from_dict(x, self.paras) for x in d.get("must_without_tpls") or []]
         self.num_executed = 0
         self.num_conti_repeated = 0
 
@@ -903,15 +906,54 @@ class 操作块(基本输入字段对象):
                 return True
 
     def match(self, job, ignore_status=False):
+        """操作块匹配方法"""
+        # 1. 状态检查
         if ignore_status or (not job.status and not self.only_when):
             状态正确 = True
         else:
             状态正确 = (job.status == self.only_when) or (self.only_when == "*")
+        
+        # 2. 自身模板匹配
         for tpl in self.tpls:
             if 状态正确:
                 tpl.match(job)
             else:
                 tpl.matched = False
+        
+        # 3. must_with/must_without 条件检查
+        # 只有自身模板匹配成功且配置了 must_with/must_without 时才检查
+        if self.matched and (self.must_with_tpls or self.must_without_tpls):
+            if not self._check_match_conditions(job):
+                # 条件不满足，强制设置所有模板为不匹配
+                for tpl in self.tpls:
+                    tpl.matched = False
+    
+    def _check_match_conditions(self, job):
+        """
+        检查 must_with 和 must_without 条件
+        
+        使用 self.must_with_tpls 和 self.must_without_tpls 中已实例化的模板
+        """
+        # 检查 must_with: 至少有一个模板在当前屏幕匹配（OR逻辑）
+        if self.must_with_tpls:
+            has_any_match = False
+            
+            for tpl in self.must_with_tpls:
+                tpl.match(job)  # 对当前屏幕进行匹配
+                if tpl.matched:
+                    has_any_match = True
+                    break
+            
+            if not has_any_match:
+                return False
+        
+        # 检查 must_without: 所有模板都不能在当前屏幕匹配
+        for tpl in self.must_without_tpls:
+            tpl.match(job)  # 对当前屏幕进行匹配
+            if tpl.matched:
+                return False
+        
+        return True
 
     @property
     def matched(self):
@@ -1205,8 +1247,22 @@ class 基本任务(抽象持久序列):
         script = f"am force-stop {self.package}"
         return self.device.adb.execute(script)
 
-    def 输入(self, text, clear=True):
+    def 输入(self, text, clear=False):
+        """
+        输入文本
+        
+        Args:
+            text: 要输入的文本
+            clear: 是否先清空输入框（默认 False，与 uiautomator2 保持一致）
+        """
         self.device.send_keys(text, clear)
+
+    def 清空输入(self):
+        """
+        清空当前输入框的内容
+        通过发送空字符串并设置 clear=True 实现
+        """
+        self.device.send_keys('', clear=True)
 
     @property
     def paras(self):
@@ -2386,6 +2442,83 @@ class 基本任务(抽象持久序列):
         else:
             print(f"[生成评论] 生成评论失败")
         
+        return comment
+
+    def 根据视频数据生成评论_豆包(
+        self,
+        video_data: dict,
+        sys_prompt: str = None,
+        目标描述: str = None
+    ) -> str:
+        """
+        根据视频数据生成评论（使用豆包队列系统）
+
+        流程：
+        1. 使用HTML模板渲染系统提示词
+        2. 上传HTML获取URL链接
+        3. 推入豆包队列并阻塞获取结果
+
+        Args:
+            video_data: 视频结构化数据（作者、文案、点赞等）
+            sys_prompt: 可选，自定义系统提示词。如不传入则使用模板生成
+            目标描述: 可选，目标视频描述。如不传入则从配置获取
+
+        Returns:
+            str: 生成的评论内容，失败返回None
+        """
+        print(f"[生成评论_豆包] video_data: {video_data}")
+
+        # 1. 准备模板数据
+        template_data = {
+            **video_data,
+            "目标描述": 目标描述 or self.config.get("目标视频描述", ""),
+            "立场": self.config.get("评论立场", "支持"),
+        }
+
+        # 2. 如果没有提供sys_prompt，使用PromptGenerator生成
+        if not sys_prompt:
+            from dy_text_classifier.prompt_generator import PromptGenerator
+            目标描述 = template_data["目标描述"]
+            sys_prompt = PromptGenerator.获取评论助手提示词(目标描述, video_data)
+
+        # 3. 渲染HTML模板
+        template_path = tool_moban_configs.获得模版("抖音视频评论生成模版.html")
+        try:
+            html_content = helper_tpls.render_template_file_to_string(
+                template_path,
+                template_data
+            )
+        except Exception as e:
+            print(f"[生成评论_豆包] 模板渲染失败: {e}")
+            # 回退到使用纯文本提示词
+            html_content = sys_prompt
+
+        # 4. 上传HTML获取URL
+        try:
+            html_bytes = html_content.encode('utf-8')
+            html_url = self.上传文件(html_bytes, suffix='.html')
+            print(f"[生成评论_豆包] HTML模板URL: {html_url}")
+        except Exception as e:
+            print(f"[生成评论_豆包] 上传HTML失败: {e}")
+            # 回退到直接使用提示词
+            data = {
+                "直接提示词": sys_prompt,
+            }
+        else:
+            # 5. 构造队列数据
+            data = {
+                "直接提示词": f"请根据以下链接中的提示词生成评论:\n{html_url}",
+            }
+
+        # 6. 推入豆包队列并获取结果
+        result = self.推入通用豆包任务队列并阻塞获取结果(data)
+        comment = result.get("结果") if isinstance(result, dict) else result
+
+        if comment:
+            print(f"[生成评论_豆包] 成功生成评论: {comment[:50]}...")
+        else:
+            print(f"[生成评论_豆包] 生成评论失败")
+
         return comment
 
     def _获取强制匹配朋友视频配置(self):
