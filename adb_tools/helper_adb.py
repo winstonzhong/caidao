@@ -944,6 +944,7 @@ class BaseAdb(object):
         从URL直接下载内容并推送到手机下载目录
 
         实现：下载到临时文件 -> 调用 push_file_to_download
+        支持从 HTTP Content-Type 推断文件类型
 
         Args:
             url: 文件URL
@@ -958,31 +959,83 @@ class BaseAdb(object):
         import tempfile
         from urllib.parse import urlparse, unquote
 
-        # 下载URL内容到临时文件
+        # Content-Type 到文件后缀的映射表
+        CONTENT_TYPE_MAP = {
+            'image/jpeg': '.jpg',
+            'image/jpg': '.jpg',
+            'image/png': '.png',
+            'image/gif': '.gif',
+            'image/webp': '.webp',
+            'image/bmp': '.bmp',
+            'image/svg+xml': '.svg',
+            'application/pdf': '.pdf',
+            'text/plain': '.txt',
+            'text/html': '.html',
+            'application/json': '.json',
+            'video/mp4': '.mp4',
+            'video/webm': '.webm',
+            'audio/mpeg': '.mp3',
+            'audio/wav': '.wav',
+            'application/zip': '.zip',
+        }
+
+        # 下载URL内容
         response = requests.get(url, timeout=30, stream=True)
         response.raise_for_status()
 
-        # 确定临时文件后缀
+        # 从 URL 解析文件名和后缀
         parsed = urlparse(url)
         path = unquote(parsed.path)
         url_basename = os.path.basename(path) or "download"
-        suffix = "." + url_basename.split(".")[-1] if "." in url_basename else ""
+        url_suffix = "." + url_basename.split(".")[-1] if "." in url_basename else ""
 
-        # 创建临时文件
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
+        # 从 Content-Type 推断后缀（优先级更高）
+        content_type = response.headers.get('Content-Type', '').split(';')[0].strip().lower()
+        inferred_suffix = CONTENT_TYPE_MAP.get(content_type, '')
+
+        # 最终后缀：优先使用推断的，其次使用URL的，图片默认.jpg
+        final_suffix = inferred_suffix or url_suffix
+        if not final_suffix:
+            # 默认根据 content-type 主类型判断
+            if content_type.startswith('image/'):
+                final_suffix = '.jpg'
+            else:
+                final_suffix = '.bin'
+        if not final_suffix.startswith('.'):
+            final_suffix = '.' + final_suffix
+
+        # 创建临时文件（带正确后缀）
+        with tempfile.NamedTemporaryFile(delete=False, suffix=final_suffix) as tmp_file:
             for chunk in response.iter_content(chunk_size=8192):
                 if chunk:
                     tmp_file.write(chunk)
             tmp_path = tmp_file.name
 
         try:
+            # 确定最终文件名
+            if fname is not None:
+                # 用户指定了文件名，确保有后缀
+                if '.' not in fname:
+                    final_fname = fname + final_suffix
+                else:
+                    final_fname = fname
+            elif not use_timestamp:
+                # 使用URL的文件名，确保有后缀
+                if '.' not in url_basename:
+                    final_fname = url_basename + final_suffix
+                else:
+                    final_fname = url_basename
+            else:
+                # 使用时间戳 + 后缀：构造完整的带后缀文件名
+                final_fname = f"{time.time()}{final_suffix}"
+
             # 复用 push_file_to_download
             return self.push_file_to_download(
                 src=tmp_path,
                 sleep_span=sleep_span,
                 clean_temp=True,
-                use_timestamp=use_timestamp,
-                fname=fname if fname else (None if use_timestamp else url_basename),
+                use_timestamp=False,  # 因为我们已经构造了带时间戳的文件名
+                fname=final_fname,
             )
         finally:
             try:
