@@ -2471,8 +2471,8 @@ class 基本任务(抽象持久序列):
         生成推入豆包队列所需的数据字典
 
         流程：
-        1. 使用HTML模板渲染系统提示词
-        2. 上传HTML获取URL链接
+        1. 使用PromptGenerator生成系统提示词（如未提供）
+        2. 将sys_prompt和video_data合并为单一字符串
         3. 构造队列数据字典
 
         Args:
@@ -2484,51 +2484,30 @@ class 基本任务(抽象持久序列):
             dict: 可直接推入队列的数据字典，包含:
                 - "直接提示词": str
         """
-        import helper_tpls
         print(f"[生成豆包队列数据] video_data: {video_data}")
 
-        # 1. 准备模板数据
-        template_data = {
-            **video_data,
-            "目标描述": 目标描述 or self.config.get("目标视频描述", ""),
-            "立场": self.config.get("评论立场", "支持"),
-        }
-
-        # 2. 如果没有提供sys_prompt，使用PromptGenerator生成
+        # 1. 如果没有提供sys_prompt，使用PromptGenerator生成
         if not sys_prompt:
             from dy_text_classifier.prompt_generator import PromptGenerator
-            目标描述 = template_data["目标描述"]
+            目标描述 = 目标描述 or self.config.get("目标视频描述", "")
             sys_prompt = PromptGenerator.获取评论助手提示词(目标描述, video_data)
 
-        # 3. 渲染HTML模板
-        template_path = tool_moban_configs.获得模版("抖音视频评论生成模版.html")
-        try:
-            html_content = helper_tpls.render_template_file_to_string(
-                template_path,
-                template_data
-            )
-        except Exception as e:
-            print(f"[生成豆包队列数据] 模板渲染失败: {e}")
-            # 回退到使用纯文本提示词
-            html_content = sys_prompt
+        # 2. 将video_data转为JSON字符串
+        video_data_json = json.dumps(video_data, ensure_ascii=False, indent=2)
 
-        # 4. 上传HTML获取URL
-        try:
-            html_bytes = html_content.encode('utf-8')
-            html_url = self.上传文件(html_bytes, suffix='.html')
-            print(f"[生成豆包队列数据] HTML模板URL: {html_url}")
-        except Exception as e:
-            print(f"[生成豆包队列数据] 上传HTML失败: {e}")
-            # 回退到直接使用提示词
-            data = {
-                "直接提示词": sys_prompt,
-            }
-        else:
-            # 5. 构造队列数据
-            data = {
-                "直接提示词": f"请根据以下链接中的提示词生成评论:\n{html_url}",
-                "附件模式": 1,  # 标记为附件模式，避免推入队列时重复处理
-            }
+        # 3. 合并sys_prompt和video_data为单一字符串
+        combined_prompt = f"""{sys_prompt}
+
+## 视频数据（JSON格式）
+```json
+{video_data_json}
+```
+"""
+
+        # 4. 构造队列数据（直接字符串，无需上传）
+        data = {
+            "直接提示词": combined_prompt,
+        }
 
         return data
 
