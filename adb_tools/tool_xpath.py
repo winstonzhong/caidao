@@ -2543,7 +2543,7 @@ class 基本任务(抽象持久序列):
 
         流程：
         1. 调用 生成豆包队列数据 获取数据字典
-        2. 推入豆包队列并阻塞获取结果
+        2. 使用通用队列函数提交并阻塞获取结果
 
         Args:
             video_data: 视频结构化数据（作者、文案、点赞等）
@@ -2558,8 +2558,12 @@ class 基本任务(抽象持久序列):
         # 生成队列数据
         data = self.生成豆包队列数据(video_data, sys_prompt, 目标描述)
 
-        # 推入豆包队列并获取结果
-        result = self.推入通用豆包任务队列并阻塞获取结果(data)
+        # 使用通用队列函数提交并获取结果
+        result = 全局队列.提交字典到队列并阻塞等待结果(
+            task_key=DB_QUEUE,
+            data_dict=data,
+            timeout=300
+        )
         comment = result.get("结果") if isinstance(result, dict) else result
 
         if comment:
