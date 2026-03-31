@@ -2483,6 +2483,7 @@ class 基本任务(抽象持久序列):
         Returns:
             str: 生成的评论内容，失败返回None
         """
+        import helper_tpls
         print(f"[生成评论_豆包] video_data: {video_data}")
 
         # 1. 准备模板数据
@@ -2627,6 +2628,63 @@ class 基本任务(抽象持久序列):
         # print(f"[获取评论] 已生成评论提示词")
         
         return self.根据视频数据生成评论(video_data, sys_prompt)
+
+    def 获取当前抖音视频评论_豆包(self):
+        """
+        获取当前抖音视频评论（豆包队列版本，完整流程，包含匹配检查）
+
+        流程:
+        1. 获取XML并解析video_data
+        2. 检查是否是朋友视频，是则跳过匹配直接生成
+        3. 检查目标视频描述配置
+        4. 使用dy_text_classifier进行匹配检查
+        5. 匹配成功则调用根据视频数据生成评论_豆包
+        """
+        # 1. 获取XML并解析
+        xml_source = self.device.source
+        if not xml_source:
+            print("[获取评论_豆包] 无法获取device.source")
+            raise ValueError("device.source is None")
+
+        video_data = 提取结构化数据(xml_source)
+        if not video_data:
+            print("[获取评论_豆包] XML解析失败或无视频数据")
+            return None
+        else:
+            print(f"[获取评论_豆包] video_data: {video_data}")
+
+        # 2. 检查是否是朋友视频（优先从配置读取）
+        _force_match_friend = self._获取强制匹配朋友视频配置()
+
+        if video_data.get('朋友') == '是' and not _force_match_friend:
+            print(f"[获取评论_豆包] 检测到朋友视频({video_data.get('作者')})，跳过匹配直接生成评论")
+            from dy_text_classifier.prompt_generator import PromptGenerator
+            sys_prompt = PromptGenerator.获取朋友互动提示词(video_data)
+            return self.根据视频数据生成评论_豆包(video_data, sys_prompt)
+        elif video_data.get('朋友') == '是' and _force_match_friend:
+            config_source = "配置" if (self.config.get('强制匹配朋友视频') is not None or self.config.get('DY_FORCE_MATCH_FRIEND_VIDEO') is not None) else "环境变量"
+            print(f"[获取评论_豆包] 检测到朋友视频({video_data.get('作者')})，但强制匹配已启用（来源：{config_source}），进行匹配检查")
+
+        # 3. 获取目标视频描述
+        目标描述 = self.config.get("目标视频描述", "")
+        if not 目标描述:
+            print("[获取评论_豆包] 未配置目标视频描述")
+            return None
+        else:
+            print(f"[获取评论_豆包] 目标视频描述: {目标描述}")
+
+        # 4. 使用SimpleMatcherV2进行匹配（任意词命中即匹配，无需阈值）
+        is_match = _simple_matcher_v2.文本匹配(目标描述=目标描述, 数据=video_data)
+
+        if not is_match:
+            print(f"[获取评论_豆包] 视频不匹配目标描述，未命中任何关键词")
+            return None
+
+        # 5. 匹配成功，调用豆包版本生成评论
+        from dy_text_classifier.prompt_generator import PromptGenerator
+        sys_prompt = PromptGenerator.获取评论助手提示词(目标描述, video_data)
+
+        return self.根据视频数据生成评论_豆包(video_data, sys_prompt)
 
 
     # @property
