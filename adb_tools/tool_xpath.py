@@ -143,7 +143,7 @@ URL_TASK_QUEUE = f"https://{tool_env.HOST_TASK}"
 namespaces = {"re": "http://exslt.org/regular-expressions"}
 
 
-DB_QUEUE = "豆包队列2"
+DB_QUEUE = "豆包队列3"
 
 
 def 深度合并字典(base_dict, override_dict):
@@ -2461,19 +2461,19 @@ class 基本任务(抽象持久序列):
         
         return comment
 
-    def 根据视频数据生成评论_豆包(
+    def 生成豆包队列数据(
         self,
         video_data: dict,
         sys_prompt: str = None,
         目标描述: str = None
-    ) -> str:
+    ) -> dict:
         """
-        根据视频数据生成评论（使用豆包队列系统）
+        生成推入豆包队列所需的数据字典
 
         流程：
         1. 使用HTML模板渲染系统提示词
         2. 上传HTML获取URL链接
-        3. 推入豆包队列并阻塞获取结果
+        3. 构造队列数据字典
 
         Args:
             video_data: 视频结构化数据（作者、文案、点赞等）
@@ -2481,10 +2481,11 @@ class 基本任务(抽象持久序列):
             目标描述: 可选，目标视频描述。如不传入则从配置获取
 
         Returns:
-            str: 生成的评论内容，失败返回None
+            dict: 可直接推入队列的数据字典，包含:
+                - "直接提示词": str
         """
         import helper_tpls
-        print(f"[生成评论_豆包] video_data: {video_data}")
+        print(f"[生成豆包队列数据] video_data: {video_data}")
 
         # 1. 准备模板数据
         template_data = {
@@ -2507,7 +2508,7 @@ class 基本任务(抽象持久序列):
                 template_data
             )
         except Exception as e:
-            print(f"[生成评论_豆包] 模板渲染失败: {e}")
+            print(f"[生成豆包队列数据] 模板渲染失败: {e}")
             # 回退到使用纯文本提示词
             html_content = sys_prompt
 
@@ -2515,9 +2516,9 @@ class 基本任务(抽象持久序列):
         try:
             html_bytes = html_content.encode('utf-8')
             html_url = self.上传文件(html_bytes, suffix='.html')
-            print(f"[生成评论_豆包] HTML模板URL: {html_url}")
+            print(f"[生成豆包队列数据] HTML模板URL: {html_url}")
         except Exception as e:
-            print(f"[生成评论_豆包] 上传HTML失败: {e}")
+            print(f"[生成豆包队列数据] 上传HTML失败: {e}")
             # 回退到直接使用提示词
             data = {
                 "直接提示词": sys_prompt,
@@ -2528,7 +2529,35 @@ class 基本任务(抽象持久序列):
                 "直接提示词": f"请根据以下链接中的提示词生成评论:\n{html_url}",
             }
 
-        # 6. 推入豆包队列并获取结果
+        return data
+
+    def 根据视频数据生成评论_豆包(
+        self,
+        video_data: dict,
+        sys_prompt: str = None,
+        目标描述: str = None
+    ) -> str:
+        """
+        根据视频数据生成评论（使用豆包队列系统）
+
+        流程：
+        1. 调用 生成豆包队列数据 获取数据字典
+        2. 推入豆包队列并阻塞获取结果
+
+        Args:
+            video_data: 视频结构化数据（作者、文案、点赞等）
+            sys_prompt: 可选，自定义系统提示词。如不传入则使用模板生成
+            目标描述: 可选，目标视频描述。如不传入则从配置获取
+
+        Returns:
+            str: 生成的评论内容，失败返回None
+        """
+        print(f"[生成评论_豆包] video_data: {video_data}")
+
+        # 生成队列数据
+        data = self.生成豆包队列数据(video_data, sys_prompt, 目标描述)
+
+        # 推入豆包队列并获取结果
         result = self.推入通用豆包任务队列并阻塞获取结果(data)
         comment = result.get("结果") if isinstance(result, dict) else result
 
