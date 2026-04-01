@@ -276,6 +276,7 @@ class RedisTaskHandler:
             prompt = (
                 data_dict.get("sys_prompt") or 
                 data_dict.get("prompt") or 
+                data_dict.get("直接提示词") or  # 豆包队列常用的字段
                 data_dict.get("提示词") or
                 data_dict.get("question") or
                 data_dict.get("text") or
