@@ -155,3 +155,4 @@ dy_text_classifier/synonym_cache/
 !cache/
 !cache/atx-agent/
 !cache/atx-agent/*.gz
+caidao_config/
