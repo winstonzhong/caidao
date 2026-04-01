@@ -16,15 +16,17 @@ from pathlib import Path
 import yaml
 
 CAIDAO_CONFIG_DIR = Path(__file__).resolve().parent / 'caidao_config'
-print('CAIDAO_CONFIG_DIR', CAIDAO_CONFIG_DIR)
+# print('CAIDAO_CONFIG_DIR', CAIDAO_CONFIG_DIR)
 
 with open(f"{CAIDAO_CONFIG_DIR}/email.yml", "r", encoding="utf-8") as f:
     email_config = yaml.load(f.read(), yaml.Loader)
-{'user_1': {'name': 'zhangwei'}}
+
+EMAIL_SERVER = "mail.j1.sale"
+
 class MailClient:
     """邮件客户端"""
 
-    def __init__(self, server, username, password, smtp_port=587):
+    def __init__(self, username, password, server=EMAIL_SERVER, smtp_port=587):
         """
         初始化
         :param server: 邮件服务器地址 (如 'mail.j1.sale')
@@ -404,8 +406,13 @@ if __name__ == "__main__":
     # USERNAME = "test@j1.sale"
     # PASSWORD = "xxx"
     #
-    # # 初始化客户端（使用域名连接，587端口STARTTLS）
-    # client = MailClient(SERVER, USERNAME, PASSWORD, smtp_port=587)
+    # 初始化客户端（使用域名连接，587端口STARTTLS）
+    client = MailClient(email_config['user_1']['username'], email_config['user_1']['password'])
+    client.send_text(
+        to_addr="liqiang239@qq.com",
+        subject="测试邮件 - 文本",
+        body="这是一封测试邮件，来自 Python MailClient。"
+    )
     # l = client.list_all(limit=5)
     # print("=" * 50)
     # print("测试 1: 发送文本邮件")
