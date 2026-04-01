@@ -7,8 +7,14 @@ import time
 import sys
 # import os
 import tool_env
+import requests
+from concurrent.futures import ThreadPoolExecutor
 
 from pathlib import Path
+
+
+# 全局线程池（复用，避免频繁创建销毁）用于记录 PromptResult
+_prompt_result_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="PromptResult_")
 
 
 if getattr(sys, 'frozen', False):  # pyinstaller打包后的判断
@@ -185,7 +191,22 @@ class RedisTaskHandler:
                 continue
             result = d
             break
-
+        
+        # 6. 异步记录 PromptResult（不阻塞主流程）
+        if result:
+            try:
+                _prompt_result_executor.submit(
+                    self._记录提示词结果异步,
+                    data_dict.copy(),  # 复制数据，避免后续修改影响
+                    result.copy() if isinstance(result, dict) else result,
+                    task_key,
+                    key_back
+                )
+                print(f"[提交字典到队列] PromptResult 异步记录已提交")
+            except Exception as e:
+                print(f"[提交字典到队列] 提交异步记录失败: {e}")
+                # 失败不影响主流程
+        
         return result if result else {}
 
     def 提交数据并阻塞等待结果(
@@ -227,6 +248,99 @@ class RedisTaskHandler:
             d["result"] = json.loads(d["result"])
 
         return d
+
+    def _记录提示词结果异步(self, data_dict: dict, result, task_key: str, key_back: str):
+        """
+        异步方法：在线程中记录提示词和结果到 PromptResult 服务
+        
+        注意：此方法在线程池中执行，不阻塞主流程
+        """
+        try:
+            # 提取提示词（支持多种字段名）
+            prompt = (
+                data_dict.get("sys_prompt") or 
+                data_dict.get("prompt") or 
+                data_dict.get("提示词") or
+                data_dict.get("question") or
+                data_dict.get("text") or
+                ""
+            )
+            
+            # 提取结果（支持多种格式）
+            result_text = ""
+            if isinstance(result, dict):
+                result_text = (
+                    result.get("结果") or 
+                    result.get("result") or 
+                    result.get("text") or
+                    result.get("content") or
+                    json.dumps(result, ensure_ascii=False)
+                )
+            elif isinstance(result, str):
+                result_text = result
+            
+            # 如果没有提示词或结果，不记录
+            if not prompt or not result_text:
+                print(f"[_记录提示词结果] 提示词或结果为空，跳过记录")
+                return
+            
+            # 确定任务类型
+            task_type = data_dict.get("任务类型", "")
+            if not task_type:
+                # 根据队列名称推断
+                if "image" in task_key.lower():
+                    task_type = "image"
+                elif "video" in task_key.lower():
+                    task_type = "video"
+                else:
+                    task_type = "text"
+            
+            # 提取 job_id 和 ops_id（如果 data_dict 中有）
+            job_id = data_dict.get("job_id")
+            ops_id = data_dict.get("ops_id")
+            
+            # 构建记录数据
+            record_data = {
+                "prompt": prompt,
+                "result": result_text,
+                "task_type": task_type,
+                "job_id": job_id,
+                "ops_id": ops_id,
+                "extra_data": {
+                    "task_key": task_key,
+                    "key_back": key_back,
+                    "original_data_keys": list(data_dict.keys()),
+                    "result_type": type(result).__name__,
+                }
+            }
+            
+            # 发送到 PromptResult API
+            try:
+                response = requests.post(
+                    "https://mission.j1.sale/prompt-service/api/record/",
+                    json=record_data,
+                    timeout=10,  # 异步操作可以容忍更长的超时
+                    headers={"Content-Type": "application/json"}
+                )
+                
+                if response.status_code == 200:
+                    resp_data = response.json()
+                    if resp_data.get("success"):
+                        print(f"[_记录提示词结果] 记录成功，ID: {resp_data.get('id')}")
+                    else:
+                        print(f"[_记录提示词结果] 记录失败: {resp_data.get('message')}")
+                else:
+                    print(f"[_记录提示词结果] HTTP 错误: {response.status_code}")
+                    
+            except requests.exceptions.Timeout:
+                print(f"[_记录提示词结果] 请求超时（异步）")
+            except requests.exceptions.RequestException as e:
+                print(f"[_记录提示词结果] 请求异常: {e}")
+                
+        except Exception as e:
+            print(f"[_记录提示词结果] 未知异常: {e}")
+            import traceback
+            traceback.print_exc()
 
     def 测试服务可用性(self, timeout=10) -> dict:
         """

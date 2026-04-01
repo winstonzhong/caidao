@@ -55,7 +55,7 @@ class CategoryCacheManager:
             cache_dir = os.path.join(_MODULE_DIR, cache_dir)
         
         self.cache_dir = Path(cache_dir)
-        print('cache_dir', self.cache_dir)
+        # print('cache_dir', self.cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
     
     @staticmethod
