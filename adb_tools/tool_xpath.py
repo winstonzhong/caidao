@@ -143,7 +143,7 @@ URL_TASK_QUEUE = f"https://{tool_env.HOST_TASK}"
 namespaces = {"re": "http://exslt.org/regular-expressions"}
 
 
-DB_QUEUE = "豆包队列2"
+DB_QUEUE = "豆包队列3"
 
 
 def 深度合并字典(base_dict, override_dict):
@@ -193,7 +193,7 @@ def 得到url(task_key, 中继=False):
 
 def 在队列中是否有任务(task_key, 中继=False):
     url = f"{得到url(task_key, 中继)}?query_only=1"
-    # print("在队列中是否有任务:", url)
+    print("在队列中是否有任务:", url)
     return bool(requests.get(url).json())
 
 
@@ -564,14 +564,31 @@ class SteadyDevice(DummyDevice):
         self.adb.ua2.send_keys(keys, clear)
 
     def 上传到下载目录(self, url, fname=None, clean_temp=True):
-        if tool_static.is_inner():
+        """
+        上传文件到手机下载目录
+
+        支持：
+        1. 56T内部链接（本地文件推送）
+        2. 内网非56T链接（下载后推送，如nocobase链接）
+        3. Termux环境（原有逻辑，保持不变）
+        """
+        if tool_static.is_inner() and tool_static.is_56t_url(url):
+            # 内网 + 56T链接：使用本地文件推送
             fpath = tool_static.链接到路径(url)
             return self.adb.push_file_to_download(
-                fpath,
+                src=fpath,
                 fname=fname,
                 clean_temp=clean_temp,
             )
+        elif tool_static.is_inner():
+            # 内网 + 非56T链接（如nocobase）：下载后推送
+            return self.adb.push_url_to_download(
+                url=url,
+                use_timestamp=(fname is None),
+                fname=fname,
+            )
         else:
+            # Termux 环境逻辑（完全不动）
             """
             根据url的文件名匹配robot temp下的文件
             并且将此文件拷贝至download目录
@@ -869,6 +886,9 @@ class 操作块(基本输入字段对象):
         super().__init__(d)
         d["paras"] = paras
         self.tpls = [基本界面元素.from_dict(x, self.paras) for x in d.get("tpls")]
+        # 实例化 must_with 和 must_without 中的模板
+        self.must_with_tpls = [基本界面元素.from_dict(x, self.paras) for x in d.get("must_with_tpls") or []]
+        self.must_without_tpls = [基本界面元素.from_dict(x, self.paras) for x in d.get("must_without_tpls") or []]
         self.num_executed = 0
         self.num_conti_repeated = 0
 
@@ -903,15 +923,54 @@ class 操作块(基本输入字段对象):
                 return True
 
     def match(self, job, ignore_status=False):
+        """操作块匹配方法"""
+        # 1. 状态检查
         if ignore_status or (not job.status and not self.only_when):
             状态正确 = True
         else:
             状态正确 = (job.status == self.only_when) or (self.only_when == "*")
+        
+        # 2. 自身模板匹配
         for tpl in self.tpls:
             if 状态正确:
                 tpl.match(job)
             else:
                 tpl.matched = False
+        
+        # 3. must_with/must_without 条件检查
+        # 只有自身模板匹配成功且配置了 must_with/must_without 时才检查
+        if self.matched and (self.must_with_tpls or self.must_without_tpls):
+            if not self._check_match_conditions(job):
+                # 条件不满足，强制设置所有模板为不匹配
+                for tpl in self.tpls:
+                    tpl.matched = False
+    
+    def _check_match_conditions(self, job):
+        """
+        检查 must_with 和 must_without 条件
+        
+        使用 self.must_with_tpls 和 self.must_without_tpls 中已实例化的模板
+        """
+        # 检查 must_with: 至少有一个模板在当前屏幕匹配（OR逻辑）
+        if self.must_with_tpls:
+            has_any_match = False
+            
+            for tpl in self.must_with_tpls:
+                tpl.match(job)  # 对当前屏幕进行匹配
+                if tpl.matched:
+                    has_any_match = True
+                    break
+            
+            if not has_any_match:
+                return False
+        
+        # 检查 must_without: 所有模板都不能在当前屏幕匹配
+        for tpl in self.must_without_tpls:
+            tpl.match(job)  # 对当前屏幕进行匹配
+            if tpl.matched:
+                return False
+        
+        return True
 
     @property
     def matched(self):
@@ -1205,8 +1264,22 @@ class 基本任务(抽象持久序列):
         script = f"am force-stop {self.package}"
         return self.device.adb.execute(script)
 
-    def 输入(self, text, clear=True):
+    def 输入(self, text, clear=False):
+        """
+        输入文本
+        
+        Args:
+            text: 要输入的文本
+            clear: 是否先清空输入框（默认 False，与 uiautomator2 保持一致）
+        """
         self.device.send_keys(text, clear)
+
+    def 清空输入(self):
+        """
+        清空当前输入框的内容
+        通过发送空字符串并设置 clear=True 实现
+        """
+        self.device.send_keys('', clear=True)
 
     @property
     def paras(self):
@@ -2388,6 +2461,97 @@ class 基本任务(抽象持久序列):
         
         return comment
 
+    def 生成豆包队列数据(
+        self,
+        video_data: dict,
+        sys_prompt: str = None,
+        目标描述: str = None
+    ) -> dict:
+        """
+        生成推入豆包队列所需的数据字典
+
+        流程：
+        1. 使用PromptGenerator生成系统提示词（如未提供）
+        2. 将sys_prompt和video_data合并为单一字符串
+        3. 构造队列数据字典
+
+        Args:
+            video_data: 视频结构化数据（作者、文案、点赞等）
+            sys_prompt: 可选，自定义系统提示词。如不传入则使用模板生成
+            目标描述: 可选，目标视频描述。如不传入则从配置获取
+
+        Returns:
+            dict: 可直接推入队列的数据字典，包含:
+                - "直接提示词": str
+        """
+        print(f"[生成豆包队列数据] video_data: {video_data}")
+
+        # 1. 如果没有提供sys_prompt，使用PromptGenerator生成
+        if not sys_prompt:
+            from dy_text_classifier.prompt_generator import PromptGenerator
+            目标描述 = 目标描述 or self.config.get("目标视频描述", "")
+            sys_prompt = PromptGenerator.获取评论助手提示词(目标描述, video_data)
+
+        # 2. 将video_data转为JSON字符串
+        video_data_json = json.dumps(video_data, ensure_ascii=False, indent=2)
+
+        # 3. 合并sys_prompt和video_data为单一字符串
+        combined_prompt = f"""{sys_prompt}
+
+## 视频数据（JSON格式）
+```json
+{video_data_json}
+```
+"""
+
+        # 4. 构造队列数据（直接字符串，无需上传）
+        data = {
+            "直接提示词": combined_prompt,
+        }
+
+        return data
+
+    def 根据视频数据生成评论_豆包(
+        self,
+        video_data: dict,
+        sys_prompt: str = None,
+        目标描述: str = None
+    ) -> str:
+        """
+        根据视频数据生成评论（使用豆包队列系统）
+
+        流程：
+        1. 调用 生成豆包队列数据 获取数据字典
+        2. 使用通用队列函数提交并阻塞获取结果
+
+        Args:
+            video_data: 视频结构化数据（作者、文案、点赞等）
+            sys_prompt: 可选，自定义系统提示词。如不传入则使用模板生成
+            目标描述: 可选，目标视频描述。如不传入则从配置获取
+
+        Returns:
+            str: 生成的评论内容，失败返回None
+        """
+        print(f"[生成评论_豆包] video_data: {video_data}")
+
+        # 生成队列数据
+        data = self.生成豆包队列数据(video_data, sys_prompt, 目标描述)
+
+        # 使用通用队列函数提交并获取结果
+        result = 全局队列.提交字典到队列并阻塞等待结果(
+            task_key=DB_QUEUE,
+            data_dict=data,
+            timeout=300
+        )
+        comment = result.get("结果") if isinstance(result, dict) else result
+
+        if comment:
+            print(f"[生成评论_豆包] 成功生成评论: {comment[:50]}...")
+        else:
+            print(f"[生成评论_豆包] 生成评论失败")
+
+        return comment
+
     def _获取强制匹配朋友视频配置(self):
         """
         获取是否强制匹配朋友视频的配置
@@ -2477,6 +2641,63 @@ class 基本任务(抽象持久序列):
         # print(f"[获取评论] 已生成评论提示词")
         
         return self.根据视频数据生成评论(video_data, sys_prompt)
+
+    def 获取当前抖音视频评论_豆包(self):
+        """
+        获取当前抖音视频评论（豆包队列版本，完整流程，包含匹配检查）
+
+        流程:
+        1. 获取XML并解析video_data
+        2. 检查是否是朋友视频，是则跳过匹配直接生成
+        3. 检查目标视频描述配置
+        4. 使用dy_text_classifier进行匹配检查
+        5. 匹配成功则调用根据视频数据生成评论_豆包
+        """
+        # 1. 获取XML并解析
+        xml_source = self.device.source
+        if not xml_source:
+            print("[获取评论_豆包] 无法获取device.source")
+            raise ValueError("device.source is None")
+
+        video_data = 提取结构化数据(xml_source)
+        if not video_data:
+            print("[获取评论_豆包] XML解析失败或无视频数据")
+            return None
+        else:
+            print(f"[获取评论_豆包] video_data: {video_data}")
+
+        # 2. 检查是否是朋友视频（优先从配置读取）
+        _force_match_friend = self._获取强制匹配朋友视频配置()
+
+        if video_data.get('朋友') == '是' and not _force_match_friend:
+            print(f"[获取评论_豆包] 检测到朋友视频({video_data.get('作者')})，跳过匹配直接生成评论")
+            from dy_text_classifier.prompt_generator import PromptGenerator
+            sys_prompt = PromptGenerator.获取朋友互动提示词(video_data)
+            return self.根据视频数据生成评论_豆包(video_data, sys_prompt)
+        elif video_data.get('朋友') == '是' and _force_match_friend:
+            config_source = "配置" if (self.config.get('强制匹配朋友视频') is not None or self.config.get('DY_FORCE_MATCH_FRIEND_VIDEO') is not None) else "环境变量"
+            print(f"[获取评论_豆包] 检测到朋友视频({video_data.get('作者')})，但强制匹配已启用（来源：{config_source}），进行匹配检查")
+
+        # 3. 获取目标视频描述
+        目标描述 = self.config.get("目标视频描述", "")
+        if not 目标描述:
+            print("[获取评论_豆包] 未配置目标视频描述")
+            return None
+        else:
+            print(f"[获取评论_豆包] 目标视频描述: {目标描述}")
+
+        # 4. 使用SimpleMatcherV2进行匹配（任意词命中即匹配，无需阈值）
+        is_match = _simple_matcher_v2.文本匹配(目标描述=目标描述, 数据=video_data)
+
+        if not is_match:
+            print(f"[获取评论_豆包] 视频不匹配目标描述，未命中任何关键词")
+            return None
+
+        # 5. 匹配成功，调用豆包版本生成评论
+        from dy_text_classifier.prompt_generator import PromptGenerator
+        sys_prompt = PromptGenerator.获取评论助手提示词(目标描述, video_data)
+
+        return self.根据视频数据生成评论_豆包(video_data, sys_prompt)
 
 
     # @property

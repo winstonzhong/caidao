@@ -20,6 +20,13 @@ from tool_img import to_buffer
 BASE_URL_56T = "https://file.j1.sale/api/file"
 
 
+def is_56t_url(url):
+    """判断URL是否是56T内部链接"""
+    if not url:
+        return False
+    return url.startswith(BASE_URL_56T)
+
+
 if os.path.lexists("/data/data/com.termux"):
     BASE_DIR_56T = "/data/data/com.termux/files/home/file"
 
