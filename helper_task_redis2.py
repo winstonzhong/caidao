@@ -171,7 +171,7 @@ class RedisTaskHandler:
         # 3. 将 timestamp 注入 data_dict（用于结果匹配）
         data_dict["timestamp"] = ts
         data_dict["key_back"] = key_back
-
+        # print('data_dict..........', data_dict)
         # 4. 推入 Redis
         self.推入Redis(task_key, data_dict)
 
@@ -192,30 +192,30 @@ class RedisTaskHandler:
             result = d
             break
         
-        # # 6. 异步记录 PromptResult（不阻塞主流程）
-        # if result:
-        #     try:
-        #         print(f"[提交字典到队列] 准备提交异步记录...")
-        #         print(f"[提交字典到队列] data_dict keys: {list(data_dict.keys())}")
-        #         print(f"[提交字典到队列] result type: {type(result)}, result keys: {result.keys() if isinstance(result, dict) else 'N/A'}")
-        #         print(f"[提交字典到队列] task_key: {task_key}, key_back: {key_back}")
+        # 6. 异步记录 PromptResult（不阻塞主流程）
+        if result:
+            try:
+                print(f"[提交字典到队列] 准备提交异步记录...")
+                print(f"[提交字典到队列] data_dict keys: {list(data_dict.keys())}")
+                print(f"[提交字典到队列] result type: {type(result)}, result keys: {result.keys() if isinstance(result, dict) else 'N/A'}")
+                print(f"[提交字典到队列] task_key: {task_key}, key_back: {key_back}")
                 
-        #         # 检查线程池状态
-        #         print(f"[提交字典到队列] 线程池状态: workers={_prompt_result_executor._max_workers}, queue size={_prompt_result_executor._work_queue.qsize() if hasattr(_prompt_result_executor, '_work_queue') else 'unknown'}")
+                # 检查线程池状态
+                print(f"[提交字典到队列] 线程池状态: workers={_prompt_result_executor._max_workers}, queue size={_prompt_result_executor._work_queue.qsize() if hasattr(_prompt_result_executor, '_work_queue') else 'unknown'}")
                 
-        #         future = _prompt_result_executor.submit(
-        #             self._记录提示词结果异步,
-        #             data_dict.copy(),  # 复制数据，避免后续修改影响
-        #             result.copy() if isinstance(result, dict) else result,
-        #             task_key,
-        #             key_back
-        #         )
-        #         print(f"[提交字典到队列] PromptResult 异步记录已提交，future: {future}")
-        #     except Exception as e:
-        #         print(f"[提交字典到队列] 提交异步记录失败: {e}")
-        #         import traceback
-        #         traceback.print_exc()
-        #         # 失败不影响主流程
+                future = _prompt_result_executor.submit(
+                    self._上传评论异步,
+                    data_dict.copy(),  # 复制数据，避免后续修改影响
+                    result.copy() if isinstance(result, dict) else result,
+                    task_key,
+                    key_back
+                )
+                print(f"[提交字典到队列] PromptResult 异步记录已提交，future: {future}")
+            except Exception as e:
+                print(f"[提交字典到队列] 提交异步记录失败: {e}")
+                import traceback
+                traceback.print_exc()
+                # 失败不影响主流程
         
         return result if result else {}
 
@@ -258,6 +258,118 @@ class RedisTaskHandler:
             d["result"] = json.loads(d["result"])
 
         return d
+
+    def _上传评论异步(self, data_dict: dict, result, task_key: str, key_back: str):
+        """
+        异步方法：在线程中记录提示词和结果到 PromptResult 服务
+
+        注意：此方法在线程池中执行，不阻塞主流程
+        """
+        print(f"[_记录提示词结果异步] ====== 开始执行 ======")
+        print(f"[_记录提示词结果异步] 线程ID: {__import__('threading').current_thread().ident}")
+        print(f"[_记录提示词结果异步] data_dict keys: {list(data_dict.keys())}")
+        print(f"[_记录提示词结果异步] result type: {type(result)}")
+        print(f"[_记录提示词结果异步] task_key: {task_key}")
+
+        try:
+            # 提取提示词（支持多种字段名）
+            prompt = (
+                    data_dict.get("sys_prompt") or
+                    data_dict.get("prompt") or
+                    data_dict.get("直接提示词") or  # 豆包队列常用的字段
+                    data_dict.get("提示词") or
+                    data_dict.get("question") or
+                    data_dict.get("text") or
+                    ""
+            )
+
+            print(f"[_记录提示词结果异步] 提取的提示词长度: {len(prompt) if prompt else 0}")
+            print(f"[_记录提示词结果异步] 提示词前100字符: {prompt[:100] if prompt else 'EMPTY'}")
+
+            # 提取结果（支持多种格式）
+            result_text = ""
+            if isinstance(result, dict):
+                result_text = (
+                        result.get("结果") or
+                        result.get("result") or
+                        result.get("text") or
+                        result.get("content") or
+                        json.dumps(result, ensure_ascii=False)
+                )
+                print(f"[_记录提示词结果异步] 从dict提取结果，结果长度: {len(result_text) if result_text else 0}")
+            elif isinstance(result, str):
+                result_text = result
+                print(f"[_记录提示词结果异步] 结果是str，长度: {len(result_text)}")
+
+            # 如果没有提示词或结果，不记录
+            if not prompt or not result_text:
+                print(f"[_记录提示词结果异步] ⚠️ 提示词或结果为空，跳过记录")
+                print(f"  - prompt empty: {not prompt}")
+                print(f"  - result_text empty: {not result_text}")
+                return
+
+            # 确定任务类型
+            task_type = data_dict.get("任务类型", "")
+            if not task_type:
+                # 根据队列名称推断
+                if "image" in task_key.lower():
+                    task_type = "image"
+                elif "video" in task_key.lower():
+                    task_type = "video"
+                else:
+                    task_type = "text"
+
+            # 提取 job_id 和 ops_id（如果 data_dict 中有）
+            job_id = data_dict.get("job_id")
+            ops_id = data_dict.get("ops_id")
+
+            # 构建记录数据
+            record_data = {
+                "prompt": prompt,
+                "result": result_text,
+            }
+
+            print(f"[_记录提示词结果异步] 准备发送请求到 API...")
+            print(f"[_记录提示词结果异步] API URL: https://coco.j1.sale/robot_client/push_task_data")
+            print(f"[_记录提示词结果异步] record_data keys: {list(record_data.keys())}")
+            post_data = {
+                'device_id': data_dict.get('串口号'),
+                'name': data_dict.get('name'),
+                'data_list': [record_data]
+            }
+            # 发送到 PromptResult API
+            try:
+
+                response = requests.post(
+                    "https://coco.j1.sale/robot_client/push_task_data",
+                    json=post_data,
+                    timeout=10,  # 异步操作可以容忍更长的超时
+                    headers={"Content-Type": "application/json"}
+                )
+
+                print(f"[_记录提示词结果异步] 收到响应: status_code={response.status_code}")
+
+                if response.status_code == 200:
+                    resp_data = response.json()
+                    print(f"[_记录提示词结果异步] 响应数据: {resp_data}")
+                else:
+                    print(f"[_记录提示词结果异步] ❌ HTTP 错误: {response.status_code}")
+                    print(f"[_记录提示词结果异步] 响应内容: {response.text[:500]}")
+
+            except requests.exceptions.Timeout:
+                print(f"[_记录提示词结果异步] ⏱️ 请求超时（异步）")
+            except requests.exceptions.RequestException as e:
+                print(f"[_记录提示词结果异步] ❌ 请求异常: {e}")
+                import traceback
+                traceback.print_exc()
+
+        except Exception as e:
+            print(f"[_记录提示词结果异步] ❌ 未知异常: {e}")
+            import traceback
+            traceback.print_exc()
+
+        print(f"[_记录提示词结果异步] ====== 执行结束 ======")
+
 
     def _记录提示词结果异步(self, data_dict: dict, result, task_key: str, key_back: str):
         """

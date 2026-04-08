@@ -2517,6 +2517,8 @@ class 基本任务(抽象持久序列):
         # 4. 构造队列数据（直接字符串，无需上传）
         data = {
             "直接提示词": combined_prompt,
+            "串口号": self.串口号,
+            "name": self.name
         }
 
         return data
