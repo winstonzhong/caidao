@@ -192,30 +192,30 @@ class RedisTaskHandler:
             result = d
             break
         
-        # 6. 异步记录 PromptResult（不阻塞主流程）
-        if result:
-            try:
-                print(f"[提交字典到队列] 准备提交异步记录...")
-                print(f"[提交字典到队列] data_dict keys: {list(data_dict.keys())}")
-                print(f"[提交字典到队列] result type: {type(result)}, result keys: {result.keys() if isinstance(result, dict) else 'N/A'}")
-                print(f"[提交字典到队列] task_key: {task_key}, key_back: {key_back}")
+        # # 6. 异步记录 PromptResult（不阻塞主流程）
+        # if result:
+        #     try:
+        #         print(f"[提交字典到队列] 准备提交异步记录...")
+        #         print(f"[提交字典到队列] data_dict keys: {list(data_dict.keys())}")
+        #         print(f"[提交字典到队列] result type: {type(result)}, result keys: {result.keys() if isinstance(result, dict) else 'N/A'}")
+        #         print(f"[提交字典到队列] task_key: {task_key}, key_back: {key_back}")
                 
-                # 检查线程池状态
-                print(f"[提交字典到队列] 线程池状态: workers={_prompt_result_executor._max_workers}, queue size={_prompt_result_executor._work_queue.qsize() if hasattr(_prompt_result_executor, '_work_queue') else 'unknown'}")
+        #         # 检查线程池状态
+        #         print(f"[提交字典到队列] 线程池状态: workers={_prompt_result_executor._max_workers}, queue size={_prompt_result_executor._work_queue.qsize() if hasattr(_prompt_result_executor, '_work_queue') else 'unknown'}")
                 
-                future = _prompt_result_executor.submit(
-                    self._记录提示词结果异步,
-                    data_dict.copy(),  # 复制数据，避免后续修改影响
-                    result.copy() if isinstance(result, dict) else result,
-                    task_key,
-                    key_back
-                )
-                print(f"[提交字典到队列] PromptResult 异步记录已提交，future: {future}")
-            except Exception as e:
-                print(f"[提交字典到队列] 提交异步记录失败: {e}")
-                import traceback
-                traceback.print_exc()
-                # 失败不影响主流程
+        #         future = _prompt_result_executor.submit(
+        #             self._记录提示词结果异步,
+        #             data_dict.copy(),  # 复制数据，避免后续修改影响
+        #             result.copy() if isinstance(result, dict) else result,
+        #             task_key,
+        #             key_back
+        #         )
+        #         print(f"[提交字典到队列] PromptResult 异步记录已提交，future: {future}")
+        #     except Exception as e:
+        #         print(f"[提交字典到队列] 提交异步记录失败: {e}")
+        #         import traceback
+        #         traceback.print_exc()
+        #         # 失败不影响主流程
         
         return result if result else {}
 
