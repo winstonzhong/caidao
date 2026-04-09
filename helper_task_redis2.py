@@ -333,6 +333,7 @@ class RedisTaskHandler:
             print(f"[_记录提示词结果异步] API URL: https://coco.j1.sale/robot_client/push_task_data")
             print(f"[_记录提示词结果异步] record_data keys: {list(record_data.keys())}")
             post_data = {
+                'ip_port': data_dict.get('ip_port'),
                 'device_id': data_dict.get('串口号'),
                 'name': data_dict.get('name'),
                 'data_list': [record_data]
