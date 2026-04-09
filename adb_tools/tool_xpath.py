@@ -2518,7 +2518,7 @@ class 基本任务(抽象持久序列):
         data = {
             "直接提示词": combined_prompt,
             "串口号": self.串口号,
-            "ip_port": self.device.adb.ip_port,
+            # "ip_port": self.device.adb.ip_port,
             "name": self.name
         }
 
