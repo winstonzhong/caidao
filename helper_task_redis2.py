@@ -260,17 +260,17 @@ class RedisTaskHandler:
                 "timestamp": time.time(),
             }
 
-            task_type = data_dict.get("任务类型", "")
-            if not task_type:
-                if "image" in task_key.lower():
-                    task_type = "image"
-                elif "video" in task_key.lower():
-                    task_type = "video"
-                else:
-                    task_type = task_key
+            # task_type = data_dict.get("任务类型", "")
+            # if not task_type:
+            #     if "image" in task_key.lower():
+            #         task_type = "image"
+            #     elif "video" in task_key.lower():
+            #         task_type = "video"
+            #     else:
+            #         task_type = task_key
 
             post_data = {
-                "type": task_type,
+                "type": None,
                 "data_list": [log_record],
             }
 
