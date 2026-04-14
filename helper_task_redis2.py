@@ -144,6 +144,7 @@ class RedisTaskHandler:
         key_back: str = None,
         timeout: int = 300,
         debug: bool = False,
+        submit_log: bool = True,
     ) -> dict:
         """
         通用队列任务提交函数 - 直接传入字典，支持多队列
@@ -166,43 +167,39 @@ class RedisTaskHandler:
         ts = str(time.time())
 
         # 2. 确保 key_back 是唯一独立队列
-        original_key_back = key_back
+        # original_key_back = key_back
         key_back = ensure_unique_key_back(task_key, key_back)
 
         # 3. 将 timestamp 和 key_back 注入 data_dict
         data_dict["timestamp"] = ts
         data_dict["key_back"] = key_back
-        if original_key_back is not None:
-            data_dict["original_key_back"] = original_key_back
+        # if original_key_back is not None:
+        #     data_dict["original_key_back"] = original_key_back
 
         # 4. 推入 Redis
         self.推入Redis(task_key, data_dict)
 
         # 5. 单次阻塞拉取结果（队列已唯一，无需循环过滤）
-        d = self.拉出Redis(key_back, True, timeout)
-        if debug:
-            print("-" * 66)
-            print("获取结果:")
-            print(d)
-        result = d if d else {}
+        result = self.拉出Redis(key_back, True, timeout) or {}
+        # result = d if d else {}
 
         # 6. 异步记录 PromptResult（不阻塞主流程）
-        if result:
+        if result and submit_log:
             try:
-                future = _prompt_result_executor.submit(
+                _ = _prompt_result_executor.submit(
                     self._上传日志记录,
-                    data_dict.copy(),  # 复制数据，避免后续修改影响
-                    result.copy() if isinstance(result, dict) else result,
+                    # data_dict.copy(),  # 复制数据，避免后续修改影响
+                    # result.copy() if isinstance(result, dict) else result,
+                    data_dict,
+                    result,
                     task_key,
                     key_back,
-                    debug,
                 )
             except Exception as e:
                 if debug:
                     print(f"[提交字典到队列] 提交异步记录失败: {e}")
                     import traceback
                     traceback.print_exc()
-                # 失败不影响主流程
 
         return result
     def 提交数据并阻塞等待结果(
@@ -245,7 +242,7 @@ class RedisTaskHandler:
 
         return d
 
-    def _上传日志记录(self, data_dict: dict, result, task_key: str, key_back: str, debug: bool = False):
+    def _上传日志记录(self, data_dict: dict, result, task_key: str, key_back: str):
         """
         异步方法：将请求与响应整合为通用日志记录并提交到 robot_client 服务。
 
@@ -259,15 +256,6 @@ class RedisTaskHandler:
                 "key_back": key_back,
                 "timestamp": time.time(),
             }
-
-            # task_type = data_dict.get("任务类型", "")
-            # if not task_type:
-            #     if "image" in task_key.lower():
-            #         task_type = "image"
-            #     elif "video" in task_key.lower():
-            #         task_type = "video"
-            #     else:
-            #         task_type = task_key
 
             post_data = {
                 "type": None,
