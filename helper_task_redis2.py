@@ -135,12 +135,40 @@ class RedisTaskHandler:
     # partial_content=None,
     # history=None,
 
+    def _阻塞等待结果(
+        self,
+        key_back: str,
+        ts: str,
+        check_timestamp: bool,
+        timeout: int,
+        debug: bool,
+    ) -> dict:
+        while 1:
+            d = self.拉出Redis(key_back, True, timeout)
+            if debug:
+                print("-" * 66)
+                print("获取结果:")
+                print(d)
+
+            if not d:
+                return {}
+
+            if check_timestamp:
+                result_ts = d.get("timestamp")
+                if result_ts is not None and result_ts != ts:
+                    if debug:
+                        print("丢弃前期废弃结果:", d)
+                    continue
+
+            return d
+
     def 提交字典到队列并阻塞等待结果(
         self,
         task_key: str,
         data_dict: dict,
         key_back: str = None,
         timeout: int = 300,
+        debug: bool = False,
     ) -> dict:
         """
         通用队列任务提交函数 - 直接传入字典，支持多队列
@@ -150,6 +178,7 @@ class RedisTaskHandler:
             data_dict: 要提交的字典数据（直接传入，无需组装）
             key_back: 返回队列名称（可选，为空则自动生成）
             timeout: 拉取结果的超时时间（秒）
+            debug: 是否打印调试信息
 
         Returns:
             dict: 包含结果的字典，失败返回空字典
@@ -163,6 +192,9 @@ class RedisTaskHandler:
         # 1. 生成唯一 timestamp
         ts = str(time.time())
 
+        # 仅外部传入 key_back（legacy 共享队列模式）才需比对 timestamp
+        check_timestamp = key_back is not None
+
         # 2. 如果 key_back 为空，自动生成
         if key_back is None:
             rand_suffix = random.randint(1000, 9999)
@@ -175,50 +207,28 @@ class RedisTaskHandler:
         # 4. 推入 Redis
         self.推入Redis(task_key, data_dict)
 
-        # 5. 循环拉取结果，比较 timestamp
-        result = None
-        while 1:
-            d = self.拉出Redis(key_back, True, timeout)
-            print("-" * 66)
-            print("获取结果:")
-            print(d)
-
-            if not d:
-                result = {}
-                break
-            if d.get("timestamp") != ts:
-                print("丢弃前期废弃结果:", d)
-                continue
-            result = d
-            break
+        # 5. 循环拉取结果
+        result = self._阻塞等待结果(key_back, ts, check_timestamp, timeout, debug)
         
         # 6. 异步记录 PromptResult（不阻塞主流程）
         if result:
             try:
-                print(f"[提交字典到队列] 准备提交异步记录...")
-                print(f"[提交字典到队列] data_dict keys: {list(data_dict.keys())}")
-                print(f"[提交字典到队列] result type: {type(result)}, result keys: {result.keys() if isinstance(result, dict) else 'N/A'}")
-                print(f"[提交字典到队列] task_key: {task_key}, key_back: {key_back}")
-                
-                # 检查线程池状态
-                print(f"[提交字典到队列] 线程池状态: workers={_prompt_result_executor._max_workers}, queue size={_prompt_result_executor._work_queue.qsize() if hasattr(_prompt_result_executor, '_work_queue') else 'unknown'}")
-                
                 future = _prompt_result_executor.submit(
                     self._上传评论异步,
                     data_dict.copy(),  # 复制数据，避免后续修改影响
                     result.copy() if isinstance(result, dict) else result,
                     task_key,
-                    key_back
+                    key_back,
+                    debug,
                 )
-                print(f"[提交字典到队列] PromptResult 异步记录已提交，future: {future}")
             except Exception as e:
-                print(f"[提交字典到队列] 提交异步记录失败: {e}")
-                import traceback
-                traceback.print_exc()
+                if debug:
+                    print(f"[提交字典到队列] 提交异步记录失败: {e}")
+                    import traceback
+                    traceback.print_exc()
                 # 失败不影响主流程
         
         return result if result else {}
-
     def 提交数据并阻塞等待结果(
         self,
         key_back,
@@ -259,17 +269,21 @@ class RedisTaskHandler:
 
         return d
 
-    def _上传评论异步(self, data_dict: dict, result, task_key: str, key_back: str):
+    def _上传评论异步(self, data_dict: dict, result, task_key: str, key_back: str, debug: bool = False):
         """
         异步方法：在线程中记录提示词和结果到 PromptResult 服务
 
         注意：此方法在线程池中执行，不阻塞主流程
         """
-        print(f"[_记录提示词结果异步] ====== 开始执行 ======")
-        print(f"[_记录提示词结果异步] 线程ID: {__import__('threading').current_thread().ident}")
-        print(f"[_记录提示词结果异步] data_dict keys: {list(data_dict.keys())}")
-        print(f"[_记录提示词结果异步] result type: {type(result)}")
-        print(f"[_记录提示词结果异步] task_key: {task_key}")
+        if debug:
+            print(f"[_记录提示词结果异步] ====== 开始执行 ======")
+            print(f"[_记录提示词结果异步] 线程ID: {__import__('threading').current_thread().ident}")
+            print(f"[_记录提示词结果异步] data_dict keys: {list(data_dict.keys())}")
+            print(f"[_记录提示词结果异步] result type: {type(result)}")
+            print(f"[_记录提示词结果异步] task_key: {task_key}")
+            print(f"[_记录提示词结果异步] 准备提交异步记录...")
+            print(f"[_记录提示词结果异步] result type: {type(result)}, result keys: {result.keys() if isinstance(result, dict) else 'N/A'}")
+            print(f"[_记录提示词结果异步] task_key: {task_key}, key_back: {key_back}")
 
         try:
             # 提取提示词（支持多种字段名）
@@ -283,8 +297,9 @@ class RedisTaskHandler:
                     ""
             )
 
-            print(f"[_记录提示词结果异步] 提取的提示词长度: {len(prompt) if prompt else 0}")
-            print(f"[_记录提示词结果异步] 提示词前100字符: {prompt[:100] if prompt else 'EMPTY'}")
+            if debug:
+                print(f"[_记录提示词结果异步] 提取的提示词长度: {len(prompt) if prompt else 0}")
+                print(f"[_记录提示词结果异步] 提示词前100字符: {prompt[:100] if prompt else 'EMPTY'}")
 
             # 提取结果（支持多种格式）
             result_text = ""
@@ -296,16 +311,19 @@ class RedisTaskHandler:
                         result.get("content") or
                         json.dumps(result, ensure_ascii=False)
                 )
-                print(f"[_记录提示词结果异步] 从dict提取结果，结果长度: {len(result_text) if result_text else 0}")
+                if debug:
+                    print(f"[_记录提示词结果异步] 从dict提取结果，结果长度: {len(result_text) if result_text else 0}")
             elif isinstance(result, str):
                 result_text = result
-                print(f"[_记录提示词结果异步] 结果是str，长度: {len(result_text)}")
+                if debug:
+                    print(f"[_记录提示词结果异步] 结果是str，长度: {len(result_text)}")
 
             # 如果没有提示词或结果，不记录
             if not prompt or not result_text:
-                print(f"[_记录提示词结果异步] ⚠️ 提示词或结果为空，跳过记录")
-                print(f"  - prompt empty: {not prompt}")
-                print(f"  - result_text empty: {not result_text}")
+                if debug:
+                    print(f"[_记录提示词结果异步] ⚠️ 提示词或结果为空，跳过记录")
+                    print(f"  - prompt empty: {not prompt}")
+                    print(f"  - result_text empty: {not result_text}")
                 return
 
             # 确定任务类型
@@ -329,9 +347,10 @@ class RedisTaskHandler:
                 "result": result_text,
             }
 
-            print(f"[_记录提示词结果异步] 准备发送请求到 API...")
-            print(f"[_记录提示词结果异步] API URL: https://coco.j1.sale/robot_client/push_task_data")
-            print(f"[_记录提示词结果异步] record_data keys: {list(record_data.keys())}")
+            if debug:
+                print(f"[_记录提示词结果异步] 准备发送请求到 API...")
+                print(f"[_记录提示词结果异步] API URL: https://coco.j1.sale/robot_client/push_task_data")
+                print(f"[_记录提示词结果异步] record_data keys: {list(record_data.keys())}")
             post_data = {
                 # 'ip_port': data_dict.get('ip_port'),
                 'device_id': data_dict.get('串口号'),
@@ -348,41 +367,50 @@ class RedisTaskHandler:
                     headers={"Content-Type": "application/json"}
                 )
 
-                print(f"[_记录提示词结果异步] 收到响应: status_code={response.status_code}")
+                if debug:
+                    print(f"[_记录提示词结果异步] 收到响应: status_code={response.status_code}")
 
                 if response.status_code == 200:
                     resp_data = response.json()
-                    print(f"[_记录提示词结果异步] 响应数据: {resp_data}")
+                    if debug:
+                        print(f"[_记录提示词结果异步] 响应数据: {resp_data}")
                 else:
-                    print(f"[_记录提示词结果异步] ❌ HTTP 错误: {response.status_code}")
-                    print(f"[_记录提示词结果异步] 响应内容: {response.text[:500]}")
+                    if debug:
+                        print(f"[_记录提示词结果异步] ❌ HTTP 错误: {response.status_code}")
+                        print(f"[_记录提示词结果异步] 响应内容: {response.text[:500]}")
 
             except requests.exceptions.Timeout:
-                print(f"[_记录提示词结果异步] ⏱️ 请求超时（异步）")
+                if debug:
+                    print(f"[_记录提示词结果异步] ⏱️ 请求超时（异步）")
             except requests.exceptions.RequestException as e:
-                print(f"[_记录提示词结果异步] ❌ 请求异常: {e}")
+                if debug:
+                    print(f"[_记录提示词结果异步] ❌ 请求异常: {e}")
+                    import traceback
+                    traceback.print_exc()
+
+        except Exception as e:
+            if debug:
+                print(f"[_记录提示词结果异步] ❌ 未知异常: {e}")
                 import traceback
                 traceback.print_exc()
 
-        except Exception as e:
-            print(f"[_记录提示词结果异步] ❌ 未知异常: {e}")
-            import traceback
-            traceback.print_exc()
-
-        print(f"[_记录提示词结果异步] ====== 执行结束 ======")
-
-
-    def _记录提示词结果异步(self, data_dict: dict, result, task_key: str, key_back: str):
+        if debug:
+            print(f"[_记录提示词结果异步] ====== 执行结束 ======")
+    def _记录提示词结果异步(self, data_dict: dict, result, task_key: str, key_back: str, debug: bool = False):
         """
         异步方法：在线程中记录提示词和结果到 PromptResult 服务
         
         注意：此方法在线程池中执行，不阻塞主流程
         """
-        print(f"[_记录提示词结果异步] ====== 开始执行 ======")
-        print(f"[_记录提示词结果异步] 线程ID: {__import__('threading').current_thread().ident}")
-        print(f"[_记录提示词结果异步] data_dict keys: {list(data_dict.keys())}")
-        print(f"[_记录提示词结果异步] result type: {type(result)}")
-        print(f"[_记录提示词结果异步] task_key: {task_key}")
+        if debug:
+            print(f"[_记录提示词结果异步] ====== 开始执行 ======")
+            print(f"[_记录提示词结果异步] 线程ID: {__import__('threading').current_thread().ident}")
+            print(f"[_记录提示词结果异步] data_dict keys: {list(data_dict.keys())}")
+            print(f"[_记录提示词结果异步] result type: {type(result)}")
+            print(f"[_记录提示词结果异步] task_key: {task_key}")
+            print(f"[_记录提示词结果异步] 准备提交异步记录...")
+            print(f"[_记录提示词结果异步] result type: {type(result)}, result keys: {result.keys() if isinstance(result, dict) else 'N/A'}")
+            print(f"[_记录提示词结果异步] task_key: {task_key}, key_back: {key_back}")
         
         try:
             # 提取提示词（支持多种字段名）
@@ -396,8 +424,9 @@ class RedisTaskHandler:
                 ""
             )
             
-            print(f"[_记录提示词结果异步] 提取的提示词长度: {len(prompt) if prompt else 0}")
-            print(f"[_记录提示词结果异步] 提示词前100字符: {prompt[:100] if prompt else 'EMPTY'}")
+            if debug:
+                print(f"[_记录提示词结果异步] 提取的提示词长度: {len(prompt) if prompt else 0}")
+                print(f"[_记录提示词结果异步] 提示词前100字符: {prompt[:100] if prompt else 'EMPTY'}")
             
             # 提取结果（支持多种格式）
             result_text = ""
@@ -409,16 +438,19 @@ class RedisTaskHandler:
                     result.get("content") or
                     json.dumps(result, ensure_ascii=False)
                 )
-                print(f"[_记录提示词结果异步] 从dict提取结果，结果长度: {len(result_text) if result_text else 0}")
+                if debug:
+                    print(f"[_记录提示词结果异步] 从dict提取结果，结果长度: {len(result_text) if result_text else 0}")
             elif isinstance(result, str):
                 result_text = result
-                print(f"[_记录提示词结果异步] 结果是str，长度: {len(result_text)}")
+                if debug:
+                    print(f"[_记录提示词结果异步] 结果是str，长度: {len(result_text)}")
             
             # 如果没有提示词或结果，不记录
             if not prompt or not result_text:
-                print(f"[_记录提示词结果异步] ⚠️ 提示词或结果为空，跳过记录")
-                print(f"  - prompt empty: {not prompt}")
-                print(f"  - result_text empty: {not result_text}")
+                if debug:
+                    print(f"[_记录提示词结果异步] ⚠️ 提示词或结果为空，跳过记录")
+                    print(f"  - prompt empty: {not prompt}")
+                    print(f"  - result_text empty: {not result_text}")
                 return
             
             # 确定任务类型
@@ -443,7 +475,7 @@ class RedisTaskHandler:
                 "task_type": task_type,
                 "job_id": job_id,
                 "ops_id": ops_id,
-                "extra_data": {
+                'extra_data': {
                     "task_key": task_key,
                     "key_back": key_back,
                     "original_data_keys": list(data_dict.keys()),
@@ -451,9 +483,10 @@ class RedisTaskHandler:
                 }
             }
             
-            print(f"[_记录提示词结果异步] 准备发送请求到 API...")
-            print(f"[_记录提示词结果异步] API URL: https://mission.j1.sale/prompt-service/api/record/")
-            print(f"[_记录提示词结果异步] record_data keys: {list(record_data.keys())}")
+            if debug:
+                print(f"[_记录提示词结果异步] 准备发送请求到 API...")
+                print(f"[_记录提示词结果异步] API URL: https://mission.j1.sale/prompt-service/api/record/")
+                print(f"[_记录提示词结果异步] record_data keys: {list(record_data.keys())}")
             
             # 发送到 PromptResult API
             try:
@@ -464,33 +497,41 @@ class RedisTaskHandler:
                     headers={"Content-Type": "application/json"}
                 )
                 
-                print(f"[_记录提示词结果异步] 收到响应: status_code={response.status_code}")
+                if debug:
+                    print(f"[_记录提示词结果异步] 收到响应: status_code={response.status_code}")
                 
                 if response.status_code == 200:
                     resp_data = response.json()
-                    print(f"[_记录提示词结果异步] 响应数据: {resp_data}")
-                    if resp_data.get("success"):
-                        print(f"[_记录提示词结果异步] ✅ 记录成功，ID: {resp_data.get('id')}")
+                    if debug:
+                        print(f"[_记录提示词结果异步] 响应数据: {resp_data}")
+                    if resp_data.get('success'):
+                        if debug:
+                            print(f"[_记录提示词结果异步] ✅ 记录成功，ID: {resp_data.get('id')}")
                     else:
-                        print(f"[_记录提示词结果异步] ❌ 记录失败: {resp_data.get('message')}")
+                        if debug:
+                            print(f"[_记录提示词结果异步] ❌ 记录失败: {resp_data.get('message')}")
                 else:
-                    print(f"[_记录提示词结果异步] ❌ HTTP 错误: {response.status_code}")
-                    print(f"[_记录提示词结果异步] 响应内容: {response.text[:500]}")
+                    if debug:
+                        print(f"[_记录提示词结果异步] ❌ HTTP 错误: {response.status_code}")
+                        print(f"[_记录提示词结果异步] 响应内容: {response.text[:500]}")
                     
             except requests.exceptions.Timeout:
-                print(f"[_记录提示词结果异步] ⏱️ 请求超时（异步）")
+                if debug:
+                    print(f"[_记录提示词结果异步] ⏱️ 请求超时（异步）")
             except requests.exceptions.RequestException as e:
-                print(f"[_记录提示词结果异步] ❌ 请求异常: {e}")
-                import traceback
-                traceback.print_exc()
-                
+                if debug:
+                    print(f"[_记录提示词结果异步] ❌ 请求异常: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    
         except Exception as e:
-            print(f"[_记录提示词结果异步] ❌ 未知异常: {e}")
+            if debug:
+                print(f"[_记录提示词结果异步] ❌ 未知异常: {e}")
             import traceback
             traceback.print_exc()
         
-        print(f"[_记录提示词结果异步] ====== 执行结束 ======")
-
+        if debug:
+            print(f"[_记录提示词结果异步] ====== 执行结束 ======")
     def 测试服务可用性(self, timeout=10) -> dict:
         """
         测试"提交数据并阻塞等待结果"调用的服务可用性
