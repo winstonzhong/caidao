@@ -12,6 +12,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 from pathlib import Path
 
+from tool_task_redis_utils import is_shared_key_back, ensure_unique_key_back
+
 
 # 全局线程池（复用，避免频繁创建销毁）用于记录 PromptResult
 _prompt_result_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="PromptResult_")
@@ -135,33 +137,6 @@ class RedisTaskHandler:
     # partial_content=None,
     # history=None,
 
-    def _阻塞等待结果(
-        self,
-        key_back: str,
-        ts: str,
-        check_timestamp: bool,
-        timeout: int,
-        debug: bool,
-    ) -> dict:
-        while 1:
-            d = self.拉出Redis(key_back, True, timeout)
-            if debug:
-                print("-" * 66)
-                print("获取结果:")
-                print(d)
-
-            if not d:
-                return {}
-
-            if check_timestamp:
-                result_ts = d.get("timestamp")
-                if result_ts is not None and result_ts != ts:
-                    if debug:
-                        print("丢弃前期废弃结果:", d)
-                    continue
-
-            return d
-
     def 提交字典到队列并阻塞等待结果(
         self,
         task_key: str,
@@ -187,29 +162,30 @@ class RedisTaskHandler:
             - 格式: "{task_key}_return_{timestamp}_{random}"
             - 保证每个队列有自己的回传队列，不会重复
         """
-        import random
-
-        # 1. 生成唯一 timestamp
+        # 1. 生成唯一 timestamp（保留注入，供 Worker 或日志使用）
         ts = str(time.time())
 
-        # 仅外部传入 key_back（legacy 共享队列模式）才需比对 timestamp
-        check_timestamp = key_back is not None
+        # 2. 确保 key_back 是唯一独立队列
+        original_key_back = key_back
+        key_back = ensure_unique_key_back(task_key, key_back)
 
-        # 2. 如果 key_back 为空，自动生成
-        if key_back is None:
-            rand_suffix = random.randint(1000, 9999)
-            key_back = f"{task_key}_return_{ts}_{rand_suffix}"
-
-        # 3. 将 timestamp 注入 data_dict（用于结果匹配）
+        # 3. 将 timestamp 和 key_back 注入 data_dict
         data_dict["timestamp"] = ts
         data_dict["key_back"] = key_back
-        # print('data_dict..........', data_dict)
+        if original_key_back is not None:
+            data_dict["original_key_back"] = original_key_back
+
         # 4. 推入 Redis
         self.推入Redis(task_key, data_dict)
 
-        # 5. 循环拉取结果
-        result = self._阻塞等待结果(key_back, ts, check_timestamp, timeout, debug)
-        
+        # 5. 单次阻塞拉取结果（队列已唯一，无需循环过滤）
+        d = self.拉出Redis(key_back, True, timeout)
+        if debug:
+            print("-" * 66)
+            print("获取结果:")
+            print(d)
+        result = d if d else {}
+
         # 6. 异步记录 PromptResult（不阻塞主流程）
         if result:
             try:
@@ -227,8 +203,8 @@ class RedisTaskHandler:
                     import traceback
                     traceback.print_exc()
                 # 失败不影响主流程
-        
-        return result if result else {}
+
+        return result
     def 提交数据并阻塞等待结果(
         self,
         key_back,
