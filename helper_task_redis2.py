@@ -5,7 +5,8 @@ import redis
 from typing import Any
 import time
 import sys
-# import os
+import random
+import os
 import tool_env
 import requests
 from concurrent.futures import ThreadPoolExecutor
@@ -241,6 +242,70 @@ class RedisTaskHandler:
             d["result"] = json.loads(d["result"])
 
         return d
+
+    def 提交提示词任务_KC(
+        self,
+        prompt: str,
+        image_path: str = None,
+        task_type: str = 'text',
+        session_id: str = None,
+        work_dir: str = None,
+        timeout: int = 300,
+        queue_name: str = 'kimi_code通用解析',
+        submit_log: bool = False,
+    ) -> dict:
+        """
+        提交提示词任务到固定 Redis 队列并阻塞等待结果（KC = Kimi Code）。
+
+        与 prompt_worker.py --redis-mode（固定 Session）或
+        --redis-mode --new-session-mode（新 Session）配合使用。
+
+        Args:
+            prompt: 提示词内容
+            image_path: 可选的本地图片路径（会自动嵌入 prompt，worker 从中提取）
+            task_type: 任务类型标记，如 'text' / 'image'
+            session_id: 固定 Session 模式使用的 Session ID
+            work_dir: 新 Session 模式使用的基础工作目录
+            timeout: 阻塞等待结果的超时时间（秒）
+            queue_name: Redis 队列名称（默认 'kimi_code通用解析'）
+            submit_log: 是否提交异步日志
+
+        Returns:
+            dict: {'success': True/False, 'content': str, 'error': str}
+        """
+        unique_id = f"{int(time.time() * 1000)}_{random.randint(10000, 99999)}"
+
+        # 如有图片路径且未在 prompt 中出现，追加到 prompt（worker 依赖正则提取）
+        if image_path and image_path not in prompt:
+            prompt = f"{prompt}\n图片路径: {image_path}"
+
+        task_data = {
+            'prompt': f"【任务ID: {unique_id}】{prompt}",
+            'task_type': task_type,
+        }
+
+        if session_id:
+            task_data['session_id'] = session_id
+        elif work_dir:
+            task_data['work_dir'] = work_dir
+
+        result = self.提交字典到队列并阻塞等待结果(
+            task_key=queue_name,
+            data_dict=task_data,
+            timeout=timeout,
+            submit_log=submit_log,
+        )
+
+        if not result:
+            return {'success': False, 'error': '等待结果超时'}
+
+        if result.get('status') == 'success':
+            return {'success': True, 'content': result.get('result', '')}
+        else:
+            error = result.get('error')
+            if not error:
+                error = f"消费端返回失败: {str(result)[:200]}"
+            return {'success': False, 'error': error}
 
     def _上传日志记录(self, data_dict: dict, result, task_key: str, key_back: str):
         """
