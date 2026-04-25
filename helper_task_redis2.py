@@ -235,6 +235,7 @@ class RedisTaskHandler:
             data_dict=data_dict,
             key_back=key_back,
             timeout=timeout,
+            submit_log=False,
         )
 
         # 处理 partial_content 的特殊逻辑（保持向后兼容）
