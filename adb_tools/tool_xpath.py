@@ -1257,7 +1257,7 @@ class 基本任务(抽象持久序列):
         package = package or self.package
         activity = activity or self.activity
         script = f"am start -n {package}/{activity}"
-        # print(script)
+        print(script)
         self.device.adb.execute(script)
         time.sleep(3)
         if not self.device.adb.is_app_opened(package):
