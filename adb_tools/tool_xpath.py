@@ -1391,7 +1391,8 @@ class 基本任务(抽象持久序列):
 
             if 最大执行秒 > 0 and executed_seconds >= 最大执行秒:
                 print("达到最大执行秒，停止执行:", executed_seconds, 最大执行秒)
-                self.关闭应用()
+                if not global_cache.发生异常不关闭应用:
+                    self.关闭应用()
                 raise ValueError(f"达到最大执行秒异常:{executed_seconds} {最大执行秒}")
 
             if not self.blocks:
@@ -2875,10 +2876,11 @@ class 基本任务列表(抽象持久序列):
         global_cache.update(main_job.paras)
         return main_job
 
-    def 执行任务(self, 单步=False):
+    def 执行任务(self, 单步=False, 调试模式=False):
         global_cache.clear()
         main_job = self.jobs[-1]
         global_cache.update(main_job.paras)
+        global_cache.发生异常不关闭应用 = 调试模式
         if 单步:
             return main_job.执行任务(单步=单步)
         else:
