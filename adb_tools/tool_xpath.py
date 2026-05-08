@@ -51,6 +51,8 @@ from tool_exceptions import (
     没有找到联系人异常,
 )
 
+from adb_tools.ops_device_utils import OpsDeviceUtils
+
 from tool_remote_orm_model import RemoteModel
 
 from tool_wx_container import 解析器, 获取3P列表详情, 获取列表详情
