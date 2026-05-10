@@ -140,6 +140,6 @@ def get_wechat_openid_encrypt(code: str, appid: str, appsecret: str, encrypt_key
     login_info = get_wechat_openid(code, appid, appsecret)
     ss = StrSecret(encrypt_key)
     login_info_encrypt_str = ss.encrypt(json.dumps(login_info).encode())
-    ret_data = {'user_info': login_info_encrypt_str}
+    ret_data = {'user_info': login_info_encrypt_str.decode()}
     return ret_data
 
