@@ -3,6 +3,7 @@ import json
 
 from Crypto.Cipher import AES
 import requests
+from tool_enc import *
 
 
 def get_login_info(js_code, app_id, app_secret):
@@ -84,4 +85,61 @@ def decrypt_callback(resource, api_v3_key):
     # 转换为JSON字典
     return json.loads(plaintext.decode('utf-8'))
 
+def get_wechat_openid(code: str, appid: str, appsecret: str) -> dict:
+    """
+    通过微信网页授权的 code 获取用户 openid
+
+    参数：
+        code: 前端传回的微信授权 code
+        appid: 微信公众号 appid
+        appsecret: 微信公众号 appsecret
+
+    返回：
+        dict: 包含 openid、access_token 等信息，失败则包含错误信息
+    """
+    # 微信官方接口地址
+    url = "https://api.weixin.qq.com/sns/oauth2/access_token"
+
+    # 请求参数（微信规定格式）
+    params = {
+        "appid": appid,
+        "secret": appsecret,
+        "code": code,
+        "grant_type": "authorization_code"  # 固定值
+    }
+
+    try:
+        # 发送 GET 请求
+        response = requests.get(url, params=params, timeout=10)
+        # 解析 JSON
+        result = response.json()
+
+        # 微信返回成功：包含 openid
+        if "openid" in result:
+            return {
+                "success": True,
+                "openid": result["openid"],
+                "data": result  # 完整返回体（包含access_token等）
+            }
+        # 返回失败
+        else:
+            return {
+                "success": False,
+                "err_code": result.get("errcode"),
+                "err_msg": result.get("errmsg")
+            }
+
+    except Exception as e:
+        # 网络异常等错误
+        return {
+            "success": False,
+            "err_msg": f"请求异常：{str(e)}"
+        }
+
+def get_wechat_openid_encrypt(code: str, appid: str, appsecret: str, encrypt_key):
+    login_info = get_wechat_openid(code, appid, appsecret)
+    ss = StrSecret(encrypt_key)
+    login_info_encrypt_str = ss.encrypt(json.dumps(login_info))
+    ret_data = {'user_info': login_info_encrypt_str}
+    return ret_data
 
