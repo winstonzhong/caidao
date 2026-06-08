@@ -1,61 +1,53 @@
 # Agent 开发规范
 
-> 已知陷阱详见 [AGENTS_TRAPS.md](./AGENTS_TRAPS.md)
+> Django 通用开发规范详见 [AGENTS_DJANGO.md](../AGENTS_DJANGO.md)
 
 ---
 
-## 1. 绝对禁止重启 Django 开发服务器（⚠️ 核心）
+## 1. 数据库迁移规范（⚠️ 必须）
 
-**规则**: 永远不要手动重启 Django 开发服务器 (`python manage.py runserver`)
+**规则**: 进行数据库结构变更（迁移）时，必须：
 
-**原因**: Django 有自动重载机制，手动重启会导致端口占用错误
+1. **迁移前备份** - 使用滚动备份脚本备份所有数据库
+2. **使用 mm.bat 迁移** - 统一使用项目中的迁移脚本执行迁移
+3. **禁止删除数据库** - 严禁删除数据库文件进行重建
 
-**正确做法**: 
-- 保存文件后等待 1-2 秒自动重载
-- 刷新浏览器验证即可
-- **严禁执行**: `pkill -f "runserver"` 或手动重启
+**原因**:
+- 数据库迁移可能导致数据丢失或结构损坏
+- 多数据库配置（default/base）需要一致迁移
+- 备份可确保意外情况下可恢复
 
----
-
-## 2. 任务完成通知（必须）
-
-**规则**: 所有任务完成后必须：
-1. 播放提示音 `task_complete.wav`
-2. 输出：`✓ 我的任务已完成，请审阅！`
-
-```python
-import subprocess
-
-print('\a', end='', flush=True)
-subprocess.run(['aplay', 'task_complete.wav'], capture_output=True, timeout=5)
-print("✓ 我的任务已完成，请审阅！")
-```
-
----
-
-## 3. 版本控制规范（必须）
-
-**规则**: 每次代码变更后立即执行 Git 签入
+**正确做法**:
 
 ```bash
-git add <变更的文件>
-git commit -m "<type>: <描述>"
-git tag -a "<标签>" -m "<描述>"
+# 步骤1: 执行滚动备份（迁移前必须）
+cd /home/yka-003/workspace/caidao/backups
+./rolling_backup.sh
+
+# 步骤2: 执行数据库迁移（使用项目脚本）
+cd /home/yka-003/workspace/caidao
+./mm.bat
+# 或手动执行：
+# python manage.py makemigrations
+# python manage.py migrate
+# python manage.py migrate --database=base
 ```
 
-**签入后要求**: 必须输出简要汇总（约两行），提示用户已签入
+**严禁执行**:
+```bash
+# ❌ 禁止先删除再重建
+rm /home/yka-003/workspace/caidao/*.sqlite3
 
-示例输出：
-```
-✓ 已签入 3 个文件: runtime/models.py, runtime/admin.py
-  提交: feat: 添加场景分布修复功能 | 标签: v1.2.0
-```
+# ❌ 禁止使用 --fake 绕过迁移（除非确定知道后果）
+python manage.py migrate --fake
 
-提交类型：`feat`, `fix`, `refactor`, `docs`, `perf`
+# ❌ 禁止直接删除迁移文件后重建
+rm */migrations/00*.py
+```
 
 ---
 
-## 4. 测试保证（必须）
+## 2. 测试保证（必须）
 
 **规则**: 当 `.py` 文件发生逻辑变更时，必须执行所有单元测试和集成测试
 
