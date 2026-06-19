@@ -390,3 +390,28 @@ python manage.py test
 - 测试覆盖率：单元测试 + 集成测试全覆盖
 
 **目的**: 防止代码回归，确保功能正确性
+
+---
+
+## 测试与 doctest 变更保证（必须）
+
+**规则**：当 `.py` 文件发生逻辑变更时，必须执行该文件的所有 doctest 单元测试以及所有单元测试和集成测试。
+
+1. 若变更的文件包含 doctest，先运行对应 doctest：
+   ```bash
+   python -m doctest path/to/module.py
+   # 或（模块含 __main__ 入口时）
+   python /absolute/path/to/module.py
+   ```
+2. 再运行项目全部单元测试和集成测试：
+   ```bash
+   python manage.py test
+   ```
+   > 注：部分项目使用 `pytest` 或 `run_tests.py` / `run_all_tests.py`，请以项目实际测试命令为准。
+
+**要求**：
+- doctest 与全部测试均 0 failures 方可签入
+- 新增功能必须附带 doctest
+- 修改逻辑后必须重新运行 doctest 与全部测试验证
+- 测试失败必须修复后再提交
+- 测试覆盖率：单元测试 + 集成测试全覆盖
