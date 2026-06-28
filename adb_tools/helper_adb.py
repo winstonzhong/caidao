@@ -1482,9 +1482,11 @@ class BaseAdb(object):
         cls,
         ip_port,
         encoding="utf8",
+        audio=False,
     ):
 
-        cmd = f"scrcpy -s {ip_port} --no-audio --always-on-top"
+        audio_flag = "" if audio else "--no-audio"
+        cmd = f"scrcpy -s {ip_port} {audio_flag} --always-on-top".strip()
 
         print(cmd)
         process = subprocess.Popen(
