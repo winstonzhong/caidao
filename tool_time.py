@@ -45,6 +45,23 @@ WEEKDAY_MAP = {
     "周五": 4,
     "周六": 5,
     "周日": 6,
+    # 别名：星期X / 礼拜X / 星期天 / 礼拜天（企业微信等聊天时间标签常用）
+    "星期一": 0,
+    "星期二": 1,
+    "星期三": 2,
+    "星期四": 3,
+    "星期五": 4,
+    "星期六": 5,
+    "星期日": 6,
+    "星期天": 6,
+    "礼拜一": 0,
+    "礼拜二": 1,
+    "礼拜三": 2,
+    "礼拜四": 3,
+    "礼拜五": 4,
+    "礼拜六": 5,
+    "礼拜日": 6,
+    "礼拜天": 6,
 }
 
 units = {
@@ -166,14 +183,25 @@ def from_datename(name, today=None):
     """
     >>> from_datename('昨天', '2022-01-01')
     datetime.datetime(2021, 12, 31, 0, 0)
+    >>> from_datename('前天', '2026-08-10')
+    datetime.datetime(2026, 8, 8, 0, 0)
     >>> from_datename('周一', '2024-01-01')
     datetime.datetime(2023, 12, 25, 0, 0)
+    >>> from_datename('星期三', '2026-08-10')
+    datetime.datetime(2026, 8, 5, 0, 0)
+    >>> from_datename('星期天', '2026-08-10')
+    datetime.datetime(2026, 8, 9, 0, 0)
+    >>> from_datename('礼拜五', '2026-08-10')
+    datetime.datetime(2026, 8, 7, 0, 0)
     >>> from_datename('天天', '2024-01-01') # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ValueError:
     """
     if name == "昨天":
         return get_today(today) - datetime.timedelta(days=1)
+
+    if name == "前天":
+        return get_today(today) - datetime.timedelta(days=2)
 
     if WEEKDAY_MAP.get(name) is not None:
         return get_weekday(name, today)
@@ -269,6 +297,14 @@ def convert_chinese_datetime(line, today=None):
     >>> convert_chinese_datetime(None)
     >>> convert_chinese_datetime('周四 10:45 ', today='2025-10-10')
     datetime.datetime(2025, 10, 9, 10, 45, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
+    >>> convert_chinese_datetime('星期三 15:38', today='2026-08-10')
+    datetime.datetime(2026, 8, 5, 15, 38, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
+    >>> convert_chinese_datetime('星期天 09:00', today='2026-08-10')
+    datetime.datetime(2026, 8, 9, 9, 0, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
+    >>> convert_chinese_datetime('礼拜五 10:00', today='2026-08-10')
+    datetime.datetime(2026, 8, 7, 10, 0, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
+    >>> convert_chinese_datetime('前天 10:00', today='2026-08-10')
+    datetime.datetime(2026, 8, 8, 10, 0, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
     >>> convert_chinese_datetime('受苦不吃亏')
     """
     if pandas.isnull(line) or not is_string(line):
