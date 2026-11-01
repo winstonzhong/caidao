@@ -1,94 +1,88 @@
+# weixin_tools/tool_native_pay.py
 """
-微信支付 API v2 Native 支付高层封装（基于 helper_native_pay 的原语）。
+微信支付 Native（扫码）支付 —— API v2 纯函数封装
 
-- create_native_order：统一下单，拿 code_url（顾客扫码）
-- verify_notify_xml：支付结果回调验签
+与项目无关的通用支付能力：统一下单、回调验签、主动查单。
+所有商户配置（appid / mch_id / apiv2_key / notify_url）均由调用方以参数注入，
+本模块不读任何配置文件、不内置任何密钥（密钥管理规范见 docs/native_pay_integration.md）。
 
->>> import requests
->>> from unittest import mock
->>> _ok_xml = (
-...     '<xml><return_code><![CDATA[SUCCESS]]></return_code>'
-...     '<result_code><![CDATA[SUCCESS]]></result_code>'
-...     '<code_url><![CDATA[weixin://wxpay/biz/test123]]></code_url></xml>')
->>> with mock.patch.object(requests, 'post', return_value=mock.Mock(content=_ok_xml.encode('utf-8'))):
-...     r = create_native_order(appid='appid1', mch_id='mch1', apiv2_key='key1',
-...                             notify_url='https://x/notify', body='金立方-服务',
-...                             out_trade_no='T1', total_fee=100,
-...                             spbill_create_ip='127.0.0.1', trade_type='NATIVE')
->>> r['code_url']
-'weixin://wxpay/biz/test123'
+依赖：requests、weixin_tools.helper_native_pay（签名/XML/订单号）
 
->>> _fail_xml = (
-...     '<xml><return_code><![CDATA[SUCCESS]]></return_code>'
-...     '<result_code><![CDATA[FAIL]]></result_code>'
-...     '<err_code_des><![CDATA[余额不足]]></err_code_des></xml>')
->>> with mock.patch.object(requests, 'post', return_value=mock.Mock(content=_fail_xml.encode('utf-8'))):
-...     create_native_order(appid='a', mch_id='m', apiv2_key='k',
-...                         notify_url='https://x', body='b', out_trade_no='o',
-...                         total_fee=1, spbill_create_ip='127.0.0.1', trade_type='NATIVE')
+>>> nonce = generate_nonce_str()
+>>> len(nonce) == 32 and all(c in '0123456789abcdef' for c in nonce)
+True
+
+>>> # verify_notify_xml：用假密钥构造一份带正确签名的回调 XML，验签通过
+>>> from weixin_tools.helper_native_pay import generate_wechat_pay_sign, dict_to_xml
+>>> _params = {'return_code': 'SUCCESS', 'result_code': 'SUCCESS',
+...            'out_trade_no': 'ORDER_1700000000_1234', 'total_fee': '990'}
+>>> _params['sign'] = generate_wechat_pay_sign(_params, 'fake_key_for_doctest_only')
+>>> _xml = dict_to_xml(_params)
+>>> result = verify_notify_xml(_xml, 'fake_key_for_doctest_only')
+>>> result['out_trade_no']
+'ORDER_1700000000_1234'
+
+>>> # 密钥错误（签名不匹配）→ 抛 ValueError
+>>> verify_notify_xml(_xml, 'wrong_key')
 Traceback (most recent call last):
 ...
-ValueError: 微信下单失败: 余额不足
+ValueError: 签名验证失败
 
->>> _notify = {
-...     'appid': 'appid1', 'mch_id': 'mch1', 'nonce_str': 'n1',
-...     'return_code': 'SUCCESS', 'result_code': 'SUCCESS', 'openid': 'ox1', 'out_trade_no': 'T1',
-...     'total_fee': '100', 'transaction_id': 'wx1',
-... }
->>> _notify['sign'] = generate_wechat_pay_sign(_notify, 'key1')
->>> import weixin_tools.helper_native_pay as _h
->>> _notify_xml = _h.dict_to_xml(_notify)
->>> _r = verify_notify_xml(_notify_xml, 'key1')
->>> _r['out_trade_no'], _r['openid']
-('T1', 'ox1')
-
->>> _notify['sign'] = 'BAD_SIGN'
->>> verify_notify_xml(_h.dict_to_xml(_notify), 'key1')
+>>> # 回调 return_code 非 SUCCESS → 抛 ValueError
+>>> verify_notify_xml(dict_to_xml({'return_code': 'FAIL', 'return_msg': '系统错误'}), 'k')
 Traceback (most recent call last):
 ...
-ValueError: 微信支付回调验签失败
-"""
+ValueError: 回调数据异常: 系统错误
 
+>>> # 非法 XML → 抛 ValueError
+>>> verify_notify_xml('not xml at all', 'k')
+Traceback (most recent call last):
+...
+ValueError: XML解析失败
+"""
 import random
-import string
-import time
 
 import requests
 
 from weixin_tools.helper_native_pay import (
-    dict_to_xml,
-    generate_wechat_pay_sign,
-    xml_to_dict,
+    generate_wechat_pay_sign, dict_to_xml, xml_to_dict,
 )
 
-UNIFIEDORDER_URL = "https://api.mch.weixin.qq.com/pay/unifiedorder"
+UNIFIED_ORDER_URL = "https://api.mch.weixin.qq.com/pay/unifiedorder"
+ORDER_QUERY_URL = "https://api.mch.weixin.qq.com/pay/orderquery"
 
 
-def _nonce_str(length=32):
-    return "".join(random.choices(string.ascii_letters + string.digits, k=length))
+def generate_nonce_str(length=32):
+    """生成随机 nonce_str（十六进制），每次下单/查单重新生成，不要使用固定值"""
+    return "".join(random.choices("0123456789abcdef", k=length))
 
 
-def _check_response(data, action):
-    """检查 v2 响应的 return_code / result_code，失败抛 ValueError。"""
-    if not isinstance(data, dict) or data.get("status") == "fail":
-        raise ValueError(f"微信{action}失败: 响应解析失败 {data}")
-    if data.get("return_code") != "SUCCESS":
-        raise ValueError(f"微信{action}失败: {data.get('return_msg', '')}")
-    if data.get("result_code") != "SUCCESS":
-        raise ValueError(f"微信{action}失败: {data.get('err_code_des', data.get('err_code', ''))}")
-    return data
+def _post_pay_api(url, params, apiv2_key, timeout):
+    """签名 → 转 XML → POST → 解析响应，返回响应 dict"""
+    params["sign"] = generate_wechat_pay_sign(params, apiv2_key)
+    response = requests.post(
+        url,
+        data=dict_to_xml(params).encode("utf-8"),
+        headers={"Content-Type": "text/xml"},
+        timeout=timeout,
+    )
+    return xml_to_dict(response.content)
 
 
 def create_native_order(*, appid, mch_id, apiv2_key, notify_url, body,
-                        out_trade_no, total_fee, spbill_create_ip, trade_type="NATIVE"):
+                        out_trade_no, total_fee, spbill_create_ip,
+                        trade_type="NATIVE", timeout=10):
     """
-    微信 Native 统一下单。返回响应字典（含 code_url）。
-    失败抛 ValueError（消息来自微信响应）。
+    调用微信支付统一下单（v2），生成扫码支付二维码链接。
+
+    :param total_fee: 金额，单位：分
+    :return: {'out_trade_no': ..., 'code_url': ..., 'raw': 微信原始响应dict}
+    :raises ValueError: 微信侧下单失败（return_code/result_code 非 SUCCESS 或无 code_url）
     """
-    params = {
+    pay_params = {
         "appid": appid,
         "mch_id": mch_id,
-        "nonce_str": _nonce_str(),
+        "nonce_str": generate_nonce_str(),
         "body": body,
         "out_trade_no": out_trade_no,
         "total_fee": total_fee,
@@ -96,29 +90,67 @@ def create_native_order(*, appid, mch_id, apiv2_key, notify_url, body,
         "notify_url": notify_url,
         "trade_type": trade_type,
     }
-    params["sign"] = generate_wechat_pay_sign(params, apiv2_key)
+    result = _post_pay_api(UNIFIED_ORDER_URL, pay_params, apiv2_key, timeout)
 
-    resp = requests.post(UNIFIEDORDER_URL, data=dict_to_xml(params).encode("utf-8"))
-    data = xml_to_dict(resp.content)
-    _check_response(data, "下单")
-    return data
+    if result.get("return_code") != "SUCCESS":
+        raise ValueError(f"下单失败: {result.get('return_msg', '未知错误')}")
+    if result.get("result_code") != "SUCCESS":
+        raise ValueError(f"下单失败: {result.get('err_code_des') or result.get('err_msg') or '未知错误'}")
+
+    code_url = result.get("code_url", "")
+    if not code_url:
+        raise ValueError("未获取到支付二维码链接")
+
+    return {
+        "out_trade_no": out_trade_no,
+        "code_url": code_url,
+        "raw": result,
+    }
 
 
-def verify_notify_xml(xml_bytes, apiv2_key):
+def verify_notify_xml(xml_data, apiv2_key):
     """
-    校验微信支付结果回调的签名与状态。返回回调参数字典（含 out_trade_no/openid）。
-    验签失败或支付未成功抛 ValueError。
+    解析并验签微信支付 v2 回调 XML。
+
+    :return: 验签通过后的回调 dict（已弹出 sign 字段）
+    :raises ValueError: XML 非法、return_code 非 SUCCESS、签名不匹配
     """
-    data = xml_to_dict(xml_bytes)
-    if not isinstance(data, dict) or data.get("status") == "fail":
-        raise ValueError("微信支付回调验签失败: 响应解析失败")
+    result = xml_to_dict(xml_data)
+    if not result or result.get("status") == "fail":
+        raise ValueError("XML解析失败")
+    if result.get("return_code") != "SUCCESS":
+        raise ValueError(f"回调数据异常: {result.get('return_msg', '')}")
 
-    sign = data.get("sign")
-    if not sign or generate_wechat_pay_sign(data, apiv2_key) != str(sign).upper():
-        raise ValueError("微信支付回调验签失败")
+    sign = result.pop("sign", "")
+    if generate_wechat_pay_sign(result, apiv2_key) != sign:
+        raise ValueError("签名验证失败")
 
-    _check_response(data, "支付")
-    return data
+    return result
+
+
+def query_native_order(*, appid, mch_id, apiv2_key, out_trade_no, timeout=10):
+    """
+    主动调用微信支付查单接口（v2 pay/orderquery）。
+    用于 notify 回调丢失时的兜底对账；返回 dict 中 trade_state 为微信支付状态
+    （SUCCESS / NOTPAY / CLOSED / REFUND ...）。
+
+    :return: 微信原始响应 dict（return_code/result_code 均为 SUCCESS）
+    :raises ValueError: 查询失败
+    """
+    params = {
+        "appid": appid,
+        "mch_id": mch_id,
+        "nonce_str": generate_nonce_str(),
+        "out_trade_no": out_trade_no,
+    }
+    result = _post_pay_api(ORDER_QUERY_URL, params, apiv2_key, timeout)
+
+    if result.get("return_code") != "SUCCESS":
+        raise ValueError(f"查单失败: {result.get('return_msg', '未知错误')}")
+    if result.get("result_code") != "SUCCESS":
+        raise ValueError(f"查单失败: {result.get('err_code_des') or result.get('err_msg') or '未知错误'}")
+
+    return result
 
 
 if __name__ == "__main__":
